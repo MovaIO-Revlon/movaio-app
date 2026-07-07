@@ -1,0 +1,36 @@
+[{
+  "_id": {
+    "$oid": "695f2b3a3e7dd23fe25b6da1"
+  },
+  "agent_name": "Guided Resolution Assistant",
+  "agent_id": "696506ef53963ad1e115059e",
+  "agent_secret_key": "sk-default-18YVxPwhbrdM4HzXwuUx4PWV2pwqvsMw",
+  "enabled": true,
+  "suggested_actions": [
+    "Create a JD for AI Architect",
+    "Create a JD for Java FullStack Developer"
+  ]
+},
+{
+  "_id": {
+    "$oid": "695f2c9d3e7dd23fe25b6da2"
+  },
+  "agent_name": "TDX Assistant",
+  "agent_id": "697865e3a75ef8a94cc4eb35",
+  "agent_secret_key": "sk-default-FEawPLkz6lntJ2z88YvZswqhk0a4APXu",
+  "enabled": true,
+  "suggested_actions": [
+    "Top 10 profiles for AI Architect",
+    "Top 10 profiles for Java FullStack Developer"
+  ]
+},
+{
+  "_id": {
+    "$oid": "695f2cd43e7dd23fe25b6da3"
+  },
+  "agent_name": "Runbook & SOP Assistant",
+  "agent_id": "696506ef53963ad1e115059f",
+  "agent_secret_key": "sk-default-18YVxPwhbrdM4HzXwuUx4PWV2pwqvsMw",
+  "enabled": true,
+  "suggested_actions": []
+}]

@@ -1,0 +1,36 @@
+[{
+  "_id": {
+    "$oid": "6875fdbbbe9beca9693768ba"
+  },
+  "id": "AT001",
+  "agent_type_id": "TYPE_MASTER",
+  "agent_type_name": "Task Agent",
+  "status": "active"
+},
+{
+  "_id": {
+    "$oid": "6877823ce771bc0f273a6633"
+  },
+  "id": "AT002",
+  "agent_type_id": "MASTER",
+  "agent_type_name": "Master Agent",
+  "status": "active"
+},
+{
+  "_id": {
+    "$oid": "68778269e771bc0f273a6635"
+  },
+  "id": "AT003",
+  "agent_type_id": "INSIGHT_AGENT",
+  "agent_type_name": "Insight Agent",
+  "status": "active"
+},
+{
+  "_id": {
+    "$oid": "687782b1e771bc0f273a6637"
+  },
+  "id": "AT004",
+  "agent_type_id": "WORKFLOW_MASTER",
+  "agent_type_name": "Workflow Agent",
+  "status": "active"
+}]

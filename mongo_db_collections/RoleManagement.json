@@ -1,0 +1,12 @@
+[{
+  "_id": {
+    "$oid": "686d35dce771bc0f273a6602"
+  },
+  "RoleName": "Super Admin",
+  "IsActive": true,
+  "Created_Date": {
+    "$date": "2025-07-02T00:00:00.000Z"
+  },
+  "Created_By": "Super Admin",
+  "RoleId": -1
+}]

@@ -1,0 +1,30 @@
+[{
+  "_id": {
+    "$oid": "691484968532ac6b0700057c"
+  },
+  "TeamId": "[object Object]",
+  "ProjectId": "2",
+  "RoleId": "[object Object]",
+  "permissions": {
+    "Command Center": {
+      "view": true,
+      "insert / edit": true,
+      "delete": true
+    },
+    "Chatbot": {
+      "view": true,
+      "insert / edit": true,
+      "delete": true
+    },
+    "Agent Management": {
+      "view": true,
+      "insert / edit": true,
+      "delete": true
+    },
+    "Agency Management": {
+      "view": true,
+      "insert / edit": true,
+      "delete": true
+    }
+  }
+}]

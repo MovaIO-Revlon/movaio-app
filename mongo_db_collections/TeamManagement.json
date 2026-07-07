@@ -1,0 +1,12 @@
+[{
+  "_id": {
+    "$oid": "68828f3a604b5bc270e878dd"
+  },
+  "TeamName": "Development Team",
+  "TeamId": 1,
+  "IsActive": true,
+  "Created_Date": {
+    "$date": "2025-07-02T00:00:00.000Z"
+  },
+  "Created_By": "Admin"
+}]

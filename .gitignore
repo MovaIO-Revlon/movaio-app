@@ -1,0 +1,8 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+.tvenv/
+/frontend/.vscode/
+/backend/.pytest_cache/
+/backend/.scannerwork/
+/backend/.vscode/
+/backend/__pycache__/

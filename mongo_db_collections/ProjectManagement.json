@@ -1,0 +1,29 @@
+[{
+  "_id": {
+    "$oid": "68e5e12c1ba34674415e9766"
+  },
+  "projectName": "App Engineering",
+  "projectId": 1,
+  "project_desc": "App Engineering",
+  "description": "App Engineering",
+  "active": true,
+  "teams": [
+    {
+      "teamName": "Development Team",
+      "roles": [
+        {
+          "role": "Test Manager"
+        },
+        {
+          "role": "Admin"
+        },
+        {
+          "role": "Super Admin"
+        }
+      ]
+    }
+  ],
+  "dateCreated": "2025-10-07",
+  "database_name": "movate_ai_infusion"
+}]
+ 

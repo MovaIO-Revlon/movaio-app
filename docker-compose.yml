@@ -1,0 +1,189 @@
+services:
+  # MongoDB service
+  mongodb:
+    image: mongo:latest
+    container_name: mongodb
+    restart: unless-stopped
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_USERNAME}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_PASSWORD}
+    ports:
+      - "27017:27017"
+    networks:
+      - opencon-network
+    volumes:
+      - mongodb_data:/data/db
+      - mongodb_config:/data/configdb
+      - ./mongo-init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+
+ # Application Backend service
+  appbackend:
+    build: ./backend
+    container_name: app-backend
+    restart: unless-stopped
+    environment:
+      - MONGO_URI=mongodb://${MONGO_USERNAME}:${MONGO_USERNAME}@mongodb:27017/
+    ports:
+      - "5000:5000"
+    networks:
+      - opencon-network
+    depends_on:
+      - mongodb
+
+
+  # Application Frontend service
+  appfrontend:
+    build: ./frontend
+    container_name: app-frontend
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl/fullchain.pem:/etc/ssl/certs/fullchain.pem:ro
+      - ./ssl/private-key.pem:/etc/ssl/private/private-key.pem:ro
+    networks:
+      - opencon-network
+    depends_on:
+      - appbackend
+
+ # TeamsApp Backend service
+  teamsbackend:
+    build: ./teamsbackend
+    container_name: teams-backend
+    restart: unless-stopped
+    environment:
+      - MONGO_URI=mongodb://${MONGO_USERNAME}:${MONGO_USERNAME}@mongodb:27017/
+    ports:
+      - "5002:5002"
+    networks:
+      - opencon-network
+    depends_on:
+      - mongodb
+
+# Middleware Backend service
+  backend:
+    image: ghcr.io/${GITHUB_REPOSITORY:-lyzr/open-con}-backend:${IMAGE_TAG:-latest}
+    container_name: middleware-backend
+    restart: unless-stopped
+    ports:
+      - "5001:8000"
+    env_file:
+      - .env
+    environment:
+      - MONGO_URI=${MONGO_URI}
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - opencon-network
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
+
+# Middleware Frontend service
+  frontend:
+    image: ghcr.io/${GITHUB_REPOSITORY:-lyzr/open-con}-frontend:${IMAGE_TAG:-latest}
+    container_name: middleware-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - opencon-network
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://localhost:80",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 128M
+
+  coding-agent:
+    image: ghcr.io/${GITHUB_REPOSITORY:-lyzr/open-con}-coding-agent:${IMAGE_TAG:-latest}
+    container_name: opencon-coding-agent
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "8001:8000"
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - opencon-network
+    environment:
+      - MONGO_URI=${MONGO_URI}
+      - PYTHONUNBUFFERED=1
+    stdin_open: true
+    tty: true
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
+          
+volumes:
+  mongodb_data:
+    driver: local
+  mongodb_config:
+    driver: local
+
+networks:
+  opencon-network:
+    driver: bridge

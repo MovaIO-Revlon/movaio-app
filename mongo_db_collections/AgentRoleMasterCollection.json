@@ -1,0 +1,77 @@
+[{
+  "_id": {
+    "$oid": "68778990e771bc0f273a663f"
+  },
+  "id": "AR001",
+  "agent_role_id": "ROLE001",
+  "agent_role_name": "Planner",
+  "created_ts": "2025-07-07T08:00:00Z",
+  "updated_ts": "2025-07-07T08:00:00Z",
+  "status": "active"
+},
+{
+  "_id": {
+    "$oid": "68778990e771bc0f273a6640"
+  },
+  "id": "AR002",
+  "agent_role_id": "ROLE002",
+  "agent_role_name": "Assistant",
+  "created_ts": "2025-07-07T08:00:00Z",
+  "updated_ts": "2025-07-07T08:00:00Z",
+  "status": "active"
+},
+{
+  "_id": {
+    "$oid": "68778990e771bc0f273a6641"
+  },
+  "id": "AR003",
+  "agent_role_id": "ROLE003",
+  "agent_role_name": "Writer",
+  "created_ts": "2025-07-07T08:00:00Z",
+  "updated_ts": "2025-07-07T08:00:00Z",
+  "status": "active"
+},
+{
+  "_id": {
+    "$oid": "68778990e771bc0f273a6642"
+  },
+  "id": "AR004",
+  "agent_role_id": "ROLE004",
+  "agent_role_name": "Transcriber",
+  "created_ts": "2025-07-07T08:00:00Z",
+  "updated_ts": "2025-07-07T08:00:00Z",
+  "status": "active"
+},
+{
+  "_id": {
+    "$oid": "68778990e771bc0f273a6643"
+  },
+  "id": "AR005",
+  "agent_role_id": "ROLE005",
+  "agent_role_name": "Summarizer",
+  "created_ts": "2025-07-07T08:00:00Z",
+  "updated_ts": "2025-07-07T08:00:00Z",
+  "status": "active"
+},
+{
+  "_id": {
+    "$oid": "68778990e771bc0f273a6644"
+  },
+  "id": "AR006",
+  "agent_role_id": "ROLE006",
+  "agent_role_name": "Researcher",
+  "created_ts": "2025-07-07T08:00:00Z",
+  "updated_ts": "2025-07-07T08:00:00Z",
+  "status": "active"
+},
+{
+  "_id": {
+    "$oid": "68778990e771bc0f273a6645"
+  },
+  "id": "AR007",
+  "agent_role_id": "ROLE007",
+  "agent_role_name": "Navigator",
+  "created_ts": "2025-07-07T08:00:00Z",
+  "updated_ts": "2025-07-07T08:00:00Z",
+  "status": "active"
+}]
