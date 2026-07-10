@@ -1,0 +1,28 @@
+/* Container styling */
+.permissions-container {
+  max-width: 800px;
+  margin: auto;
+}
+
+/* Table styling */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 15px;
+}
+
+table, th, td {
+  border: 1px solid #ccc;
+}
+
+th, td {
+  text-align: center;
+  padding: 8px;
+}
+
+button {
+  margin-top: 10px;
+}
+label {
+  margin-right: 10px; /* adjust spacing as needed */
+}

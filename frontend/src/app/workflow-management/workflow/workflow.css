@@ -1,0 +1,321 @@
+.content {
+  margin-top: 4.063rem;
+  padding: 0 0.625rem;
+  background-color: #ffffff;
+  font-family: "Fira Sans", system-ui, sans-serif;
+}
+
+.content-search {
+  width: 100%;
+  padding: 0.375rem 0.625rem 0.375rem 1.25rem;
+  border: 1px solid #e1e0e3;
+  border-radius: 10px 10px 0 0;
+  display: flex;
+  gap: 0.625rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.btn {
+  padding: 0.625rem 1rem;
+  border-radius: 0.5rem;
+  display: flex;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  line-height: 100%;
+  align-items: center;
+  font-weight: 400;
+}
+
+.btn img {
+  height: 0.875rem;
+}
+
+.btn-action {
+  background-color: #ffa242 !important;
+  color: #ffffff !important;
+  border: 1.5px solid #ffffff;
+}
+
+.btn-filter {
+  background-color: #ffffff;
+  color: #797979;
+  border: 1.5px solid #e1e0e3;
+  margin-right: 1.375rem;
+}
+
+.search-wrapper {
+  height: 2.375rem;
+  border: 1px solid #e1e0e3;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  position: relative;
+  width: 100%;
+  max-width: 532px;
+  margin-left: auto;
+}
+
+.search-wrapper .search-icon {
+  position: absolute;
+  top: 50%;
+  left: 0.688rem;
+  transform: translateY(-50%);
+  color: #797979;
+}
+
+.search-wrapper .search {
+  border: none;
+  width: 100%;
+  height: 100%;
+  padding: 0.438rem 0.688rem 0.438rem 2rem;
+  outline: none;
+  font-size: 0.875rem;
+}
+
+.search-wrapper .search::placeholder {
+  color: #262e2b4d;
+}
+
+.workflow-list {
+  padding: 0.25rem;
+  border-top: 0;
+  border-radius: 0 0 10px 10px;
+  min-height: 78dvh;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  align-content: flex-start;
+  gap: 0.688rem;
+}
+
+.workflow-card {
+  border: 1px solid #e1e0e3;
+  border-radius: 0.625rem;
+  height: 10.563rem;
+  position: relative;
+  background: white;
+  display: flex;
+  flex-direction: column;
+}
+
+.workflow-card .details {
+  padding: 0.938rem;
+  flex-wrap: wrap;
+  display: flex;
+  row-gap: 0.875rem;
+  column-gap: 0.625rem;
+  align-items: center;
+  flex: 1;
+}
+
+.workflow-card .delete-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.workflow-card .workflow-timestamp {
+  border-top: 1px solid #e1e0e3;
+  padding: 0.688rem 0.938rem;
+  font-weight: 400;
+  font-size: 0.875rem;
+  line-height: 1.188rem;
+  color: #797979;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.workflow-card .workflow-icon {
+  width: 2.75rem;
+  aspect-ratio: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #725a691a;
+  border-radius: 0.5rem;
+  color: #725a69;
+}
+
+.workflow-card .workflow-icon img {
+  height: 1.3rem;
+}
+
+.workflow-card .workflow-title {
+  flex: 1;
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.125rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 7px;
+}
+
+.workflow-card .workflow-description {
+  flex-basis: 100%;
+  font-weight: 400;
+  font-size: 0.875rem;
+  line-height: 1.188rem;
+  color: #797979;
+  margin: 0;
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  display: -webkit-box;
+  max-height: calc(1.3em * 2);
+}
+
+.workflow-card .status {
+  position: absolute;
+  top: 0.625rem;
+  right: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+}
+
+.workflow-card .status span {
+  width: 0.625rem;
+  display: inline-block;
+  aspect-ratio: 1;
+  border-radius: 50%;
+}
+
+.workflow-card .status .dot {
+  height: 0.625rem;
+  background-color: #29b14b;
+}
+
+#import-workflow-modal .modal-dialog {
+  max-width: 600px;
+}
+
+#import-workflow-modal .modal-title {
+  line-height: 2rem;
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+#import-workflow-modal .btn-close {
+  font-size: 0.75rem;
+  color: #262e2b;
+}
+
+#import-workflow-modal .form-label {
+  font-size: 0.875rem;
+  line-height: 100%;
+  color: #262e2b;
+}
+
+#import-workflow-modal .form-control {
+  font-size: 0.875rem;
+  line-height: 1.5rem;
+}
+
+#import-workflow-modal .form-control::placeholder {
+  color: #262e2b;
+}
+
+@media screen and (max-width: 600px) {
+  .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .btn-filter {
+    margin: 0;
+  }
+}
+
+@media screen and (max-width: 400px) {
+  .workflow-list {
+    grid-template-columns: 1fr;
+  }
+
+  .workflow-card {
+    height: auto;
+  }
+}
+
+.no-data {
+  grid-column: 1 / -1;
+  text-align: center;
+}
+.spinner-border-sm {
+  width: 1rem !important;
+  height: 1rem !important;
+  border-width: 0.15em !important;
+}
+
+.col-md-11 {
+  flex: 0 0 91.666667%;
+  max-width: 91.666667%;
+}
+
+.accordion-button:not(.collapsed) {
+  background-color: transparent;
+  box-shadow: none;
+}
+
+.accordion-button:focus {
+  box-shadow: none;
+  border-color: rgba(0, 0, 0, 0.125);
+}
+
+.accordion-button::after {
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%236c757d'%3e%3cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3e%3c/svg%3e");
+  transition: transform 0.2s ease-in-out;
+}
+
+.accordion-button:not(.collapsed)::after {
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%236c757d'%3e%3cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3e%3c/svg%3e");
+  transform: rotate(180deg);
+}
+
+.collapsed-title-overlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(-90deg);
+  transform-origin: center center;
+  white-space: nowrap;
+  z-index: 0;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.horizontal-body-title {
+  font-weight: 600;
+  color: #333;
+  text-align: center;
+  padding: 10px;
+}
+
+.sidebarAgent.collapsed {
+  width: 60px;
+  transition: width 0.3s ease;
+  position: relative;
+}
+
+.sidebarAgent {
+  transition: width 0.3s ease;
+  position: relative;
+}
+
+.sidebarAgent.collapsed .card-body {
+  display: none;
+}
+
+.sidebarAgent .card-header {
+  min-height: 40px;
+  justify-content: flex-end;
+}
+
+.sidebarAgent .card {
+  position: relative;
+}

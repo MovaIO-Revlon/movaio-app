@@ -1,0 +1,926 @@
+/*PR management*/
+.card-PR {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  margin: 5px;
+  border: 1px solid #e1e5e9;
+  position: relative;
+}
+
+.header-PR {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.title-section {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.logo-PR {
+  width: 40px;
+  height: 40px;
+  background: #d9d9d9;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: bold;
+  font-size: 18px;
+}
+
+.logo-PR2 {
+  width: 70px;
+  height: 70px;
+  background: #d9d9d9;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: bold;
+  font-size: 18px;
+}
+
+.title-PR {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.fire-icon {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.description {
+  color: #6b7280;
+  font-size: 14px;
+  line-height: 1.4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.agents {
+  font-size: 14px;
+  color: #1a1a1a;
+  margin-bottom: 16px;
+}
+
+.agents-label {
+  font-weight: 600;
+}
+
+.usage-section {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 14px;
+}
+
+.usage-text {
+  color: #1a1a1a;
+}
+
+.usage-text:after {
+  content: '|';
+  color: #cacaca;
+}
+
+.rating {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.star {
+  color: #fbbf24;
+  font-size: 16px;
+}
+
+.rating-value {
+  color: #1a1a1a;
+  font-weight: 500;
+}
+
+.tags-PR {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.tag-PR {
+  background: #f3f4f6;
+  color: #6b7280;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.tag-PR:last-child {
+  background: #e5e7eb;
+  color: #4b5563;
+}
+
+/*sidebar*/
+.left-p1 {
+  padding: 0 36px;
+}
+
+.sidebar-PR {
+  position: absolute;
+  top: 70px;
+  left: 12px;
+  width: 60px;
+  height: 87vh;
+  overflow-y: auto;
+  transition: width 0.3s ease;
+  box-sizing: border-box;
+  z-index: 1;
+  border-radius: 10px;
+}
+
+.sidebar-PR:hover {
+  width: 200px;
+}
+
+.sidebar-PR ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.sidebar-PR li {
+  display: flex;
+  align-items: center;
+  padding: 12px 15px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.sidebar-PR li a {
+  color: #4f3144;
+  font-size: 16px;
+  display: flex;
+}
+
+.sidebar-PR li .icon {
+  font-size: 16px;
+  width: 30px;
+  min-width: 30px;
+  text-align: center;
+}
+
+.sidebar-PR li .text {
+  opacity: 0;
+  margin-left: 0px;
+  transition: opacity 0.3s ease;
+  overflow: hidden;
+  width: 0;
+
+}
+
+.sidebar-PR:hover li .text {
+  opacity: 1;
+  width: auto;
+}
+
+.sidebar-PR li:hover {
+  background-color: #f1eef0;
+}
+
+
+.title {
+  font-weight: 600;
+  font-size: 15px;
+  color: #1a1a1a;
+}
+
+.pos-sett {
+  position: absolute;
+  right: 4px;
+  top: 4px;
+}
+
+.icon-node {
+  width: 27px;
+  height: 27px;
+  background: #d5cad4;
+  border-radius: 8px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: #685e6a;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.text-agent {
+  text-align: center;
+  width: 100px;
+}
+
+.text-agent .name {
+  font-weight: 600;
+  color: #222;
+  margin-bottom: 4px;
+  line-height: 1.1;
+}
+
+.text-agent .role {
+  font-weight: 400;
+  font-size: 12px;
+  color: #6b6a70;
+  line-height: 1.1;
+}
+
+.settings-icon {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  fill: #b7b5bf;
+  top: 8px;
+  right: 8px;
+  cursor: pointer;
+}
+
+.settings-icon:hover {
+  fill: #565656;
+}
+
+/* node positions */
+#planning {
+  top: 20px;
+  left: calc(50% - 60px);
+  z-index: 3;
+}
+
+#nexora {
+  top: 120px;
+  left: 40px;
+}
+
+#quantaX {
+  top: 120px;
+  left: 180px;
+}
+
+#lumina {
+  top: 120px;
+  left: 320px;
+}
+
+#cognix {
+  top: 120px;
+  left: 460px;
+}
+
+
+
+.h-99 {
+  height: 58vmin;
+}
+
+.list-overflow {
+  overflow-y: auto;
+  height: 577px;
+}
+
+
+.btn-delete {
+  background-color: #fff;
+  border-color: gray;
+  color: gray;
+}
+
+.btn-edit {
+  background-color: #fff;
+  border-color: gray;
+  color: gray;
+}
+
+.btn-delete:hover {
+  background-color: #fff;
+  border-color: red;
+  color: red;
+}
+
+.btn-edit:hover {
+  background-color: #fff;
+  border-color: blue;
+  color: blue;
+}
+
+.scroll-section-master {
+  max-height: 200px;
+  /* Set heights as needed for each section */
+  overflow-y: auto;
+  overflow-x: hidden;
+  border: 1px solid #eee;
+  border-radius: 4px;
+  background: #fff;
+}
+
+.scroll-section-others {
+  max-height: 200px;
+  /* Set heights as needed for each section */
+  overflow-y: auto;
+  overflow-x: hidden;
+  border: 1px solid #eee;
+  border-radius: 4px;
+  background: #fff;
+  /* Optional: adjust padding etc. */
+}
+.PRsidebarAgent{
+  height: auto !important;
+}
+
+/* Make the left sidebar card stretch to the viewport height and let body scroll */
+.PRsidebarAgent.sidebarPR {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 120px);
+}
+.PRsidebarAgent.sidebarPR .card {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+.PRsidebarAgent.sidebarPR .card .card-body {
+  flex: 1 1 auto;
+  overflow: auto;
+}
+
+.box-shad{
+  box-shadow:none !important;
+}
+.accordion-button.box-shad:not(.collapsed)::after {
+  transform: rotate(0deg);
+}
+.accordion-button.box-shad::after {
+  transform: rotate(-90deg);
+  
+}
+/* Remove blue text when accordion is open */
+.accordion-button.box-shad {
+  color: inherit !important;       /* Keep normal text color */
+  background-color: transparent !important;
+  box-shadow: none !important;
+  z-index: 0;
+}
+
+/* Prevent any color change when active/open */
+.accordion-button.box-shad:not(.collapsed) {
+  color: inherit !important;
+  background-color: transparent !important;
+}
+
+.btn-orange {
+  background-color: #ffb944;
+  color: white;
+  border: none;
+}
+
+.btn-orange:hover {
+  background-color: #e8a832;
+  color: white;
+}
+
+.accordion-button {
+  font-size: 15px;
+  box-shadow: none !important;
+  transition: background-color 0.3s ease;
+}
+
+.accordion-button:not(.collapsed) {
+  background-color: white !important;
+  color: inherit;
+}
+
+.accord-header:not(.collapsed) {
+  background-color: #f8f9fa !important;
+  color: inherit;
+}
+
+.accordion-item {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px !important;
+  overflow: hidden;
+}
+
+.accordion-body {
+  background: #f8f9fa;
+}
+.accordion-body-prompt{
+  background: white;
+  transition: all 0.3s ease;
+}
+
+.badge.bg-warning {
+  background-color: #fff3cd !important;
+  color: #856404;
+  font-weight: 600;
+}
+
+.btn-outline-color{
+  border-color: #ffb944;
+  color: #ffb944;
+}
+.btn-outline-color:hover {
+  background-color: #aea9b0;
+}
+
+.accordion-button:focus {
+  box-shadow: none !important;
+}
+
+.metric-item {
+  white-space: nowrap;
+  font-size: 0.85rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background-color: rgba(0, 0, 0, 0.03);
+  transition: all 0.2s ease;
+}
+
+.metric-item:hover {
+  background-color: rgba(0, 0, 0, 0.08);
+}
+
+/* Make it responsive */
+@media (max-width: 992px) {
+  .metric-item {
+    font-size: 0.8rem;
+    padding: 1px 5px;
+  }
+}
+
+.accordion-collapse {
+  transition: all 0.3s ease;
+}
+
+.truncate-2-lines {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 10px;
+}
+
+/* Prompt + Metrics Side-by-Side - 3 per row */
+.prompt-metrics-container {
+    display: flex;
+    gap: 5px;
+    margin-bottom: 7px;
+}
+
+.prompt-section {
+    flex: 1;
+    min-width: 40%;
+}
+
+.prompt-box {
+  min-height: 85px;
+  max-height: 180px;
+  overflow-y: auto;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  border: 1px solid #e0e0e0;
+}
+
+.metrics-section {
+    flex: 1;
+    padding: 16px;
+    min-width: 516px;
+    height: 174px;
+    
+}
+
+.scores-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);  
+  height: 70px;
+}
+
+.score-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  background: white;
+  padding: 6px 10px;
+}
+
+.score-label {
+  flex: 1;
+}
+
+.score-value {
+  font-weight: 700;
+  color: #212529;
+  min-width: 45px;
+  text-align: right;
+}
+
+.latency-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: 12px;
+  margin-top: 15px;
+  font-size: 0.95rem;
+  padding-left: 69%;
+}
+
+.latency-label {
+  font-weight: 500;
+  color: #28a745;
+}
+
+
+/* Responsive */
+@media (max-width: 992px) {
+  .prompt-metrics-container {
+    flex-direction: column;
+  }
+  .metrics-section {
+    min-width: auto;
+  }
+  .scores-grid {
+    grid-template-columns: repeat(2, 1fr);   /* 2 per row on smaller screens */
+  }
+}
+
+.card-PR-refresh {
+  position: absolute;
+  right: 15px;
+  z-index: 10;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  background: transparent;
+  color: #6c757d;      
+  border: 1px solid #a7abad; 
+  background-color: #f8f9fa;
+  transition: all 0.2s ease;
+  line-height: 1;
+}
+
+.card-PR-refresh:hover {
+  color: #9aa1a7;      
+  border: 1px solid #c5d1d6; 
+  background-color: #f8f9fa;
+}
+
+.card-PR-refresh:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.card-PR-refresh:disabled:hover {
+  background-color: transparent;
+  border-color: transparent;
+  color: #6b7280;
+}
+
+/* Agent Query Count Badge */
+.fs-11 {
+  font-size: 11px !important;
+}
+
+.badge.bg-secondary.bg-opacity-10 {
+  background-color: rgba(108, 117, 125, 0.1) !important;
+  color: #6c757d !important;
+  border: 1px solid rgba(108, 117, 125, 0.2);
+  border-radius: 12px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+.config-info-btn.text-secondary:hover:not(:disabled) {
+  background-color: rgba(108, 117, 125, 0.1);
+}
+
+.agent-config-popup {
+  position: fixed !important;
+  z-index: 1070 !important;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+  width: 420px;
+  max-height: 520px;
+  overflow-y: auto;
+  border: 1px solid #ddd;
+  pointer-events: auto;
+  animation: configPopupFadeIn 0.15s ease-out;
+}
+
+@keyframes configPopupFadeIn {
+  from { 
+    opacity: 0; 
+    transform: translateY(5px); 
+  }
+  to { 
+    opacity: 1; 
+    transform: translateY(0); 
+  }
+}
+
+/* Make trigger button container have proper stacking context */
+.agent-config-container {
+  position: relative;
+  display: inline-flex;
+  z-index: 10;
+}
+
+/* Ensure trigger button doesn't cause layout shifts */
+.config-info-btn {
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s ease;
+  position: relative;
+  z-index: 11;
+}
+
+.config-info-btn:hover:not(:disabled) {
+  background-color: rgba(111, 113, 116, 0.1);
+}
+
+.config-info-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+/* Prevent accordion header from interfering with popup */
+.accordion-header {
+  position: relative;
+  z-index: 1;
+}
+
+.accordion-header:hover {
+  z-index: 2;
+}
+
+/* When popup is visible, ensure trigger stays above other elements */
+.agent-config-container:has(.agent-config-popup) {
+  z-index: 100;
+}
+
+.config-detail-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 11px 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.config-detail-row:hover {
+  background-color: #f8fafc;
+  border-radius: 6px;
+  margin: 0 -8px;
+  padding: 11px 8px;
+}
+
+.config-detail-label {
+  font-size: 11px !important;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: #64748b;
+}
+
+.config-detail-value.text-truncate {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  cursor: help;
+}
+
+.config-detail-value.text-truncate:hover {
+  white-space: pre-wrap;
+  word-break: break-word;
+  background-color: #f8f9fa;
+  padding: 8px 12px;
+  border-radius: 6px;
+  max-height: 220px;
+  overflow-y: auto;
+  line-height: 1.6;
+  border: 1px solid #eef0f2;
+  -webkit-line-clamp: unset;
+
+}
+
+.config-detail-value.text-truncate:hover::-webkit-scrollbar {
+  width: 4px;
+}
+
+.config-detail-value.text-truncate:hover::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.config-detail-value.text-truncate:hover::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 4px;
+}
+
+.config-detail-value.text-truncate:hover::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+}
+
+.config-store-item .config-detail-label {
+  font-size: 10.5px;
+  color: #64748b;
+}
+
+.config-store-id {
+  font-family: monospace;
+  font-size: 12px;
+  color: #64748b;
+  word-break: break-all;
+  display: block;
+  margin-top: 4px;
+}
+
+/* Tools Footer */
+.agent-config-popup .mt-2.pt-2.border-top {
+  border-top: 1px solid #e2e8f0 !important;
+  padding-top: 12px !important;
+  margin-top: 8px;
+}
+
+/* Close Button Enhancement */
+.agent-config-popup button.btn-sm {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+.agent-config-popup button.btn-sm:hover {
+  background-color: #fee2e2;
+  color: #ef4444;
+}
+
+/* Icon in Header */
+.agent-config-popup i.fa-gear {
+  color: #3b82f6;
+}
+
+/* Better spacing for long content */
+.config-detail-value {
+  font-weight: 600;
+}
+
+.config-detail-value.text-truncate {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: help;
+}
+
+/* Scrollbar Styling for Popup */
+.agent-config-popup::-webkit-scrollbar,
+.config-details-list::-webkit-scrollbar {
+  width: 5px;
+}
+
+.agent-config-popup::-webkit-scrollbar-track,
+.config-details-list::-webkit-scrollbar-track {
+  background: #f8f9fa;
+  border-radius: 4px;
+}
+
+.agent-config-popup::-webkit-scrollbar-thumb,
+.config-details-list::-webkit-scrollbar-thumb {
+  background: #dee2e6;
+  border-radius: 4px;
+}
+
+.agent-config-popup::-webkit-scrollbar-thumb:hover,
+.config-details-list::-webkit-scrollbar-thumb:hover {
+  background: #adb5bd;
+}
+
+
+/* Knowledge Store nested item styling */
+.config-store-item {
+  padding-left: 12px;
+  margin-top: 4px;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+  padding: 6px 8px;
+}
+
+.agent-info-popup {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border-radius: 8px;
+  animation: fadeIn 0.2s ease-in-out;
+  
+  &::before {
+    content: '';
+    position: absolute;
+    top: -6px;
+    left: 15px;
+    width: 12px;
+    height: 12px;
+    background: white;
+    border-left: 1px solid #dee2e6;
+    border-top: 1px solid #dee2e6;
+    transform: rotate(45deg);
+  }
+}
+
+.config-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.config-item {
+  display: flex;
+  flex-direction: column;
+  padding: 6px 8px;
+  background: #f8f9fa;
+  border-radius: 6px;
+  
+  .config-label {
+    font-size: 11px;
+    color: #6c757d;
+    text-transform: uppercase;
+    font-weight: 600;
+    margin-bottom: 2px;
+  }
+  
+  .config-value {
+    font-size: 13px;
+    color: #212529;
+    font-weight: 500;
+    word-break: break-all;
+  }
+}
+
+.system-prompt-box {
+  font-family: 'Segoe UI', monospace;
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.5;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.agent-info-popup::-webkit-scrollbar,
+.system-prompt-box::-webkit-scrollbar {
+  width: 4px;
+}
+
+.agent-info-popup::-webkit-scrollbar-track,
+.system-prompt-box::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.agent-info-popup::-webkit-scrollbar-thumb,
+.system-prompt-box::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+.agent-info-popup::-webkit-scrollbar-thumb:hover,
+.system-prompt-box::-webkit-scrollbar-thumb:hover {
+  background: #a1a1a1;
+}

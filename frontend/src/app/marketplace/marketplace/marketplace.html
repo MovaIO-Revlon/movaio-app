@@ -1,0 +1,80 @@
+<app-header></app-header>
+<div class="d-flex h-100">
+  <div class="position-relative left-p1">
+    <div class="sidebar-agency bg-white border-end ">
+      <ul>
+        <li routerLink="/marketplace/agentmanagement" routerLinkActive="active-left "
+          [routerLinkActiveOptions]="{ exact: true }">
+          <a class="text-decoration-none" href="javascript:void(0)">
+            <img src="assets/img/Agent_Management.png" class="rounded-2 w-11 me-2" alt="agent_management" />
+            <span class="fs-12 fw-semibold text"> Agent Management </span>
+          </a>
+        </li>
+        <li routerLink="/marketplace/agencymanagement" routerLinkActive="active-left"
+          [routerLinkActiveOptions]="{ exact: true }">
+          <a class="text-decoration-none" href="javascript:void(0)">
+            <i class="fa-solid" aria-hidden="true"></i>
+            <img src="assets/img/Agency_Management.png" class="rounded-2 w-11 me-2" alt="agency_management" />
+            <span class=" fs-12 fw-semibold text">Agency Management</span>
+          </a>
+        </li>
+        <li routerLink="/marketplace/knowledgestore" routerLinkActive="active-left"
+          [routerLinkActiveOptions]="{ exact: true }">
+          <a class="text-decoration-none" href="javascript:void(0)">
+            <i class="fa-solid" aria-hidden="true"></i>
+            <img src="assets/img/Knowledge_Store.png" class="rounded-2 w-11 me-2" alt="knowledge_store"/>
+            <span class=" fs-12 fw-semibold text"> Knowledge Store</span>
+          </a>
+        </li>
+        <li routerLink="/marketplace/workflows" routerLinkActive="active-left" [routerLinkActiveOptions]="{ exact: true }"> 
+		<!-- <li> -->
+          <a class="text-decoration-none" href="javascript:void(0)">
+            <i class="fa-solid" aria-hidden="true"></i>
+            <img src="assets/img/workflow.svg" class="rounded-2 w-11 me-2" alt="workflow"/>
+            <span class=" fs-12 fw-semibold text"> Workflow</span>
+          </a>
+        </li>
+        <li routerLink="/marketplace/mcpconnectors" routerLinkActive="active-left" [routerLinkActiveOptions]="{ exact: true }">
+          <a class="text-decoration-none">
+            <i class="fa-solid" aria-hidden="true"></i>
+            <img src="assets/img/MCP_Server.png" class="rounded-2 w-11 me-2" alt="mcp_server"/>
+            <span class=" fs-12 fw-semibold text"> MCP Connectors </span>
+          </a>
+        </li>
+        <li routerLink="/marketplace/automationlibrary" routerLinkActive="active-left" [routerLinkActiveOptions]="{ exact: true }">
+          <a class="text-decoration-none">
+            <i class="fa-solid" aria-hidden="true"></i>
+            <img src="assets/img/automation-library.png" class="rounded-2 w-11 me-2" alt="automation_library"/>
+            <span class=" fs-12 fw-semibold text"> Automation Library </span>
+          </a>
+        </li>
+        <li>
+          <a class="text-decoration-none disabled">
+            <i class="fa-solid" aria-hidden="true"></i>
+            <img src="assets/img/AI_Foundation.png" class="rounded-2 w-11 me-2" alt="AI Foundation" />
+            <span class=" fs-12 fw-semibold text">AI Foundation </span>
+          </a>
+        </li>
+        <li>
+          <a class="text-decoration-none disabled">
+            <i class="fa-solid" aria-hidden="true"></i>
+            <img src="assets/img/Model_Store.png" class="rounded-2 w-11 me-2" alt="Model Store" />
+            <span class=" fs-12 fw-semibold text"> Model Store </span>
+          </a>
+        </li>
+        <li routerLink="/marketplace/promptrepository" routerLinkActive="active-left "
+          [routerLinkActiveOptions]="{ exact: true }">
+          <a class="text-decoration-none" href="javascript:void(0)">
+            <i class="fa-solid" aria-hidden="true"></i>
+            <img src="assets/img/Prompt_Repository.png" class="rounded-2 w-11 me-2" alt="Prompt Repository" />
+            <span class=" fs-12 fw-semibold text"> Prompt Repository </span>
+          </a>
+        </li>
+
+      </ul>
+    </div>
+  </div>
+  <div class="flex-grow-1 overflow-auto">
+    <router-outlet></router-outlet>
+  </div>
+</div>

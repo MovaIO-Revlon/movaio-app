@@ -1,0 +1,288 @@
+INFO:werkzeug:[31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://10.0.17.198:5000
+INFO:werkzeug:[33mPress CTRL+C to quit[0m
+INFO:werkzeug: * Restarting with stat
+WARNING:werkzeug: * Debugger is active!
+INFO:werkzeug: * Debugger PIN: 807-859-077
+INFO:werkzeug:127.0.0.1 - - [08/Jul/2025 14:49:05] "POST /api/GetReCaptchaConfig HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [08/Jul/2025 14:49:33] "[33mPOST /GetReCaptchaConfig HTTP/1.1[0m" 404 -
+INFO:werkzeug:127.0.0.1 - - [08/Jul/2025 14:49:44] "[33mPOST /GetReCaptchaConfig HTTP/1.1[0m" 404 -
+INFO:werkzeug:127.0.0.1 - - [08/Jul/2025 14:50:09] "[33mPOST /DoLogin HTTP/1.1[0m" 404 -
+INFO:werkzeug:127.0.0.1 - - [08/Jul/2025 14:50:20] "[33mPOST /DoLogin HTTP/1.1[0m" 404 -
+INFO:werkzeug:127.0.0.1 - - [08/Jul/2025 14:50:27] "[33mPOST /GetReCaptchaConfig HTTP/1.1[0m" 404 -
+INFO:werkzeug:127.0.0.1 - - [08/Jul/2025 14:50:41] "[33mPOST /DoLogin HTTP/1.1[0m" 404 -
+INFO:werkzeug:127.0.0.1 - - [08/Jul/2025 14:51:05] "[33mPOST /api/doLogin HTTP/1.1[0m" 404 -
+INFO:werkzeug: * Detected change in 'C:\\Application\\AI-Infused_QE\\Backend\\wwwroot\\pythonapp\\app.py', reloading
+INFO:werkzeug: * Restarting with stat
+WARNING:werkzeug: * Debugger is active!
+INFO:werkzeug: * Debugger PIN: 807-859-077
+INFO:werkzeug:127.0.0.1 - - [08/Jul/2025 14:53:05] "[33mPOST /GetReCaptchaConfig HTTP/1.1[0m" 404 -
+INFO:werkzeug:127.0.0.1 - - [08/Jul/2025 14:53:08] "[33mPOST /GetReCaptchaConfig HTTP/1.1[0m" 404 -
+INFO:werkzeug:127.0.0.1 - - [08/Jul/2025 14:53:16] "POST /DoLogin HTTP/1.1" 200 -
+ERROR:root:Error in DoLogin: 
+Traceback (most recent call last):
+  File "C:\Application\AI-Infused_QE\Backend\wwwroot\pythonapp\app.py", line 101, in do_login
+    user_data["_id"] = str(user_data["_id"])
+                           ~~~~~~~~~^^^^^^^
+TypeError: 'NoneType' object is not subscriptable
+INFO:werkzeug:127.0.0.1 - - [08/Jul/2025 14:53:16] "POST /DoLogin HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [08/Jul/2025 14:53:30] "POST /DoLogin HTTP/1.1" 200 -
+INFO:werkzeug: * Detected change in 'C:\\Application\\AI-Infused_QE\\Backend\\wwwroot\\pythonapp\\app.py', reloading
+INFO:werkzeug: * Restarting with stat
+WARNING:werkzeug: * Debugger is active!
+INFO:werkzeug: * Debugger PIN: 807-859-077
+INFO:werkzeug:127.0.0.1 - - [08/Jul/2025 14:55:11] "POST /GetReCaptchaConfig HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [08/Jul/2025 14:55:27] "POST /GetReCaptchaConfig HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [08/Jul/2025 14:56:25] "POST /GetReCaptchaConfig HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [08/Jul/2025 14:56:33] "POST /DoLogin HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [08/Jul/2025 14:56:44] "POST /DoLogin HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [08/Jul/2025 14:57:07] "POST /DoLogin HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [08/Jul/2025 14:58:16] "POST /DoLogin HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [08/Jul/2025 14:58:30] "POST /DoLogin HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [08/Jul/2025 14:58:39] "POST /DoLogin HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [08/Jul/2025 14:58:42] "POST /DoLogin HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [08/Jul/2025 14:58:44] "POST /GetReCaptchaConfig HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [08/Jul/2025 14:58:53] "POST /DoLogin HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [08/Jul/2025 14:58:59] "POST /DoLogin HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [08/Jul/2025 15:00:03] "POST /DoLogin HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [08/Jul/2025 15:00:07] "POST /SendRecoveryMail/mohamed.luthufullah@movate.com HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [08/Jul/2025 15:00:38] "POST /DoLogin HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [08/Jul/2025 15:00:39] "POST /GetUserDetails HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [08/Jul/2025 15:01:24] "POST /GetReCaptchaConfig HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [08/Jul/2025 15:01:30] "POST /DoLogin HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [08/Jul/2025 15:01:31] "POST /GetUserDetails HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [08/Jul/2025 15:02:55] "POST /AddUser HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [08/Jul/2025 15:02:55] "POST /GetUserDetails HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [08/Jul/2025 15:03:48] "POST /GetReCaptchaConfig HTTP/1.1" 200 -
+ERROR:root:Error in DoLogin: 
+Traceback (most recent call last):
+  File "C:\Application\AI-Infused_QE\Backend\wwwroot\pythonapp\app.py", line 101, in do_login
+    user_data["_id"] = str(user_data["_id"])
+                           ~~~~~~~~~^^^^^^^
+TypeError: 'NoneType' object is not subscriptable
+INFO:werkzeug:127.0.0.1 - - [08/Jul/2025 15:03:59] "POST /DoLogin HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [08/Jul/2025 15:04:07] "POST /GetReCaptchaConfig HTTP/1.1" 200 -
+ERROR:root:Error in DoLogin: 
+Traceback (most recent call last):
+  File "C:\Application\AI-Infused_QE\Backend\wwwroot\pythonapp\app.py", line 101, in do_login
+    user_data["_id"] = str(user_data["_id"])
+                           ~~~~~~~~~^^^^^^^
+TypeError: 'NoneType' object is not subscriptable
+INFO:werkzeug:127.0.0.1 - - [08/Jul/2025 15:04:38] "POST /DoLogin HTTP/1.1" 200 -
+ERROR:root:Error in DoLogin: 
+Traceback (most recent call last):
+  File "C:\Application\AI-Infused_QE\Backend\wwwroot\pythonapp\app.py", line 101, in do_login
+    user_data["_id"] = str(user_data["_id"])
+                           ~~~~~~~~~^^^^^^^
+TypeError: 'NoneType' object is not subscriptable
+INFO:werkzeug:127.0.0.1 - - [08/Jul/2025 15:04:46] "POST /DoLogin HTTP/1.1" 200 -
+ERROR:root:Error in DoLogin: 
+Traceback (most recent call last):
+  File "C:\Application\AI-Infused_QE\Backend\wwwroot\pythonapp\app.py", line 101, in do_login
+    user_data["_id"] = str(user_data["_id"])
+                           ~~~~~~~~~^^^^^^^
+TypeError: 'NoneType' object is not subscriptable
+INFO:werkzeug:127.0.0.1 - - [08/Jul/2025 15:05:01] "POST /DoLogin HTTP/1.1" 200 -
+ERROR:root:Error in DoLogin: 
+Traceback (most recent call last):
+  File "C:\Application\AI-Infused_QE\Backend\wwwroot\pythonapp\app.py", line 101, in do_login
+    user_data["_id"] = str(user_data["_id"])
+                           ~~~~~~~~~^^^^^^^
+TypeError: 'NoneType' object is not subscriptable
+INFO:werkzeug:127.0.0.1 - - [08/Jul/2025 15:05:16] "POST /DoLogin HTTP/1.1" 200 -
+ERROR:root:Error in DoLogin: 
+Traceback (most recent call last):
+  File "C:\Application\AI-Infused_QE\Backend\wwwroot\pythonapp\app.py", line 101, in do_login
+    user_data["_id"] = str(user_data["_id"])
+                           ~~~~~~~~~^^^^^^^
+TypeError: 'NoneType' object is not subscriptable
+INFO:werkzeug:127.0.0.1 - - [08/Jul/2025 15:05:19] "POST /DoLogin HTTP/1.1" 200 -
+ERROR:root:Error in DoLogin: 
+Traceback (most recent call last):
+  File "C:\Application\AI-Infused_QE\Backend\wwwroot\pythonapp\app.py", line 101, in do_login
+    user_data["_id"] = str(user_data["_id"])
+                           ~~~~~~~~~^^^^^^^
+TypeError: 'NoneType' object is not subscriptable
+INFO:werkzeug:127.0.0.1 - - [08/Jul/2025 15:06:01] "POST /DoLogin HTTP/1.1" 200 -
+ERROR:root:Error in DoLogin: 
+Traceback (most recent call last):
+  File "C:\Application\AI-Infused_QE\Backend\wwwroot\pythonapp\app.py", line 101, in do_login
+    user_data["_id"] = str(user_data["_id"])
+                           ~~~~~~~~~^^^^^^^
+TypeError: 'NoneType' object is not subscriptable
+INFO:werkzeug:127.0.0.1 - - [08/Jul/2025 15:06:03] "POST /DoLogin HTTP/1.1" 200 -
+ERROR:root:Error in DoLogin: 
+Traceback (most recent call last):
+  File "C:\Application\AI-Infused_QE\Backend\wwwroot\pythonapp\app.py", line 101, in do_login
+    user_data["_id"] = str(user_data["_id"])
+                           ~~~~~~~~~^^^^^^^
+TypeError: 'NoneType' object is not subscriptable
+INFO:werkzeug:127.0.0.1 - - [08/Jul/2025 15:06:05] "POST /DoLogin HTTP/1.1" 200 -
+ERROR:root:Error in DoLogin: 
+Traceback (most recent call last):
+  File "C:\Application\AI-Infused_QE\Backend\wwwroot\pythonapp\app.py", line 101, in do_login
+    user_data["_id"] = str(user_data["_id"])
+                           ~~~~~~~~~^^^^^^^
+TypeError: 'NoneType' object is not subscriptable
+INFO:werkzeug:127.0.0.1 - - [08/Jul/2025 15:06:07] "POST /DoLogin HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [08/Jul/2025 15:06:14] "POST /GetReCaptchaConfig HTTP/1.1" 200 -
+ERROR:root:Error in DoLogin: 
+Traceback (most recent call last):
+  File "C:\Application\AI-Infused_QE\Backend\wwwroot\pythonapp\app.py", line 101, in do_login
+    user_data["_id"] = str(user_data["_id"])
+                           ~~~~~~~~~^^^^^^^
+TypeError: 'NoneType' object is not subscriptable
+INFO:werkzeug:127.0.0.1 - - [08/Jul/2025 15:06:44] "POST /DoLogin HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [08/Jul/2025 15:07:03] "POST /SendRecoveryMail/Gobu.Durairasu@movate.com HTTP/1.1" 200 -
+ERROR:root:Error in DoLogin: 
+Traceback (most recent call last):
+  File "C:\Application\AI-Infused_QE\Backend\wwwroot\pythonapp\app.py", line 101, in do_login
+    user_data["_id"] = str(user_data["_id"])
+                           ~~~~~~~~~^^^^^^^
+TypeError: 'NoneType' object is not subscriptable
+INFO:werkzeug:127.0.0.1 - - [08/Jul/2025 15:07:26] "POST /DoLogin HTTP/1.1" 200 -
+INFO:werkzeug:[31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://10.0.17.198:5000
+INFO:werkzeug:[33mPress CTRL+C to quit[0m
+INFO:werkzeug: * Restarting with stat
+WARNING:werkzeug: * Debugger is active!
+INFO:werkzeug: * Debugger PIN: 807-859-077
+ERROR:root:Error in DoLogin: 
+Traceback (most recent call last):
+  File "C:\Application\AI-Infused_QE\Backend\wwwroot\pythonapp\app.py", line 101, in do_login
+    user_data["_id"] = str(user_data["_id"])
+                           ~~~~~~~~~^^^^^^^
+TypeError: 'NoneType' object is not subscriptable
+INFO:werkzeug:127.0.0.1 - - [08/Jul/2025 15:08:55] "POST /DoLogin HTTP/1.1" 200 -
+ERROR:root:Error in DoLogin: 
+Traceback (most recent call last):
+  File "C:\Application\AI-Infused_QE\Backend\wwwroot\pythonapp\app.py", line 101, in do_login
+    user_data["_id"] = str(user_data["_id"])
+                           ~~~~~~~~~^^^^^^^
+TypeError: 'NoneType' object is not subscriptable
+INFO:werkzeug:127.0.0.1 - - [08/Jul/2025 15:08:57] "POST /DoLogin HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [08/Jul/2025 15:09:03] "POST /GetReCaptchaConfig HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [08/Jul/2025 15:09:16] "POST /DoLogin HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [08/Jul/2025 15:09:17] "POST /GetUserDetails HTTP/1.1" 200 -
+ERROR:root:Error in DoLogin: 
+Traceback (most recent call last):
+  File "C:\Application\AI-Infused_QE\Backend\wwwroot\pythonapp\app.py", line 101, in do_login
+    user_data["_id"] = str(user_data["_id"])
+                           ~~~~~~~~~^^^^^^^
+TypeError: 'NoneType' object is not subscriptable
+INFO:werkzeug:127.0.0.1 - - [08/Jul/2025 15:09:35] "POST /DoLogin HTTP/1.1" 200 -
+ERROR:root:Error in DoLogin: 
+Traceback (most recent call last):
+  File "C:\Application\AI-Infused_QE\Backend\wwwroot\pythonapp\app.py", line 101, in do_login
+    user_data["_id"] = str(user_data["_id"])
+                           ~~~~~~~~~^^^^^^^
+TypeError: 'NoneType' object is not subscriptable
+INFO:werkzeug:127.0.0.1 - - [08/Jul/2025 15:09:56] "POST /DoLogin HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [08/Jul/2025 15:10:11] "POST /GetReCaptchaConfig HTTP/1.1" 200 -
+ERROR:root:Error in DoLogin: 
+Traceback (most recent call last):
+  File "C:\Application\AI-Infused_QE\Backend\wwwroot\pythonapp\app.py", line 101, in do_login
+    user_data["_id"] = str(user_data["_id"])
+                           ~~~~~~~~~^^^^^^^
+TypeError: 'NoneType' object is not subscriptable
+INFO:werkzeug:127.0.0.1 - - [08/Jul/2025 15:10:14] "POST /DoLogin HTTP/1.1" 200 -
+ERROR:root:Error in DoLogin: 
+Traceback (most recent call last):
+  File "C:\Application\AI-Infused_QE\Backend\wwwroot\pythonapp\app.py", line 101, in do_login
+    user_data["_id"] = str(user_data["_id"])
+                           ~~~~~~~~~^^^^^^^
+TypeError: 'NoneType' object is not subscriptable
+INFO:werkzeug:127.0.0.1 - - [08/Jul/2025 15:10:15] "POST /DoLogin HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [08/Jul/2025 15:10:16] "POST /DoLogin HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [08/Jul/2025 15:10:18] "POST /DoLogin HTTP/1.1" 200 -
+ERROR:root:Error in DoLogin: 
+Traceback (most recent call last):
+  File "C:\Application\AI-Infused_QE\Backend\wwwroot\pythonapp\app.py", line 101, in do_login
+    user_data["_id"] = str(user_data["_id"])
+                           ~~~~~~~~~^^^^^^^
+TypeError: 'NoneType' object is not subscriptable
+INFO:werkzeug:127.0.0.1 - - [08/Jul/2025 15:10:27] "POST /DoLogin HTTP/1.1" 200 -
+ERROR:root:Error in DoLogin: 
+Traceback (most recent call last):
+  File "C:\Application\AI-Infused_QE\Backend\wwwroot\pythonapp\app.py", line 101, in do_login
+    user_data["_id"] = str(user_data["_id"])
+                           ~~~~~~~~~^^^^^^^
+TypeError: 'NoneType' object is not subscriptable
+INFO:werkzeug:127.0.0.1 - - [08/Jul/2025 15:10:28] "POST /DoLogin HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [08/Jul/2025 15:12:11] "POST /DoLogin HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [08/Jul/2025 15:12:12] "POST /GetUserDetails HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [08/Jul/2025 15:12:19] "POST /DoLogin HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [08/Jul/2025 15:12:30] "POST /DoLogin HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [08/Jul/2025 15:12:30] "POST /GetUserDetails HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [08/Jul/2025 15:14:14] "POST /AddUser HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [08/Jul/2025 15:14:14] "POST /GetUserDetails HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [08/Jul/2025 15:14:23] "POST /GetReCaptchaConfig HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [08/Jul/2025 15:14:27] "POST /GetReCaptchaConfig HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [08/Jul/2025 15:14:30] "POST /GetReCaptchaConfig HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [08/Jul/2025 15:14:32] "POST /GetReCaptchaConfig HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [08/Jul/2025 15:14:48] "POST /GetReCaptchaConfig HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [08/Jul/2025 15:15:09] "POST /GetReCaptchaConfig HTTP/1.1" 200 -
+ERROR:root:Error in DoLogin: 
+Traceback (most recent call last):
+  File "C:\Application\AI-Infused_QE\Backend\wwwroot\pythonapp\app.py", line 101, in do_login
+    user_data["_id"] = str(user_data["_id"])
+                           ~~~~~~~~~^^^^^^^
+TypeError: 'NoneType' object is not subscriptable
+INFO:werkzeug:127.0.0.1 - - [08/Jul/2025 15:15:13] "POST /DoLogin HTTP/1.1" 200 -
+ERROR:root:Error in DoLogin: 
+Traceback (most recent call last):
+  File "C:\Application\AI-Infused_QE\Backend\wwwroot\pythonapp\app.py", line 101, in do_login
+    user_data["_id"] = str(user_data["_id"])
+                           ~~~~~~~~~^^^^^^^
+TypeError: 'NoneType' object is not subscriptable
+INFO:werkzeug:127.0.0.1 - - [08/Jul/2025 15:15:15] "POST /DoLogin HTTP/1.1" 200 -
+ERROR:root:Error in DoLogin: 
+Traceback (most recent call last):
+  File "C:\Application\AI-Infused_QE\Backend\wwwroot\pythonapp\app.py", line 104, in do_login
+    roles = {r["RoleId"]: r["RoleName"] for r in role_collection.find({})}
+             ~^^^^^^^^^^
+KeyError: 'RoleId'
+INFO:werkzeug:127.0.0.1 - - [08/Jul/2025 15:15:19] "POST /DoLogin HTTP/1.1" 200 -
+ERROR:root:Error in DoLogin: 
+Traceback (most recent call last):
+  File "C:\Application\AI-Infused_QE\Backend\wwwroot\pythonapp\app.py", line 104, in do_login
+    roles = {r["RoleId"]: r["RoleName"] for r in role_collection.find({})}
+             ~^^^^^^^^^^
+KeyError: 'RoleId'
+INFO:werkzeug:127.0.0.1 - - [08/Jul/2025 15:15:21] "POST /DoLogin HTTP/1.1" 200 -
+ERROR:root:Error in DoLogin: 
+Traceback (most recent call last):
+  File "C:\Application\AI-Infused_QE\Backend\wwwroot\pythonapp\app.py", line 101, in do_login
+    user_data["_id"] = str(user_data["_id"])
+                           ~~~~~~~~~^^^^^^^
+TypeError: 'NoneType' object is not subscriptable
+INFO:werkzeug:127.0.0.1 - - [08/Jul/2025 15:15:27] "POST /DoLogin HTTP/1.1" 200 -
+ERROR:root:Error in DoLogin: 
+Traceback (most recent call last):
+  File "C:\Application\AI-Infused_QE\Backend\wwwroot\pythonapp\app.py", line 101, in do_login
+    user_data["_id"] = str(user_data["_id"])
+                           ~~~~~~~~~^^^^^^^
+TypeError: 'NoneType' object is not subscriptable
+INFO:werkzeug:127.0.0.1 - - [08/Jul/2025 15:15:29] "POST /DoLogin HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [08/Jul/2025 15:16:33] "POST /DoLogin HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [08/Jul/2025 15:16:33] "POST /GetUserDetails HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [08/Jul/2025 15:16:57] "POST /DoLogin HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [08/Jul/2025 15:16:58] "POST /GetUserDetails HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [08/Jul/2025 15:19:21] "POST /GetUserDetails HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [08/Jul/2025 15:19:42] "POST /GetUserDetails HTTP/1.1" 200 -
+INFO:werkzeug: * Detected change in 'C:\\Application\\AI-Infused_QE\\Backend\\wwwroot\\pythonapp\\app.py', reloading
+INFO:werkzeug: * Restarting with stat
+WARNING:werkzeug: * Debugger is active!
+INFO:werkzeug: * Debugger PIN: 807-859-077
+INFO:werkzeug: * Detected change in 'C:\\Application\\AI-Infused_QE\\Backend\\wwwroot\\pythonapp\\app.py', reloading
+INFO:werkzeug: * Restarting with stat
+WARNING:werkzeug: * Debugger is active!
+INFO:werkzeug: * Debugger PIN: 807-859-077
+INFO:werkzeug: * Detected change in 'C:\\Application\\AI-Infused_QE\\Backend\\wwwroot\\pythonapp\\app.py', reloading
+INFO:werkzeug: * Restarting with stat
+INFO:werkzeug: * Restarting with stat
+INFO:werkzeug: * Restarting with stat

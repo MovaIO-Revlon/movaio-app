@@ -1,0 +1,26 @@
+:host {
+  --position-y: bottom;
+}
+:host([popover-width="parent"]) div[popover] {
+  width: anchor-size(width);
+}
+
+div[popover] {
+  display: none;
+  position: absolute;
+  margin: 0;
+  left: anchor(left);
+  position-area: var(--position-y);
+  border: none;
+  background: transparent;
+}
+
+div[popover]:popover-open {
+  display: block;
+  background: transparent;
+}
+
+:host[popover-position="left"] div[popover] {
+  right: anchor(right);
+  left: auto;
+}

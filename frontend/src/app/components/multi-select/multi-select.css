@@ -1,0 +1,123 @@
+:host {
+  --label-border-radius: 8px;
+  --label-border-width: 1px;
+  --label-border-color: #e1e0e3;
+  --label-padding-x: 0.75rem;
+  --label-padding-y: 0.375rem;
+  --label-spacing: 0.5rem;
+  --label-font-size: inherit;
+  --min-height: 38px;
+
+  --width: 140px;
+  --options-max-height: 180px;
+  --options-max-width: fit-content;
+  --options-border-radius: 8px;
+
+  --option-padding-x: 15px;
+  --option-padding-y: 7px;
+  --option-gap: 0.5rem;
+  --option-font-size: 14px;
+  --option-line-height: 24px;
+
+  --checkbox-size: 1.125rem;
+  --checkbox-color: #ffa242;
+
+  --position-right: 0;
+  --position-left: 0;
+}
+
+.label {
+  width: var(--width);
+  border-radius: var(--label-border-radius);
+  border: var(--label-border-width) solid var(--label-border-color);
+  background-color: #fff;
+  min-height: var(--min-height);
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--label-spacing);
+
+  font-weight: 400;
+  font-size: var(--label-font-size);
+  vertical-align: middle;
+
+  padding: var(--label-padding-y) var(--label-padding-x);
+}
+
+.label[aria-expanded="true"] > .icon {
+  transform: rotate(90deg);
+}
+
+.options label {
+  display: flex;
+  align-items: center;
+  padding: var(--option-padding-y) var(--option-padding-x);
+  gap: var(--option-gap);
+
+  font-family: "Fira Sans", system-ui, sans-serif;
+  font-weight: 400;
+  font-style: Regular;
+  font-size: var(--option-font-size);
+  line-height: var(--option-line-height);
+  letter-spacing: 0px;
+  vertical-align: middle;
+}
+
+.options {
+  max-height: var(--options-max-height);
+  max-width: var(--options-max-width);
+  overflow: auto;
+  background: white;
+  border: var(--bs-border-width) solid var(--bs-border-color);
+  border-radius: var(--options-border-radius);
+  scrollbar-gutter: thin;
+  width: 100%;
+  margin-top: 0.1rem;
+}
+
+:host > [popover][popover-width="parent"] .options {
+  margin-top: 0;
+  border-top: none;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+:host > [popover][popover-width="parent"] .label[aria-expanded="true"] {
+  border-bottom: none;
+  border-bottom-right-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+.options label input[type="checkbox"] {
+  box-shadow: none;
+  height: var(--checkbox-size);
+  width: var(--checkbox-size);
+  margin: 0;
+}
+
+.options label input[type="checkbox"]:checked {
+  background-color: var(--checkbox-color);
+  border-color: var(--checkbox-color);
+  box-shadow: none;
+}
+
+.label[disabled="true"] * {
+  transform: none !important;
+  user-select: none;
+}
+
+.options label:first-child {
+  margin-top: 0.5rem;
+}
+
+.options label:last-child {
+  margin-bottom: 0.5rem;
+}
+
+.label-text {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

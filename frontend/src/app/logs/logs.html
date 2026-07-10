@@ -1,0 +1,656 @@
+<app-header></app-header>
+<div class="logs-container p-3">
+  <div class="d-flex flow-grow-1 card">
+    <div class="d-flex py-1 align-items-center gap-2">
+      <div class="logs-title fs-14">Logs</div>
+      <div
+        class="logs-search d-flex align-items-center position-relative flex-grow-1"
+      >
+        <i
+          class="fa-solid fa-magnifying-glass fs-12 position-absolute ms-2 text-muted user-select-none"
+        ></i>
+        <input
+          type="text"
+          class="form-control ps-4 fs-12"
+          placeholder="Search your logs"
+          [(ngModel)]="searchTerm"
+          [disabled]="!!requestDetails"
+        />
+      </div>
+
+      <div class="d-flex gap-1 align-items-center">
+        <label class="fs-12" for="logs-from-date">Date</label>
+        <app-datepicker
+          [disabled]="loading() || !!requestDetails"
+          [maxDate]="maxDate"
+          [(value)]="dateRange"
+          (onSelect)="applyFilter()"
+          [dateRangeOptions]="dateRangeOptions"
+          style="
+            --label-min-height: 0.7rem;
+            --label-min-width: 13rem;
+            --label-padding: 0.275rem 2.5rem 0.275rem 0.75rem;
+            --label-font-size: 0.7rem;
+          "
+        >
+          <img
+            icon
+            src="/assets/img/calendar.svg"
+            alt="calendar icon"
+            style="height: 0.8rem"
+          />
+        </app-datepicker>
+      </div>
+      <app-multi-select
+        [class.disabled]="loading() || !!requestDetails"
+        [parentWidth]="false"
+        style="
+          --width: fit-content;
+          --label-padding-y: 0.275rem;
+          --label-font-size: 0.7rem;
+          --option-font-size: 0.7rem;
+          --checkbox-size: 0.9rem;
+          --min-height: auto;
+        "
+        placeholder="Select AI Solution"
+        [(ngModel)]="filter['project']"
+        [options]="projectOptions"
+        (onSelect)="applyFilter()"
+      />
+
+      <button
+        [disabled]="loading() || !!requestDetails"
+        (click)="clearFilters()"
+        class="btn text-muted border px-4 btn-sm bg-white fs-12 rounded-3"
+        type="button"
+      >
+        Clear Filters
+      </button>
+
+      <div class="logs-action">
+        <button
+          type="button"
+          class="btn border py-1 rounded-2 px-3 text-muted bg-white fs-12"
+          (click)="refreshLogs($event)"
+          [disabled]="!!requestDetails || loading()"
+        >
+          <i
+            [class.spin]="refreshing()"
+            class="fa-solid fa-arrow-rotate-right"
+          ></i>
+        </button>
+
+        <div>
+          <popover
+            [(isOpen)]="downloadOpen"
+            [disabled]="!isRowSelected || !!requestDetails"
+            popover-position="left"
+          >
+            <button
+              trigger
+              [class.disabled]="!isRowSelected || !!requestDetails"
+              class="btn border rounded-2 py-1 px-2 text-muted bg-white fs-12"
+            >
+              Download
+            </button>
+            <ul
+              content
+              class="fs-12 text-muted bg-white border rounded-3 mt-1 px-2 py-2"
+            >
+              <li
+                class="cursor-pointer d-flex align-items-center mb-1"
+                onkeyup
+                (click)="downloadJson()"
+              >
+                <i class="fa-solid fa-code" style="width: 25px"></i> JSON
+              </li>
+              <li
+                class="cursor-pointer d-flex align-items-center"
+                onkeyup
+                (click)="downloadXlsx()"
+              >
+                <i class="fa-solid fa-file-excel" style="width: 25px"></i> XLSX
+              </li>
+            </ul>
+          </popover>
+        </div>
+      </div>
+    </div>
+    <div class="logs-body border-top flex-row w-100">
+      <div class="left-side">
+        <div
+          class="table-wrapper rounded-2 border"
+          [class.overflow-hidden]="!!requestDetails"
+        >
+          <table class="table" aria-label="System Logs">
+            <caption class="visually-hidden">
+              System logs
+            </caption>
+            <colgroup>
+              <!-- checkbox -->
+              <col style="width: 1.5rem" />
+              <!-- log level -->
+              <col style="width: 3rem" />
+              <!-- time -->
+              <col style="width: 5.5rem" />
+              <!-- source -->
+              <col style="width: 8.2rem" />
+              <!-- method -->
+              <col style="width: 3.5rem" />
+              <!-- path -->
+              <col style="width: 8rem" />
+              <!-- status -->
+              <col style="width: 4rem" />
+              <!-- description -->
+              <col style="width: 14rem" />
+              <!-- user -->
+              <col style="width: 7rem" />
+              <!-- project -->
+              <col style="width: 7rem" />
+              <!-- Action -->
+              <col style="width: 5rem" />
+            </colgroup>
+            <thead>
+              <tr>
+                <th class="text-center align-middle">
+                  <input
+                    class="logs-checkbox"
+                    type="checkbox"
+                    [checked]="selectedRows['selectAll']"
+                    (change)="resetRows($event)"
+                  />
+                </th>
+                <th>
+                  <app-multi-select
+                    [parentWidth]="false"
+                    placeholder="Level"
+                    [options]="typeOptions"
+                    [value]="filter['type']"
+                    (onSelect)="handleFilterChange('type', $event)"
+                    style="
+                      --label-padding-y: 0.1rem;
+                      --label-padding-x: 0.3rem;
+                      --label-font-size: 0.6rem;
+                      --label-spacing: 0.3rem;
+                      --width: fit-content;
+                      --option-padding-y: 0.2rem;
+                      --option-padding-x: 0.4rem;
+                      --option-font-size: 0.7rem;
+                      --option-line-height: 0.9rem;
+                      --checkbox-size: 0.7rem;
+                      --min-height: auto;
+                    "
+                  />
+                </th>
+                <th>Time</th>
+                <th>
+                  <app-multi-select
+                    [parentWidth]="false"
+                    placeholder="Source"
+                    [options]="sourceOptions"
+                    [value]="filter['source']"
+                    (onSelect)="handleFilterChange('source', $event)"
+                    style="
+                      --label-padding-y: 0.1rem;
+                      --label-padding-x: 0.5rem;
+                      --label-font-size: 0.6rem;
+                      --width: 4rem;
+                      --option-padding-y: 0.2rem;
+                      --option-padding-x: 0.4rem;
+                      --option-font-size: 0.7rem;
+                      --option-line-height: 0.9rem;
+                      --checkbox-size: 0.7rem;
+                      --min-height: auto;
+                    "
+                  />
+                </th>
+                <th>
+                  <app-multi-select
+                    [parentWidth]="false"
+                    placeholder="URI"
+                    [options]="pathOptions"
+                    [value]="filter['path']"
+                    (onSelect)="handleFilterChange('path', $event)"
+                    style="
+                      --label-padding-y: 0.1rem;
+                      --label-padding-x: 0.5rem;
+                      --label-font-size: 0.6rem;
+                      --width: 4rem;
+                      --option-padding-y: 0.2rem;
+                      --option-padding-x: 0.4rem;
+                      --option-font-size: 0.7rem;
+                      --option-line-height: 0.9rem;
+                      --checkbox-size: 0.7rem;
+                      --min-height: auto;
+                    "
+                  />
+                </th>
+                <th></th>
+                <th>
+                  <app-multi-select
+                    [parentWidth]="false"
+                    placeholder="Status"
+                    [options]="statusCodeOptions"
+                    [value]="filter['status']"
+                    (onSelect)="handleFilterChange('status', $event)"
+                    style="
+                      --label-padding-y: 0.1rem;
+                      --label-padding-x: 0.5rem;
+                      --label-font-size: 0.6rem;
+                      --label-spacing: 0.3rem;
+                      --width: fit-content;
+                      --option-padding-y: 0.2rem;
+                      --option-padding-x: 0.4rem;
+                      --option-font-size: 0.7rem;
+                      --option-line-height: 0.9rem;
+                      --checkbox-size: 0.7rem;
+                      --min-height: auto;
+                    "
+                  />
+                </th>
+                <th>Description</th>
+                <th>
+                  <app-multi-select
+                    [parentWidth]="false"
+                    placeholder="User"
+                    [options]="userListOptions"
+                    [value]="filter['user']"
+                    (onSelect)="handleFilterChange('user', $event)"
+                    style="
+                      --label-padding-y: 0.1rem;
+                      --label-padding-x: 0.5rem;
+                      --label-font-size: 0.6rem;
+                      --width: fit-content;
+                      --option-padding-y: 0.2rem;
+                      --option-padding-x: 0.4rem;
+                      --option-font-size: 0.7rem;
+                      --checkbox-size: 0.8rem;
+                      --min-height: auto;
+                    "
+                  />
+                </th>
+                <th>AI Solution</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (log of paginatedData(); track log.request_id) {
+                <tr>
+                  <td class="text-center align-middle">
+                    <input
+                      class="logs-checkbox"
+                      type="checkbox"
+                      onkeyup
+                      (click)="$event.stopPropagation()"
+                      [(ngModel)]="selectedRows[log.request_id]"
+                      [checked]="selectedRows['selectAll']"
+                    />
+                  </td>
+                  <td
+                    class="text-capitalize"
+                    [style.color]="$any(colorMapping)[getLogType(log)]"
+                  >
+                    {{ getLogType(log) }}
+                  </td>
+                  <td [title]="log.timestamp">
+                    {{ log.timestamp | date: "yyyy-MM-dd HH:mm:ss" }}
+                  </td>
+                  <td class="text-truncate" [title]="log.source">
+                    {{ log.source }}
+                  </td>
+                  <td>
+                    <span
+                      [attr.data-method]="log.method"
+                      class="text-capitalize log-method"
+                      >{{ log.method || "N/A" }}</span
+                    >
+                  </td>
+                  <td>
+                    <div class="log-path text-truncate" [title]="log.path">
+                      {{ log.path }}
+                    </div>
+                  </td>
+                  <td
+                    [style.color]="
+                      getStatusColor(+(getStatus(log)?.status || '-1'))
+                    "
+                  >
+                    {{ getStatus(log)?.status || "N/A" }}
+                  </td>
+                  @let desc = getStatus(log)?.desc?.trim();
+                  <td
+                    class="text-truncate"
+                    [title]="
+                      desc === 'null'
+                        ? 'stream'
+                        : responsesIndex[log.request_id]?.[0]?.desc
+                    "
+                  >
+                    @if (desc === "null") {
+                      stream...
+                    } @else {
+                      {{ getStatus(log)?.desc || "N/A" }}
+                    }
+                  </td>
+                  <td class="text-truncate" [title]="log.user">
+                    {{ getUser(log) }}
+                  </td>
+                  <td class="text-truncate">{{ log.project }}</td>
+                  <td class="text-right action-cell">
+                    <button
+                      class="text-muted text-truncate"
+                      style="font-size: 0.6rem"
+                      (click)="openViewLogModal(log)"
+                    >
+                      View Details <i class="fa-solid fa-chevron-right"></i>
+                    </button>
+                  </td>
+                </tr>
+              }
+              @if (!paginatedData().length) {
+                <tr>
+                  <td colspan="11" class="py-4 text-center bg-white">
+                    @if (loading()) {
+                      <div
+                        class="spinner-border text-secondary"
+                        output="status"
+                      >
+                        <span class="visually-hidden">Loading...</span>
+                      </div>
+                    } @else {
+                      No logs found
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        <div
+          tabindex="-1"
+          aria-hidden="true"
+          class="request-viewer-wrapper"
+          [class.open]="!!requestDetails"
+          [class.shadow-log]="!!requestDetails"
+          (click)="closeViewLogModal($event)"
+          (keydown.escape)="closeViewLogModal($event)"
+        >
+          <div class="request-viewer">
+            <div class="request-details-header">
+              <div>Request Details</div>
+              <button
+                type="button"
+                class="close-btn"
+                (click)="closeViewLogModal()"
+              >
+                <i class="fa-solid fa-x"></i>
+              </button>
+            </div>
+            @if (requestDetails) {
+              <!-- request -->
+              <details class="viewer" open>
+                <summary>
+                  <span
+                    >Request:<span class="text-capitalize">
+                      {{ requestDetails.request.method }}
+                    </span>
+                    <span>
+                      {{ requestDetails.request.path }}
+                    </span>
+                  </span>
+                  <span class="ms-auto"
+                    >STATUS {{ requestDetails.response?.status }}</span
+                  >
+                  |
+                  <span>{{ requestDetails.duration }}</span>
+                  |
+                  <span>{{ requestDetails.requestBodySize }}</span>
+                </summary>
+                <div>
+                  <ul>
+                    <li>
+                      Request ID:
+                      <code>{{ requestDetails.request.request_id }}</code>
+                    </li>
+                    <li>Source: {{ requestDetails.request.source }}</li>
+                    <li>User: {{ requestDetails.request.user }}</li>
+                    <li>IP: {{ requestDetails.request.ip }}</li>
+                  </ul>
+                  <details class="code-block">
+                    <summary>Headers</summary>
+                    <pre>{{ requestDetails.request.headers }}</pre>
+                  </details>
+                  <details class="code-block">
+                    <summary>Query Params</summary>
+                    <pre>{{ requestDetails.request.query }}</pre>
+                  </details>
+                  <details class="code-block">
+                    <summary>Body</summary>
+                    <pre>{{ requestDetails.request.body }}</pre>
+                  </details>
+                </div>
+              </details>
+              <!-- response -->
+              @if (requestDetails.response) {
+                <details class="viewer" open>
+                  <summary>
+                    <span>Response </span>
+                    <span class="ms-auto">{{
+                      requestDetails.responseBodySize
+                    }}</span>
+                  </summary>
+                  <div>
+                    <details class="code-block">
+                      <summary>Headers</summary>
+                      <pre>{{ requestDetails.response.headers }}</pre>
+                    </details>
+                    <details class="code-block">
+                      <summary>Body</summary>
+                      <pre>{{ requestDetails.response.body }}</pre>
+                    </details>
+                  </div>
+                </details>
+              }
+              <!-- events -->
+              @if (requestDetails.events.length) {
+                <details class="viewer" open>
+                  <summary>
+                    <span>Events </span>
+                  </summary>
+                  <div>
+                    @for (event of requestDetails.events; track $index) {
+                      <details class="code-block">
+                        <summary>
+                          <span class="fw-medium" [title]="event.timestamp">{{
+                            event.timestamp | date: "yyyy-MM-dd HH:mm:ss"
+                          }}</span
+                          >:
+                          {{ event.desc || "N/A" }}
+                        </summary>
+                        <pre>{{ event.body }}</pre>
+                      </details>
+                    }
+                  </div>
+                </details>
+              }
+            }
+
+            <div>
+              @if (requestDetails?.lyzrDetails) {
+                <details class="viewer" open>
+                  <summary>
+                    <span>Traces </span>
+                  </summary>
+                  <div>
+                    <app-lyzr-traces
+                      [agentId]="requestDetails?.lyzrDetails?.agentId"
+                      [requestId]="requestDetails?.lyzrDetails?.requestId"
+                      [startDate]="requestDetails?.lyzrDetails?.startDate"
+                      [endDate]="requestDetails?.lyzrDetails?.endDate"
+                      [workflowId]="requestDetails?.lyzrDetails?.workflowId"
+                      [eventId]="requestDetails?.lyzrDetails?.eventId"
+                      [agents]="requestDetails?.lyzrDetails?.agents"
+                      [project]="requestDetails?.lyzrDetails?.project"
+                    />
+                  </div>
+                </details>
+              }
+            </div>
+          </div>
+        </div>
+        <div
+          class="pt-3 d-flex justify-content-between align-items-center fs-12"
+        >
+          <div>
+            Showing {{ pagination().startIndex + 1 }} to
+            {{ pagination().endIndex }} of {{ filteredData.length }} logs
+          </div>
+
+          @if (loading() || apiStatus()) {
+            <div class="d-flex align-items-center gap-1">
+              <div
+                class="spinner-border text-secondary"
+                style="
+                  --bs-spinner-width: 12px;
+                  --bs-spinner-height: 12px;
+                  --bs-spinner-border-width: 0.1em;
+                "
+                output="status"
+              ></div>
+
+              {{ apiStatus()?.message || "Loading..." }}
+            </div>
+          }
+
+          <div class="d-flex align-items-center gap-3">
+            <!-- Results per page -->
+            <div class="d-flex align-items-center gap-2">
+              <label class="mb-0" for="page-size">Results per page</label>
+              <select
+                id="page-size"
+                class="form-select form-select-sm w-auto"
+                [(ngModel)]="pagination().pageSize"
+                (change)="paginate()"
+              >
+                @for (size of pageSizeOptions; track $index) {
+                  <option
+                    [value]="size"
+                    [selected]="size === pagination().pageSize"
+                  >
+                    {{ size }}
+                  </option>
+                }
+              </select>
+            </div>
+
+            <!-- Item range -->
+            <div>
+              {{ pagination().startIndex + 1 }} - {{ pagination().endIndex }} of
+              {{ filteredData.length }}
+            </div>
+
+            <!-- Pagination buttons -->
+            <nav>
+              <ul class="pagination pagination-sm mb-0">
+                <li
+                  class="page-item"
+                  [class.disabled]="pagination().page === 1"
+                  (click)="goToPage(1)"
+                  (keydown.enter)="goToPage(1)"
+                >
+                  <a class="page-link">
+                    <i class="fa fa-angle-double-left"></i>
+                  </a>
+                </li>
+                <li
+                  class="page-item"
+                  [class.disabled]="pagination().page === 1"
+                  (click)="prevPage()"
+                  (keydown.enter)="prevPage()"
+                >
+                  <a class="page-link"><i class="fa fa-angle-left"></i></a>
+                </li>
+                <li class="page-item active">
+                  <a class="page-link">{{ pagination().page }}</a>
+                </li>
+
+                @if (pagination().page < pagination().totalPages) {
+                  <li
+                    class="page-item"
+                    (click)="goToPage(pagination().page + 1)"
+                    (keydown.enter)="goToPage(pagination().page + 1)"
+                  >
+                    <a class="page-link">{{ pagination().page + 1 }}</a>
+                  </li>
+                }
+
+                <li
+                  class="page-item"
+                  [class.disabled]="
+                    pagination().page === pagination().totalPages
+                  "
+                  (click)="nextPage()"
+                  (keydown.enter)="nextPage()"
+                >
+                  <a class="page-link"><i class="fa fa-angle-right"></i></a>
+                </li>
+                <li
+                  class="page-item"
+                  [class.disabled]="
+                    pagination().page === pagination().totalPages
+                  "
+                  (click)="goToPage(pagination().totalPages)"
+                  (keydown.enter)="goToPage(pagination().totalPages)"
+                >
+                  <a class="page-link"
+                    ><i class="fa fa-angle-double-right"></i
+                  ></a>
+                </li>
+              </ul>
+            </nav>
+          </div>
+        </div>
+      </div>
+
+      <div
+        class="right-side logs-chart-wrapper card d-flex justify-content-between"
+      >
+        <div class="fw-medium">Log Types</div>
+        <div class="position-relative mb-auto chart-wrapper">
+          <div class="log-count">
+            <span>{{ filteredData.length }} </span><span>Logs</span>
+          </div>
+          <canvas #logTypes></canvas>
+        </div>
+
+        <table class="table fs-13" aria-label="Type Statistics">
+          <caption class="visually-hidden">
+            Summary
+          </caption>
+          <thead>
+            <tr>
+              <th scope="col">Type</th>
+              <th scope="col">Count</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (log of logTypesCount | keyvalue; track $index) {
+              <tr>
+                <td class="position-relative text-capitalize">
+                  <span
+                    class="logs-chart-indicator"
+                    [style.background]="$any(colorMapping)[log.key]"
+                  ></span
+                  >{{ log.key }}
+                </td>
+                <td>{{ log.value }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<app-toast [toastMessage]="toast.toastMessage()" />

@@ -1,0 +1,128 @@
+.header {
+  display: flex;
+  background-color: #fff;
+  border-top: 1px solid #e1e0e3;
+  border-bottom: 1px solid #e1e0e3;
+  height: 4rem;
+  min-height: 4rem;
+  padding: 0.5rem 0.6rem;
+  gap: 0.5rem;
+  overflow: auto;
+}
+
+.header::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+.header > div > button {
+  white-space: nowrap;
+}
+
+.header label {
+  font-size: 0.875rem;
+  color: #262e2b;
+  white-space: nowrap;
+}
+
+:host.insight-group {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 0.5rem;
+  padding: 0.4rem;
+}
+
+:host.insights-root {
+  overflow: auto;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  scrollbar-width: thin;
+}
+
+.metric-wrapper {
+  display: flex;
+  gap: 0.625rem;
+  flex-wrap: wrap;
+  padding: 0.2rem 0;
+}
+
+.kpi-card {
+  position: relative;
+  min-height: 6rem;
+}
+
+.charts {
+  display: flex;
+  gap: 0.625rem;
+  flex-wrap: wrap;
+}
+
+.chart-card {
+  flex: 1;
+  position: relative;
+  border-radius: 0.625rem;
+  border: 1px solid #e1e0e3;
+  background-color: white;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  min-width: 20rem;
+  overflow: clip;
+}
+
+:host(.chart-card) .title {
+  font-family: "Fira Sans", system-ui, sans-serif;
+  font-weight: 600;
+  font-size: 1rem;
+  line-height: 1.3rem;
+  letter-spacing: 0%;
+  color: #262e2b;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+:host(.chart-card) .info {
+  display: inline-block;
+}
+
+:host(.chart-card) .info i {
+  color: #ffa242;
+}
+
+:host(.chart-card) .wrapper {
+  margin-top: 1.5rem;
+  min-height: 300px;
+  flex: 1;
+}
+
+:host(.chart-card) .chart-action > button {
+  display: grid;
+  place-content: center;
+  height: 2.125rem;
+  width: 2.125rem;
+  border-radius: 0.3rem;
+  color: #797979;
+  background: none;
+  border: none;
+}
+
+:host(.chart-card) .chart-action > button:hover {
+  background: #ffa24233;
+  color: #fff;
+}
+
+:host(.chart-card) .chart-action button[aria-expanded="true"] {
+  background: #ffa242;
+  color: #fff;
+}
+
+:host(.chart-card) .chart-action .dropdown-item:focus,
+:host(.chart-card) .chart-action .dropdown-item:hover {
+  background-color: #ffa24233;
+}
+
+:host(.chart-card) .chart-action .dropdown-item.active {
+  background-color: #ffa242;
+}

@@ -1,0 +1,266 @@
+<main>
+  <form class="content" [formGroup]="form" (keydown.enter)="$event.preventDefault()">
+    <div class="menu">
+      <span class="title"> {{ titleDescription }} </span>
+
+      <button type="button" class="btn btn-cancel" (click)="onCancel()">Cancel</button>
+      <button
+        class="btn btn-action"
+        [disabled]="isValidWorkflow"
+        (click)="onSave()"
+      >
+        Save workflow
+      </button>
+    </div>
+
+    <div class="steps">
+      <div class="step-card" [class.open]="cardState.basicDetails.open">
+        <div class="title">
+          <span class="step-placeholder"></span>
+          <span class="step-label">Basic details</span>
+          <Button (click)="toggleCard('basicDetails')">
+            <i class="fa-solid fa-chevron-right"></i>
+          </Button>
+        </div>
+
+        <div class="step-content">
+          <div class="mb-3">
+            <label for="name" class="form-label"
+              >Workflow Name <span class="text-danger">*</span></label
+            >
+            <input
+              type="text"
+              formControlName="flow_name"
+              class="form-control"
+              id="name"
+              placeholder="Enter Workflow Name"
+			  autocomplete="off"
+            />
+             <form-error
+              controlName="flow_name"
+              [messages]="{
+                required: 'flow name is required',
+                minlength: 'flow name is too short',
+                maxlength: 'flow name is too long',
+              }"
+            />
+          </div>
+
+          <div class="mb-3">
+            <label for="description" class="form-label"
+              >Description <span class="text-danger">*</span></label
+            >
+            <textarea
+              formControlName="flow_description"
+              class="form-control"
+              id="description"
+              placeholder="Enter Description"
+			  autocomplete="off"
+            ></textarea>
+            <form-error
+              controlName="flow_description"
+              [messages]="{
+                required: 'flow description is required',
+              }"
+              name="flow_description"
+            />
+          </div>
+          <div class="mb-3">
+            <label for="agency_name" class="form-label"
+              >Agency Name <span class="text-danger">*</span></label
+            >
+            <select
+              formControlName="agency_name"
+              class="form-select"
+              id="agency_name"
+            >
+              <option value="" disabled>Select Agency</option>
+              @for (agency of agencyOptions; track agency.id) {
+              <option [value]="agency.id">{{ agency.name }}</option>
+              }
+            </select>
+            <form-error
+              controlName="agency_name"
+              [messages]="{
+                required: 'Agency name is required',
+              }"
+              name="agency_name"
+            />
+          </div>
+        </div>
+      </div>
+
+      <div class="step-card" [class.open]="cardState.nodes.open">
+        <div class="title">
+          <span class="step-placeholder"></span>
+          <span class="step-label">Nodes</span>
+          <Button (click)="toggleCard('nodes')">
+            <i class="fa-solid fa-chevron-right"></i>
+          </Button>
+        </div>
+
+        <div class="step-content">
+          <p class="drag-components">Drag Components</p>
+          @for (item of dragComponents; track $index) {
+          <div [id]="item.id" class="drag-card" [dndDraggable]="item" [class.drag-disabled]="isWorkFlowExternal">
+            <span class="icon-wrapper">
+              @if(item.icon.startsWith("assets")) {
+              <img [src]="item.icon" alt="icon" />
+              } @else {
+              <span [innerHTML]="item.icon"></span>
+              }
+            </span>
+            {{ item.label }}
+          </div>
+          }
+        </div>
+      </div>
+
+      <div
+        class="step-card workflow-container"
+        [class.open]="cardState.workflowComposition.open"
+      >
+        <div class="title">
+          <span class="step-placeholder"></span>
+          <span class="step-label"> Workflow Composition</span>
+
+          <Button (click)="toggleCard('workflowComposition')">
+            <i class="fa-solid fa-chevron-right"></i>
+          </Button>
+        </div>
+
+        <div
+          class="step-content"
+          #vflowContainer
+          (click)="handleNodeClick($event)"
+        >
+          <vflow
+            view="auto"
+            [nodes]="nodes"
+            [edges]="edges"
+            [alignmentHelper]="true"
+            dndDropzone
+            [background]="{ type: 'dots', backgroundColor: '#FFFFFF' }"
+            (dndDrop)="createNode($event)"
+            (onConnect)="createEdge($event)"
+          >
+            <ng-template let-ctx nodeHtml>
+              <div
+                class="workflow-node"
+                [id]="ctx.node.id"
+                [class.selected]="this.selectedNode?.id === ctx.node.id"
+              >
+                <button *ngIf="!isWorkFlowExternal" class="del" (click)="deleteNode(ctx.node.id, $event)">
+                  <i class="fa-solid fa-trash-can"></i>
+                </button>
+                <span class="icon-wrapper">
+                  @if(ctx.node.data().icon.startsWith("assets")) {
+                  <img [src]="ctx.node.data().icon" alt="node" />
+                  } @else {
+                  <span [innerHTML]="ctx.node.data().icon"></span>
+                  }
+                </span>
+          <span class="label">
+                  {{ ctx.node.data().label }}
+                  @if (isWorkFlowExternal && editingNodeId !== ctx.node.id && ctx.node.data().label === "Agent") {
+                  <span class="edit-icon" title="Edit Agent Name" (click)="startEditing(ctx.node)">✏️</span>
+                  }
+                </span>
+
+                <span class="desc">
+                  @if (nodesFormState[ctx.node.id] && $any(nodesFormState[ctx.node.id])?.agent) {
+                  @if (editingNodeId === ctx.node.id) {
+                  <input type="text" [value]="editName" (input)="onNameInput($event)" (blur)="saveAgentName(ctx.node)"
+                    (keyup.enter)="saveAgentName(ctx.node)" (keyup.escape)="cancelEditing()"
+                    (mousedown)="$event.stopPropagation()" (click)="$event.stopPropagation()" class="agent-edit-input"
+                    autofocus tabindex="0">
+                  } @else {
+                  <span class="agent-name" title="{{ $any(nodesFormState[ctx.node.id])?.agentDetails?.name }}">
+                    {{ $any(nodesFormState[ctx.node.id])?.agentDetails?.name }}
+                  </span>
+                  }
+                  } @else {
+                  {{ ctx.node.data().type | uppercase }}
+                  }
+                </span>
+
+                <handle type="source" position="right" />
+                <handle type="target" position="left" />
+              </div>
+            </ng-template>
+
+            <ng-template let-ctx edge>
+              <svg:g customTemplateEdge>
+                <svg:path
+                  fill="none"
+                  [attr.d]="ctx.path()"
+                  class="vflow-edge"
+                  stroke-width="2"
+                  stroke="#725A69"
+                  stroke-dasharray="5,5"
+                  fill="none"
+                />
+              </svg:g>
+            </ng-template>
+
+            <ng-template let-ctx edgeLabelHtml>
+              <div class="d-flex align-items-center gap-1">
+                @if($any(nodesFormState[ctx.edge.source])?.true_cond_ids){
+                <div
+                  class="workflow-edge-label"
+                  (click)="toggleCondition($event, ctx.edge)"
+                  [attr.data-yes]="
+                    $any(
+                      nodesFormState[ctx.edge.source]
+                    )?.true_cond_ids?.includes(ctx.edge.target)
+                  "
+                  [attr.data-no]="
+                    $any(
+                      nodesFormState[ctx.edge.source]
+                    )?.false_cond_ids?.includes(ctx.edge.target)
+                  "
+                >
+                  @if
+                  ($any(nodesFormState[ctx.edge.source])?.true_cond_ids?.includes(ctx.edge.target))
+                  { Yes } @if
+                  ($any(nodesFormState[ctx.edge.source])?.false_cond_ids?.includes(ctx.edge.target))
+                  { No }
+                </div>
+                }
+                <span *ngIf="!isWorkFlowExternal" class="delete-edge-button" (click)="deleteEdge(ctx.edge)">
+                  <i class="fa-solid fa-trash-can delete-edge-button"></i>
+                </span>
+              </div>
+            </ng-template>
+          </vflow>
+
+          <div class="workflow-controls">
+            <button (click)="onZoomIn()">
+              <i class="fa-solid fa-plus"></i>
+            </button>
+            <button (click)="onZoomOut()">
+              <i class="fa-solid fa-minus"></i>
+            </button>
+            <button (click)="onZoomReset()">
+              <i class="fa-solid fa-expand"></i>
+            </button>
+          </div>
+        </div>
+
+        <app-workflow-element-form
+          [nodeId]="selectedNode?.id"
+          [type]="selectedNode?.data?.().type"
+          [connectedAgent]="connectedAgent"
+          [formState]="nodesFormState"
+          (onClose)="onNodeReset()"
+          (onSave)="onNodeFormSubmission($event)"
+          [isSubmitted]="isSubmitted"
+          (onConfigMapping)="onNodeSelect($event)"
+          (onDelete)="deleteNode($event)"
+        />
+      </div>
+    </div>
+  </form>
+</main>
+
+<app-toast [toastMessage]="toast.toastMessage()" />

@@ -1,0 +1,337 @@
+<div class="d-flex h-100">
+	<div class="row m-0 h-100 w-100">
+		<div class="col-md-12">
+			<div class="h-99">
+				<div class="row mt-2 h-100">
+					<div class="col-md-3 sidebar">
+						<!---->
+						<div class="card h-100">
+							<div class="card-header bg-white d-flex">
+								<div class="fw-semibold text-rotate"> Functional Test Case Creator</div>
+								<img src="assets/img/Play_button.svg" class="fa-solid fa-play play-btn ico-hide" alt="play_button"
+									[class.disabled]="isDisabled" [style.pointerEvents]="isDisabled ? 'none' : 'auto'"
+									[style.opacity]="isDisabled ? '0.5' : '1'" (click)="testCaseGenerate()" />
+								<i class="fa-solid fa-chevron-down ms-auto pt-1 toggleBtn"></i>
+							</div>
+
+							<div class="card-body h-91">
+								<!---->
+								<div class="d-block">
+									<ng-container *ngFor="let step of agentSteps; let i = index">
+										<div class="d-flex">
+											<div class="bot-line">
+												<img src="assets/img/Agent_icon.svg" alt="agent_icon" />
+												<!-- ✅ Show dotted line only if next agent doesn't have tools -->
+												<div class="dotted-line"
+													*ngIf="i < agentSteps.length - 1 && !(i === agentSteps.length - 2 && agentSteps[i + 1]?.tools?.length > 0)">
+												</div>
+											</div>
+											<span class="ps-2 pt-2 fs-14">{{ step.label }}</span>
+											<img src="assets/img/check.png" class="ms-auto mt-2" width="22"
+												height="25" alt="check"/>
+										</div>
+
+										<!-- ✅ Tool strip -->
+										<div *ngIf="step.tools?.length > 0" class="d-flex"
+											[ngClass]="{'pos-1': true, 'pos-3': step.order == 2}">
+											<img [src]="'assets/img/strip' + (step.tools.length >= 3 ? '3' : step.tools.length) + '.png'" alt="strip"
+												[ngClass]="{'w-124': step.tools.length >= 3,'w-125': step.tools.length === 2,'w-126': step.tools.length === 1}" />
+											<div class="d-flex flex-column">
+												<img *ngIf="step.tools.includes('doc')" src="assets/img/doc.png"
+													width="20" class="w-15" alt="doc" />
+												<img *ngIf="step.tools.includes('jira')" src="assets/img/jira.png"
+													width="50" class="w-15" alt="jira"/>
+												<img *ngIf="step.tools.includes('excel')" src="assets/img/excel.png"
+													width="20" class="w-15" alt="excel"/>
+												<img *ngIf="step.tools.includes('sharepoint')"
+													src="assets/img/excel.png" width="40" class="w-15" alt="sharepoint"/>
+											</div>
+										</div>
+
+
+									</ng-container>
+								</div>
+								<!---->
+								<!-- ✅ Loader at the bottom -->
+								<div *ngIf="!showTestCases && isLoading"
+									class="text-center loader-container border rounded p-2 shadow-sm">
+
+									<!-- Caption -->
+									<div class="d-flex justify-content-between align-items-center mb-2">
+										<strong class="ms-1 shimmer-text">Creating Test Cases...</strong>
+										<div class="spinner-border spinner-border-sm" role="status"></div>
+									</div>
+
+									<!-- Steps -->
+									<div #scrollContainer class="steps-scroll-area">
+										<div class="step-item mb-2" *ngFor="let step of visibleSteps">
+											<div class="d-flex align-items-center">
+												<img [src]="step.imgurl || 'assets/img/robot.svg'" class="me-2"
+													width="24" alt="url" />
+												<span class="flex-grow-1 text-start fs-12">{{ step.label }}</span>
+											</div>
+										</div>
+									</div>
+
+								</div>
+
+
+							</div>
+						</div>
+						<!---->
+					</div>
+					<div class="col-md ps-0">
+						<div class="card h-100">
+							<!-- Toggle Header -->
+							<div class="card-header bg-white d-flex justify-content-between align-items-center">
+								<!-- Toggle Switch on the Right -->
+								<ul class="nav nav-tabs" id="myTab" role="tablist">
+									<li class="nav-item" role="presentation">
+										<button class="nav-link nav-orange active fs-14 text-dark" id="home-tab"
+											data-bs-toggle="tab" data-bs-target="#home-tab-pane" type="button"
+											role="tab" aria-controls="home-tab-pane" aria-selected="true"
+											href="javascript:void(0)" (click)="toggleSection(false)">
+
+											<span class="fw-semibold" style="display: flex; align-items: center;">
+												Output
+											</span>
+										</button>
+
+									</li>
+									<li class="nav-item" role="presentation">
+										<button class="nav-link nav-orange fs-14 text-dark" id="profile-tab"
+											data-bs-toggle="tab" data-bs-target="#profile-tab-pane" type="button"
+											role="tab" aria-controls="profile-tab-pane" aria-selected="false"
+											href="javascript:void(0)" (click)="toggleSection(true)">Explanation</button>
+									</li>
+								</ul>
+							</div>
+							<!-- Card Body -->
+							<div class="card-body h-91">
+								<!-- Show Explainable TestCase Agency if switch is OFF -->
+								<div *ngIf="showTestCases">
+									<div class="row">
+										<div class="col-md-6">
+											<label class="form-label fs-14 fw-semibold"> System Prompt </label>
+											<textarea class="form-control resize large-textarea fs-14"
+												rows="6">{{systemPrompt}}</textarea>
+										</div>
+										<div class="col-md-6">
+											<label class="form-label fs-14 fw-semibold"> Refined Prompt </label>
+											<textarea class="form-control resize large-textarea fs-14"
+												rows="6">{{refrainPrompt}}</textarea>
+										</div>
+									</div>
+
+									<div class="row">
+										<div class="col-md-6">
+											<label class="form-label fs-14 fw-semibold"> Thoughts </label>
+											<textarea class="form-control resize large-textarea fs-14" rows="6"
+												[(ngModel)]="thoughtsInput"></textarea>
+										</div>
+										<div class="col-md-6">
+											<label class="form-label fs-14 fw-semibold"> Actions </label>
+											<textarea class="form-control resize large-textarea fs-14"
+												rows="6">{{actions}}</textarea>
+										</div>
+									</div>
+
+									<div class="row">
+										<div class="col-md-6">
+											<label class="form-label fs-12 fw-semibold"> Tools </label>
+											<textarea class="form-control resize large-textarea" rows="6"></textarea>
+										</div>
+										<div class="col-md-6">
+											<label class="form-label fs-12 fw-semibold"> Functions </label>
+											<textarea class="form-control resize large-textarea" rows="6"></textarea>
+										</div>
+									</div>
+
+								</div>
+
+								<!-- Show Test Cases Created if switch is ON -->
+								<div *ngIf="!showTestCases">
+									<div class="layout-wrapper d-flex">
+										<!-- LEFT SIDE: Main content (top + bottom grid) -->
+										<div class="main-content flex-grow-1 d-flex flex-column">
+											<!-- TOP GRID -->
+											<div class="grid-scroll-wrapper border rounded-2 mb-2">
+											<table class="table tableth fs-13 test-case-table">
+												<caption class="visually-hidden">Use Cases Overview</caption>
+												<thead>
+												<tr>
+													<th scope="col">#</th>
+													<th scope="col">Use Case ID</th>
+													<th scope="col">Use Case</th>
+													<th scope="col">Use Case Description</th>
+												</tr>
+													</thead>
+													<tbody>
+														<tr *ngFor="let item of TestCaseGridData; let i = index"
+															(click)="onParentRowClick(item)"
+															[ngClass]="{'table-active': item.event_id === selectedEventId}">
+															<td>{{ i + 1 }}</td>
+															<td>{{ item.event_id }}</td>
+															<td>{{ item.event_name }}</td>
+															<td>
+																{{ item.events_desc }}
+																<img src="assets/img/Info-icon.svg"
+																	class="ms-2 cursor-pointer" alt="Info" width="16"
+																	height="16" (click)="openInfoPanel(item,true)" />
+															</td>
+
+														</tr>
+													</tbody>
+												</table>
+											</div>
+
+											<!-- BOTTOM GRID -->
+											<div class="grid-child-scroll-wrapper border rounded-2">
+												<table class="table tableth fs-13 test-case-table">
+													<caption class="visually-hidden">Test Cases Overview</caption>
+													<thead>
+														<tr>
+															<th scope="col">#</th>
+															<th scope="col">Test Case Name</th>
+															<th scope="col">Objective</th>
+															<th scope="col">Preconditions</th>
+															<th scope="col">Test Steps</th>
+															<th scope="col">Expected Results</th>
+															<th scope="col">AI Accuracy</th>
+															<th scope="col">Verified by Human</th>
+														</tr>
+													</thead>
+													<tbody>
+														<tr *ngFor="let testCase of selectedEventOutput; let i = index">
+															<td>{{ i + 1 }}</td>
+															<td>{{ testCase.test_case_name }}</td>
+															<td>{{ testCase.objective }}</td>
+															<td>
+																<ul class="mb-0 ps-3">
+																	<li *ngFor="let pre of testCase.preconditions">{{
+																		pre }}</li>
+																</ul>
+															</td>
+															<td>
+																<ul class="mb-0 ps-3">
+																	<li *ngFor="let step of testCase.test_steps">{{ step
+																		}}</li>
+																</ul>
+															</td>
+															<td>
+																<ul class="mb-0 ps-3">
+																	<li
+																		*ngFor="let result of testCase.expected_results">
+																		{{ result }}</li>
+																</ul>
+															</td>
+															<td>{{ testCase.accuracy_percentage }}</td>
+															<td>
+																<input class="form-check-input border-dark p-2"
+																	type="checkbox" [(ngModel)]="testCase.checked"
+																	name="selectedTestCase{{i}}">
+															</td>
+														</tr>
+													</tbody>
+												</table>
+											</div>
+										</div>
+
+										<!-- RIGHT PANEL -->
+										<div *ngIf="selectedInfoItem"
+											class="info-panel border rounded-3 p-3 bg-white shadow-sm fs-13">
+											<!-- Header: Use Case ID -->
+											<div
+												class="d-flex justify-content-between align-items-start border-bottom pb-2 mb-3">
+												<div>
+													<div class="fw-bold small fs-14">Use Case ID</div>
+													<div class="">{{ selectedInfoItem.event_id }}</div>
+												</div>
+												<i class="fa fa-times text-danger cursor-pointer ms-2"
+													(click)="closeInfoPanel()"></i>
+											</div>
+
+											<!-- Use Case Title -->
+											<div class="mb-3 border-bottom ">
+												<div class="fw-bold small fs-14">Use Case</div>
+												<div class="">{{ selectedInfoItem.event_name }}</div>
+											</div>
+
+											<!-- Description -->
+											<div class="mb-3 border-bottom ">
+												<div class="fw-bold small fs-14">Use Case Description</div>
+												<div>{{ selectedInfoItem.events_desc }}</div>
+											</div>
+
+											<!-- Acceptance Criteria -->
+											<div *ngIf="selectedInfoItem.events_output.acceptance_criteria?.length">
+												<div class="fw-bold small fs-14">Acceptance Criteria</div>
+												<ul class="ps-3 mb-0">
+													<li
+														*ngFor="let crit of selectedInfoItem.events_output.acceptance_criteria">
+														{{crit }}</li>
+												</ul>
+											</div>
+										</div>
+									</div>
+
+									<div class="modal-footer p-2 border-top mt-3">
+										<button class="btn bg-white border me-2 fs-12"
+											(click)="downloadSelectedTestCases()">
+											<i class="fa-solid fa-file-arrow-down"></i>
+											Download
+										</button>
+										<button class="btn bg-orange text-white fs-12">Push to JIRA</button>
+									</div>
+
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+
+<!-- Info Modal Example -->
+<div class="modal fade" id="infoModal1" tabindex="-1" aria-labelledby="infoModalLabel1" aria-hidden="true">
+	<div class="modal-dialog modal-xl modal-dialog-scrollable">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title" id="infoModalLabel1">Generated Test Cases </h5>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+			</div>
+			<div class="modal-body">
+				<div [innerHTML]="sanitizedHtml"></div>
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+			</div>
+		</div>
+	</div>
+</div>
+
+<!-- Modal final message -->
+<div class="modal fade" #loadalert id="loadalert" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true"
+	data-bs-backdrop="static" data-bs-keyboard="false">
+
+	<div class="modal-dialog">
+		<div class="modal-content">
+			<div class="modal-header">
+				<div class="modal-title fs-13" id="exampleModalLabel1" [innerHTML]="popupTitle" style="display:none">
+				</div>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"
+					(click)="closealert()"></button>
+			</div>
+			<div class="modal-body">
+				<p class="mod-clr1"> {{Usermessage}} </p>
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-primary bg-color border-0 br-30 fs-13 pad-2" data-dismiss="modal"
+					href="javascript:void(0)" (click)="closealert()">OK</button>
+
+			</div>
+		</div>
+	</div>
+</div>

@@ -1,0 +1,2861 @@
+<div
+  class="pos-bot"
+  style="cursor: pointer"
+  *ngIf="!isChatOpen"
+  (click)="toggleChat()"
+>
+  <img src="assets/img/bot-icon.png" alt="bot-icon" class="bot-hover" width="60" height="60" />
+</div>
+<div
+  class="container-chat"
+  role="dialog"
+  aria-labelledby="dialogTitle"
+  *ngIf="isChatOpen && !isNewChatOpen"
+>
+  <div class="header-chat" style="padding-bottom: 10px">
+    <div class="title-chat" id="dialogTitle">
+       <img src="assets/img/header.svg" alt="chatbot"width="100" />
+    </div>
+    <div class="ms-auto">
+      <button
+        class="close-chat me-2"
+        aria-label="minimized"
+        (click)="toggleChat()"
+      >
+        <i class="fa-solid fa-minus"></i>
+      </button>
+      <button class="close-chat" aria-label="Close" (click)="toggleChat()">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+  </div>
+
+  <div class="section-header-chat">
+    <div>Trending Task Agents</div>
+    <div style="cursor: pointer" *ngIf="trendingAgents.length > 3">
+      <a class="showall-chat" (click)="toggleShowAll()">
+        {{ showAll ? "Show Less" : "Show All" }}</a
+      >
+    </div>
+  </div>
+  <div class="tags-chat" role="list">
+    <div
+      class="tag-chat mt-2"
+      (click)="openTrendingAgentChat(agent)"
+      role="listitem"
+      *ngFor="
+        let agent of showAll ? trendingAgents : trendingAgents.slice(0, 3)
+      "
+    >
+      {{ getAgentTypeLabel(agent.name) }}
+    </div>
+  </div>
+
+  <div class="section-header-chat">
+    <div>
+      Popular Queries
+      <div
+        *ngIf="popularQueriesLoading"
+        class="spinner-border spinner-border-sm text-primary ms-2"
+        role="status"
+      >
+        <span class="visually-hidden">Loading...</span>
+      </div>
+    </div>
+    <div
+      *ngIf="!popularQueriesLoading && recentQueries.length > 4"
+      style="cursor: pointer"
+    >
+      <a class="showall-chat" (click)="toggleShowAll()">{{
+        showAll ? "Show Less" : "Show All"
+      }}</a>
+    </div>
+  </div>
+
+
+  <div class="queries-chat" *ngIf="!popularQueriesLoading">
+    <div
+      *ngFor="
+        let queryObj of recentQueries
+          | slice : 0 : (showAll ? recentQueries.length : 4)
+      "
+      class="query-chat"
+      tabindex="0"
+      style="display: flex; align-items: center; gap: 8px"
+      [class.disabled]="!isPrivilegeExecute"
+      (click)="startAgentChat1(queryObj.agent, queryObj.query)"
+    >
+      <div class="truncate-3-lines" [appTooltip]="queryObj.query">
+        {{ queryObj.query }}
+      </div>
+    </div>
+  </div>
+  <div class="d-flex gap-1 align-items-center">
+    <button
+      class="new-chat-btn-chat flex-grow-1"
+      aria-label="Start new chat"
+      (click)="openNewChat()"
+      [disabled]="popularQueriesLoading"
+    >
+      <span class="robot-icon-chat"
+        ><img src="assets/img/chatbot-icon.png" alt="chatbot-icon" width="25" height="25"
+      /></span>
+      New Chat
+    </button>
+
+  <popover popover-position="left" style="--position-y: top">
+    <button
+      trigger
+      class="trigger rounded-2 btn text-white new-chat-btn-chat d-flex gap-1"
+      title="Call Agent"
+	    [class.disabled]="!isPrivilegeVoiceAgentView"
+     >
+       <svg width="16" height="16">
+        <use href="assets/img/call-message.svg"></use>
+      </svg>
+      <i class="fa fa-solid fa-chevron-down fs-12 anchor"></i>
+    </button>
+    <div content class="bg-white p-2 rounded-3 border mb-1" style="border-bottom-right-radius: 0 !important;">
+      @let totalOptionsLength = additionalChatPopoverOptions.length - 1;
+      @for(item of additionalChatPopoverOptions; track item.label) {
+      <button type="button" class="border-0 bg-white text-muted d-flex gap-2 align-items-start fs-12 px-3" [routerLink]="item.link">
+         <i class="fa-solid mt-1" [class]="item.icon" [style.color]="'#fca247'"></i>
+         <span class="d-flex flex-column align-items-start">
+          <span class="fw-semibold">{{ item.label }}</span>
+          <!-- <span>{{ item.caption }}</span> -->
+        </span>
+      </button>
+      @if($index < totalOptionsLength) {
+        <div class="border-top my-1" ></div>
+      }
+    }
+    </div>
+  </popover>
+  </div>
+</div>
+
+<div
+  class="pos-chat"
+  *ngIf="isNewChatOpen"
+  [ngClass]="{ minimized: isChatMinimized }"
+>
+  <div class="d-flex">
+    <!-- left menu -->
+    <div class="position-relative">
+      <div
+        class="sidebar-agency2 bg-white border-end"
+        [ngClass]="{ expanded: isSidebarExpanded }"
+        (mouseenter)="onMouseEnter()"
+        (mouseleave)="onMouseLeave()"
+      >
+        <ul>
+          <li>
+            <button
+              class="btn-icon"
+              (click)="toggleSidebarPin()"
+              [title]="isSidebarPinned ? 'Unpin menu' : 'Keep menu expanded'"
+              placement="right"
+            >
+              <img
+                src="assets/img/side-menu.png"
+                width="20"
+                height="20"
+                alt="chat_img"
+              />
+            </button>
+          </li>
+          <li
+            class="pb-0"
+            [class.disabled]="
+              IsReviewCases ||
+              agentId ||
+              isWorkflowReviewMode ||
+              isWorkflowrouted
+            "
+            (click)="!IsReviewCases && startNewChat()"
+          >
+            <img
+              src="assets/img/new-chat.png"
+              title="New Chat"
+              class="me-2"
+              width="20"
+              height="20"
+              alt="new_chat"
+            />
+            <span class="fs-12 fw-semibold text"> New Chat </span>
+          </li>
+          <li class="pt-3 pb-2">
+            <div class="fs-12 text">Recent</div>
+          </li>
+          <li class="p-0" *ngFor="let item of recentData">
+            <a class="text-decoration-none" (click)="getRecentchat(item,false)">
+              <span
+                class="fs-12 fw-semibold text query-ellipsis"
+                [appTooltip]="getUserInputForRecentQueries(item.user_query)"
+              >
+                {{ getUserInputForRecentQueries(item.user_query) }}
+              </span>
+            </a>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <!--left menu end-->
+    <div class="w-100">
+      <div class="header-chat border-bottom pt-2 ps-2 pe-3">
+        <div class="title-chat me-auto pt-2">
+          <div>
+            <span class="hello-chat">👋Hello,</span>
+            <span class="fw-semibold ms-1">{{ userName }}!</span>
+          </div>
+        </div>
+        <div class=" ">
+          <button
+            *ngIf="agentId == '' || agentId == null"
+            class="close-chat me-2"
+            aria-label="minimizeChat"
+            (click)="minimizeChat()"
+          >
+            <i class="fa-solid fa-minus"></i>
+          </button>
+          <button class="close-chat" aria-label="Close" (click)="closeChat()">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+      </div>
+      <div class="h-82 d-flex align-items-center fs-14 w-100 position-relative">
+        <div class="d-block w-51 m-auto" style="padding-bottom: 90px">
+          <ng-container *ngIf="!isChatSubmitted">
+            <div class="position-relative pad-1">
+              <i
+                class="fa-solid fa-microphone pos-microphone"
+                *ngIf="!showSendIcon"
+              ></i>
+              <input
+                type="text"
+                autocomplete="off"
+                class="form-control rounded-4 ps-s1 fs-14"
+                placeholder="Ask anything"
+                [(ngModel)]="userQuery"
+                (ngModelChange)="onInputChange()"
+                (keydown.enter)="routeAndSubmitQuery()"
+                [disabled]="!isPrivilegeExecute"
+              />
+              <button
+                *ngIf="showSendIcon"
+                (click)="routeAndSubmitQuery()"
+                class="btn position-absolute top-50 end-0 translate-middle-y me-3 p-0 border-0 bg-transparent"
+              >
+                <img
+                  src="assets/img/chat-enter.png"
+                  alt="Up Arrow"
+                  class="fs-16"
+                  style="width: 25px; height: 25px"
+                />
+              </button>
+            </div>
+
+            <div
+              class="d-flex justify-content-center flex-wrap pad-1 gap36 mt-5"
+            >
+              <div
+                class="d-flex flex-column text-center"
+                *ngFor="let agent of masterAgents"
+                (click)="startAgentChat(agent)"
+              >
+                <div
+                  class="border rounded-5 pad-req d-flex align-items-center justify-content-center"
+                >
+                  <img
+                    [src]="getAgentIcon(agent.name)"
+                    width="25"
+                    height="25"
+                    alt="AgentIcon"
+                    class="icon-left"
+                  />
+                </div>
+                <div class="fs-14 w-101 text-nowrap">{{ agent.name }}</div>
+              </div>
+            </div>
+          </ng-container>
+
+          ​<ng-container *ngIf="isChatSubmitted">
+            <div class="d-flex pos-chatbot1">
+              <!-- Main Flex Container -->
+              <div class="d-flex h-100" style="position: relative;">
+
+                <!-- Resizable Sidebar -->
+                <div #sidebar class="border-end p-3 overflow-auto" [style.width.px]="sidebarWidth"
+                  style="min-width: 0px; max-width: 800px; flex-shrink: 0;">
+
+                  <div class="h-76" #mainContainer>
+                    <div *ngIf="selectedAgent" class="welcome-panel pad-3">
+                      <div class="d-flex align-items-center mb-2">
+                        <img [src]="getAgentIcon(selectedAgent.name)" alt="{{ selectedAgent.name }}" width="20"
+                          height="24" class="me-2" />
+                        <strong>{{ selectedAgent.name }}</strong>
+                      </div>
+                      <p>
+                        I’m your {{ selectedAgent.name }} — your AI-powered
+                        partner for all
+                        {{
+                        selectedAgent.name.includes("Quality")
+                        ? "Quality Engineering"
+                        : "your needs"
+                        }}.
+                      </p>
+                      <p><strong>How can I assist you today?</strong></p>
+                      <p>Here are some things I can help with:</p>
+                      <div *ngIf="secondaryAgents.length" class="d-flex flex-wrap gap-2">
+                        <button *ngFor="let agent of secondaryAgents" class="custom-option-btn"
+                          (click)="handleOption(agent.agent_name, agent.agent_id)">
+                          {{ agent.agent_name }}
+                          <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                        </button>
+                      </div>
+                    </div>
+                    <!-- Scrollable chat container with template reference -->
+                    <div class="chat-container" #chatContainer>
+                      <div *ngFor="let message of chatMessages; let i = index" class="row">
+
+                        <!-- Special Agent Message -->
+                        <div *ngIf="isGreatMessage(message.text)" class="chat-line agent-response mt-3 pb-3">
+                          {{ message.text }}
+                        </div>
+
+                        <!-- Regular Messages (User + Normal Agent) -->
+                        <div *ngIf="!isGreatMessage(message.text)"
+                          [ngClass]="{'left-cont': message.from === 'user','right-cont': message.from === 'agent' }"
+                          class="chat-bubble">
+
+                          <div appMessageExpand [messageIndex]="i" [messageFrom]="message.from" class="message-content"
+                            [class.expanded]="expandedIndexes.has(i)">
+                            {{ message.text }}
+                          </div>
+
+                          <button *ngIf="message.showToggle" class="toggle-btn" (click)="toggleMessage(i)">
+                            {{ expandedIndexes.has(i) ? 'Show less' : 'Show more' }}
+                            <span class="toggle-icon">{{ expandedIndexes.has(i) ? '↑' : '↓' }}</span>
+                          </button>
+
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Enhanced thinking/loader section -->
+                    <div class="d-flex justify-content-start mb-3" style="margin:1px">
+                      <!-- Loading steps section -->
+                      <div *ngIf="isLoading && !completionMessageReceived" class="loader-box">
+                        <div class="fw-semibold mb-2 d-flex align-items-center justify-content-between">
+                          <div class="d-flex align-items-center">
+                            <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                            <span><i class="bi bi-feather"></i>Thinking</span>
+                          </div>
+                        </div>
+
+                        <div class="steps-scroll-area ms-1 shimmer-text" style="max-height: 300px; overflow-y: auto">
+                          <!-- Only show real logs when they arrive -->
+                          <div *ngIf="logsDuringLoading.length > 0" class="real-logs">
+                            <div *ngFor="let log of logsDuringLoading; let i = index" class="log-step-item">
+                              <div class="d-flex align-items-start">
+                                <div class="step-icon me-2">{{ log.icon }}</div>
+                                <div class="flex-grow-1">
+                                  <div class="step-title">{{ log.title }}</div>
+                                  <div class="step-desc text-muted small">{{ log.desc }}</div>
+                                </div>
+                                <div class="step-time text-muted small">{{ log.timestamp }}</div>
+                              </div>
+                            </div>
+                          </div>
+
+                          <!-- Show waiting message if no logs yet -->
+
+                        </div>
+                      </div>
+
+                      <!-- Show completion message when processing is done -->
+                      <!-- Existing thinking section for after loading is complete -->
+                      <div *ngIf="showThinking " class="left-cont mt-2" style="margin-left: 0rem">
+                        <button type="button" (click)="toggleCollapse()"
+                          style="all: unset; display: block; cursor: pointer">
+                          <img [src]="isCollapsed ? 'assets/img/thinking.png' : 'assets/img/thinking2.png'" width="140"
+                            height="40" alt="thinking" style="display: block" />
+                        </button>
+
+                        <div class="collapse mt-3" [class.show]="isCollapsed" id="collapseExample"
+                          style="background-color: #f8f9fa; padding: 10px; border-radius: 5px; overflow-y: auto;max-height: 200px;">
+                          <div class="card card-body border-0 border-start pt-0 pb-0">
+                            <!-- Display the logs in their original form -->
+                            <div class="thinking-logs">
+
+                              <div
+                                *ngFor="let log of chatResponses[chatResponses.length - 1]?.thinkingLogs; let i = index"
+                                class="thinking-item">
+
+                                <!-- Title -->
+                                <div class="thinking-title" (click)="toggleThinkingItem(i)">
+                                  <span class="me-2">
+                                    {{ log.expanded ? '▼' : '▶' }}
+                                  </span>
+                                  {{ log.title }}
+                                </div>
+
+                                <!-- Content -->
+                                <div *ngIf="log.expanded" class="thinking-content">
+                                  <div [innerHTML]="log.content"></div>
+                                </div>
+
+                              </div>
+
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="position-relative mb-2" *ngIf="shouldShowRecentQueries()">
+                    <!-- Horizontal Scrollable Buttons -->
+                    <div class="d-flex gap-2 mt-2 overflow-auto pb-2 recent-queries-scroll"
+                      style="scrollbar-width: thin; scrollbar-color: #ccc transparent;">
+
+                      <button *ngFor="let query of recentQueryForSuggestionData | slice:0:5; let i = index"
+                        class="btn btn-outline-secondary btn-sm rounded-pill flex-shrink-0 px-3 py-2 text-start"
+                        [class.disabled]="selectedQueries.has(query.user_query)"
+                        [disabled]="selectedQueries.has(query.user_query)" (click)="selectRecentQuery(query, i)">
+
+                        <span class="text-truncate" style="max-width: 220px; display: inline-block;" [appTooltip]="getUserInputForRecentQueries(query.user_query)">
+                          {{ getUserInputForRecentQueries(query.user_query) }}
+                        </span>
+                      </button>
+
+                      <!-- Show message if no recent queries -->
+                    </div>
+                  </div>
+
+                  <div class="position-relative">
+                    <i class="fa-solid fa-microphone pos-microphone"></i>
+                    <input type="text" autocomplete="off" class="form-control rounded-4 ps-s1 fs-14"
+                      placeholder="Ask anything" [(ngModel)]="userQuery1" (ngModelChange)="onInputChange1()"
+                      (keydown.enter)="submitQuery('')"
+                      [disabled]="!secondryAgentId || secondryAgentId === '' || !isPrivilegeExecute" />
+
+                    <button *ngIf="showSendIcon1" (click)="submitQuery('')"
+                      class="btn position-absolute top-50 end-0 translate-middle-y me-3 p-0 border-0 bg-transparent">
+                      <img src="assets/img/chat-enter.png" alt="Up Arrow" class="fs-16"
+                        style="width: 25px; height: 25px" />
+                    </button>
+                  </div>
+                </div>
+                <!-- Draggable Resizer -->
+                <div class="resizer" (mousedown)="startResizing($event)">
+                </div>
+              </div>
+
+              <div class="" style="overflow: auto;width: -webkit-fill-available;">
+                <div class="d-flex border-bottom pb-2 align-items-center">
+                  <div class="ps-3 pt-2 mt-2"></div>
+                  <div class="fw-bold fs-20 me-auto p-3 pb-0"></div>
+
+                  <!-- View toggle buttons -->
+                  <div class="d-flex align-items-center me-2 mt-2">
+                    <button type="button" class="btn btn-outline-secondary btn-sm"
+                      [class.active]="currentView === 'text'" (click)="changeView('text')" title="Text View">
+                      <i class="fa-solid fa-align-left"></i>
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm"
+                      [class.active]="currentView === 'table'" (click)="changeView('table')" title="Table View">
+                      <i class="fa-solid fa-table"></i>
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm"
+                      [class.active]="currentView === 'json'" (click)="changeView('json')" title="JSON View">
+                      <i class="fa-solid fa-code"></i>
+                    </button>
+
+                    <ng-container>
+                      <ng-container *ngTemplateOutlet="
+                          textDownloadOption;
+                          context: { onClick: 'downloadChatResponses' }
+                        ">
+                      </ng-container>
+                      <button class="btn btn-sm btn-outline-secondary" type="button" (click)="copyChatResponses()"
+                        title="Copy">
+                        <i class="fa-solid fa-copy"></i>
+                        <span #copyTooltip class="copy-tooltip">Copied!</span>
+                      </button>
+                    </ng-container>
+                    <button type="button" class="btn btn-outline-secondary btn-sm"
+                      [class.active]="currentView === 'explanation'" (click)="changeView('explanation')"
+                      title="Explanation">
+                      <i class="fa-solid fa-exclamation-circle"></i>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Content area with different views -->
+                <div class="p-2" style="height: 67vmin; overflow: auto">
+                  <div *ngFor="let res of chatResponses; let i = index" class="d-flex">
+                    <div *ngIf="res" class="w-100" style="font-size: 14px">
+                      <ng-container *ngIf="res.isLoading; else showResponse">
+                        <div class="response-loader w-100 d-flex justify-content-center p-3">
+                          <img src="assets/img/loader.gif" alt="Loading..." style="height: 70vmin; overflow: auto" />
+                        </div>
+                      </ng-container>
+
+                      <ng-template #showResponse>
+                        <!-- Text View -->
+                        <div *ngIf="currentView === 'text'" class="text-view">
+                          <div class="accordion" [id]="'textAccordion' + i">
+                            <div class="accordion-item mb-2 rounded-2">
+                              <h2 class="accordion-header position-relative d-flex align-items-center">
+                                <div>
+                                  <input type="checkbox" class="border ms-3" [(ngModel)]="selectedResponseIndex[i]" />
+                                </div>
+                                <button class="accordion-button box-shadow-none" type="button" data-bs-toggle="collapse"
+                                  [attr.data-bs-target]="
+                                    '#textCollapseMain' + i
+                                  " [attr.aria-expanded]="
+                                    i === 0 ? 'true' : 'false'
+                                  " [attr.aria-controls]="'textCollapseMain' + i" [class.collapsed]="i !== 0">
+                                  <strong style="margin-right: 8px" class="truncate-2-lines" [appTooltip]="res.title">{{
+                                    res.title }}</strong>
+                                  @if
+                                  (!res.isResponseFullyLoaded && !res.isLoading) {
+                                  <span class="ms-2">
+                                    <span class="spinner-border spinner-border-sm me-1" role="status"
+                                      style="width: 1.4rem; height: 1.4rem"></span>
+                                  </span>
+                                  }
+                                </button>
+                              </h2>
+                              <div [id]="'textCollapseMain' + i" class="accordion-collapse collapse"
+                                [class.show]="i === 0" [attr.data-bs-parent]="'#textAccordion' + i">
+                                <div class="accordion-body pt-0 bg-eee">
+                                  <div [innerHTML]="res.html" class="bg-eee border p-3 rounded"></div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+
+                        <div *ngIf="currentView === 'table'" class="table-view">
+                          <div class="accordion" [id]="'tableAccordion' + i">
+                            <div class="accordion-item mb-2 rounded-2">
+                              <h2 class="accordion-header position-relative d-flex align-items-center">
+                                <div>
+                                  <input type="checkbox" [(ngModel)]="selectedResponseIndex[i]" class="border ms-3" />
+                                </div>
+                                <button class="accordion-button box-shadow-none" type="button" data-bs-toggle="collapse"
+                                  [attr.data-bs-target]="'#tableCollapseMain' + i"
+                                  [attr.aria-expanded]="i === 0 ? 'true' : 'false'"
+                                  [attr.aria-controls]="'tableCollapseMain' + i" [class.collapsed]="i !== 0">
+                                  <strong class="truncate-2-lines" style="margin-right: 8px;">{{ res.title }}</strong>
+                                </button>
+                              </h2>
+                              <div [id]="'tableCollapseMain' + i" class="accordion-collapse collapse"
+                                [class.show]="i === 0" [attr.data-bs-parent]="'#tableAccordion' + i">
+                                <div class="accordion-body pt-0 bg-eee table-view">
+
+                                  <div class="table-responsive fs-14">
+                                    <!-- 
+CASE 1: Use the old ngTemplateOutlet if a markdown table was detected.
+  -->
+                                    <ng-container *ngIf="renderTables(res)">
+                                      <chatbot-editable-table [tables]="res.tables"
+                                        (update)="updateTables($event, i)" />
+                                    </ng-container>
+
+                                    <!-- 
+CASE 2: Use the new universal inline logic for all other cases 
+  -->
+                                    <ng-container *ngIf="!renderTables(res)">
+                                      <!-- Display the table if data exists -->
+                                      <ng-container
+                                        *ngIf="res.tables && res.tables.length > 0 && res.tables[0].rows.length > 0">
+                                        <table class="table table-striped table-hover" aria-label="Dynamic data table">
+                                          <caption class="visually-hidden"> Response</caption>
+                                          <thead class="table-light">
+                                            <tr>
+                                              <!-- Loop over the headers of the first table -->
+                                              <th *ngFor="let header of res.tables[0].headers" scope="col">{{ header }}
+                                              </th>
+                                            </tr>
+                                          </thead>
+                                          <tbody>
+                                            <!-- Loop over the rows of the first table -->
+                                            <tr *ngFor="let row of res.tables[0].rows">
+
+                                              <td *ngFor="let header of res.tables[0].headers"
+                                                [innerHTML]="row[header]"></td>
+                                            </tr>
+                                          </tbody>
+                                        </table>
+                                      </ng-container>
+
+                                    </ng-container>
+                                  </div>
+
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+
+
+                        <!-- JSON View -->
+                        <div *ngIf="currentView === 'json'" class="json-view">
+                          <div class="accordion" [id]="'jsonAccordion' + i">
+                            <div class="accordion-item mb-2 rounded-2">
+                              <h2 class="accordion-header position-relative d-flex align-items-center">
+                                <div>
+                                  <input type="checkbox" class="border ms-3" [(ngModel)]="selectedResponseIndex[i]" />
+                                </div>
+                                <button class="accordion-button box-shadow-none" type="button" data-bs-toggle="collapse"
+                                  [attr.data-bs-target]="
+                                    '#jsonCollapseMain' + i
+                                  " [attr.aria-expanded]="
+                                    i === 0 ? 'true' : 'false'
+                                  " [attr.aria-controls]="'jsonCollapseMain' + i" [class.collapsed]="i !== 0">
+                                  <strong style="margin-right: 8px">{{
+                                    res.title
+                                    }}</strong>
+                                </button>
+                              </h2>
+                              <div [id]="'jsonCollapseMain' + i" class="accordion-collapse collapse"
+                                [class.show]="i === 0" [attr.data-bs-parent]="'#jsonAccordion' + i">
+                                <div class="accordion-body pt-0 bg-eee">
+                                  @if(res.serializedBddJson) {
+                                  <pre class="bg-eee border p-3 rounded">{{ res.serializedBddJson | json }}</pre>
+                                  } @else {
+                                  <pre class="bg-eee border p-3 rounded">{{ res.json | json }}</pre>
+                                  }
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <!-- Explanation View -->
+                        <!-- Explanation View -->
+                        <div *ngIf="currentView === 'explanation'" class="explanation-view">
+
+                          <div class="accordion" [id]="'explanationAccordion' + i">
+                            <div class="accordion-item mb-2 rounded-2">
+                              <h2 class="accordion-header">
+                                <button class="accordion-button box-shadow-none" type="button" data-bs-toggle="collapse"
+                                  [attr.data-bs-target]="
+            '#explanationCollapseMain' + i
+          " [attr.aria-expanded]="
+            i === 0 ? 'true' : 'false'
+          " [attr.aria-controls]="
+            'explanationCollapseMain' + i
+          " [class.collapsed]="i !== 0">
+                                  <strong style="margin-right: 8px">AI Explanation</strong>
+                                  @if (res.isLoadingExplanation && !res.explanationDataLoaded) {
+                                  <span class="ms-2">
+                                    <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                                    <span class="text-muted">Loading...</span>
+                                  </span>
+                                  }
+                                </button>
+                              </h2>
+                              <div [id]="'explanationCollapseMain' + i" class="accordion-collapse collapse"
+                                [class.show]="i === 0" [attr.data-bs-parent]="
+          '#explanationAccordion' + i
+        ">
+                                <div class="accordion-body pt-0 bg-eee">
+                                  <!-- Show trace details if available, otherwise show explanation text -->
+                                  <div
+                                    *ngIf="res.traceDetails || res.agentTraces || res.logDetails; else showExplanation"
+                                    class="trace-details-container">
+                                    <div class="card border mb-3">
+                                      <!-- Card Header with Tabs -->
+                                      <div class="card-header bg-light p-0">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                          <!-- Tabs -->
+                                          <div class="details-tab">
+                                            <button (click)="res.activeTab = 'trace'"
+                                              [class.active]="res.activeTab === 'trace' || !res.activeTab">
+                                              <i class="fa-solid fa-info-circle me-1"></i>Trace Details
+                                            </button>
+                                            <button *ngIf="res.logDetails && res.logDetails.length > 0"
+                                              (click)="res.activeTab = 'logs'"
+                                              [class.active]="res.activeTab === 'logs'">
+                                              <i class="fa-solid fa-list-alt me-1"></i>Log Details
+                                            </button>
+                                            <button *ngIf="res.showChatMessages" (click)="res.activeTab = 'chat'"
+                                              [class.active]="res.activeTab === 'chat'">
+                                              <i class="fa-solid fa-robot me-1"></i>Run Details
+                                            </button>
+                                          </div>
+
+                                          <!-- Toggle Button - Modified to switch tabs automatically -->
+                                          <button type="button" class="btn btn-outline-secondary btn-sm me-3"
+                                            (click)="toggleChatMessages(res)">
+                                            <i class="fa-solid fa-{{ res.showChatMessages ? 'eye-slash' : 'eye' }}"></i>
+                                            {{ res.showChatMessages ? 'Hide' : 'Show' }} Run Details
+                                          </button>
+                                        </div>
+                                      </div>
+
+                                      <!-- Tab Contents -->
+                                      <div class="card-body">
+                                        <!-- Trace Details Tab -->
+                                        <div *ngIf="!res.activeTab || res.activeTab === 'trace'" class="tab-body">
+                                          <div *ngFor="let trace of res.traceDetails; let traceIndex = index">
+                                            @for (span of trace.details.spans; track $index) {
+                                            <details class="span-accordion mb-3 border rounded shadow-sm">
+                                              <summary
+                                                class="d-flex justify-content-between align-items-center px-3 py-2 bg-light">
+                                                <div>
+                                                  <strong class="me-2" style="color:#737373;">{{ span.SpanName |
+                                                    titlecase }}</strong>
+                                                </div>
+                                                <div class="d-flex align-items-center">
+                                                  <span class="logs-count">{{ (span['Events.Name']?.length || 0) }}
+                                                    logs</span>
+                                                  <i class="fa-solid fa-chevron-down transition-transform ms-2"></i>
+                                                </div>
+                                              </summary>
+
+                                              <div class="p-3 bg-white">
+                                                <!-- Display documents as tags with logs count -->
+                                                @if (span['Events.Name'] && span['Events.Name'].length > 0) {
+                                                <div class="document-tags">
+                                                  @for (doc of span['Events.Name']; track $index) {
+                                                  <span class="document-tag">{{ doc }}</span>
+                                                  }
+                                                </div>
+                                                }
+
+                                                <!-- Metadata Table for Span Attributes -->
+                                                <div class="metadata-table">
+                                                  <div class="metadata-table-title">
+                                                    <i class="fa-solid fa-info-circle"></i>
+                                                    <span>Metadata</span>
+                                                  </div>
+                                                  <div class="metadata-table-body">
+                                                    <table class="table table-sm table-borderless">
+													<caption>Metadata information table</caption>
+                                                      <tbody>
+                                                        @let entries = span.SpanAttributes | keyvalue;
+                                                        @let filteredEntries = filterEmptyEntries(entries);
+                                                        @for (entry of filteredEntries; track entry.key) {
+                                                        <tr>
+                                                          <th class="th-width-30">{{ formatKey(entry.key) }}</th>
+                                                          <td>{{ entry.value }}</td>
+                                                        </tr>
+                                                        }
+                                                      </tbody>
+                                                    </table>
+                                                  </div>
+                                                </div>
+
+                                                <!-- Events Attributes if available -->
+                                                @if (span['Events.Attributes'] && span['Events.Attributes'].length > 0)
+                                                {
+                                                <div class="mb-4">
+                                                  @for (attrSet of span['Events.Attributes']; track $index) {
+                                                  <div class="metadata-table">
+                                                    <div class="metadata-table-title">
+                                                      <i class="fa-solid fa-tag"></i>
+                                                      <span>Attributes</span>
+                                                    </div>
+                                                    <div class="metadata-table-body">
+                                                      <table class="table table-sm table-borderless">
+													  <caption>Metadata information table</caption>
+                                                        <tbody>
+                                                          @let entries = attrSet | keyvalue;
+                                                          @let filteredEntries = filterEmptyEntries(entries);
+                                                          @for (entry of filteredEntries; track entry.key) {
+                                                          <tr>
+                                                            <th class="th-width-30">{{ formatKey(entry.key) }}</th>
+                                                            <td>{{ entry.value }}</td>
+                                                          </tr>
+                                                          }
+                                                        </tbody>
+                                                      </table>
+                                                    </div>
+                                                  </div>
+                                                  }
+                                                </div>
+                                                }
+                                              </div>
+                                            </details>
+                                            }
+                                          </div>
+                                        </div>
+
+                                        <!-- Log Details Tab -->
+                                        <div
+                                          *ngIf="res.activeTab === 'logs' && res.logDetails && res.logDetails.length > 0"
+                                          class="tab-body">
+                                          @for (logGroup of getGroupedLogs(res.logDetails); track logGroup.feature) {
+                                          <details class="log-group mb-3 border rounded shadow-sm">
+                                            <summary
+                                              class="d-flex justify-content-between align-items-center px-3 py-2 bg-light">
+                                              <div>
+                                                <span style="font-weight: 500; color:#737373;">
+                                                  <i class="fa-solid me-2"
+                                                    [class]="getLogFeatureIcon(logGroup.feature)"></i>
+                                                  {{ getLogFeatureLabel(logGroup.feature) || logGroup.feature }}
+                                                </span>
+                                              </div>
+                                              <div class="d-flex align-items-center">
+                                                <i class="fa-solid fa-chevron-down transition-transform ms-2"></i>
+                                              </div>
+                                            </summary>
+                                            <div class="p-3 bg-white">
+                                              @if (logGroup.logs && logGroup.logs.length > 0) {
+                                              @for (logDetail of logGroup.logs; track $index) {
+                                              <!-- Simple table for all entries -->
+                                              <table class="table table-sm table-borderless mb-3">
+											  <caption>Metadata information table</caption>
+                                                <tbody>
+                                                  @let entries = logDetail | keyvalue;
+                                                  @let filteredEntries = filterEmptyEntries(entries);
+                                                  @for (entry of filteredEntries; track entry.key) {
+                                                  <tr>
+                                                    <th class="th-width-30"
+                                                      style="font-weight: 500; color: #495057; font-size: 0.875rem; border-top: none; padding: 0.25rem 0.5rem; vertical-align: middle;">
+                                                      {{ formatKey(entry.key) }}</th>
+                                                    <td
+                                                      style="color: #212529; word-break: break-word; border-top: none; padding: 0.25rem 0.5rem; vertical-align: middle;">
+                                                      @if (isComplexObject(entry.value)) {
+                                                      <!-- Inline expandable data with JSON display -->
+                                                      <div class="expandable-data">
+                                                        <div class="data-preview"
+                                                          (click)="toggleExpandedData($index, entry.key)">
+                                                          <span class="preview-text">View Data</span>
+                                                          <button class="play-button"
+                                                            [class]="{ 'expanded': isDataExpanded($index, entry.key) }">
+                                                            <i class="fa-solid"
+                                                              [class]="isDataExpanded($index, entry.key) ? 'fa-chevron-up' : 'fa-play'"></i>
+                                                          </button>
+                                                        </div>
+                                                        <div class="data-full"
+                                                          [class]="{ 'show': isDataExpanded($index, entry.key) }">
+                                                          <pre>{{ entry.value | json }}</pre>
+                                                        </div>
+                                                      </div>
+                                                      } @else {
+                                                      <!-- Simple value -->
+                                                      {{ formatData(entry.value) }}
+                                                      }
+                                                    </td>
+                                                  </tr>
+                                                  }
+                                                </tbody>
+                                              </table>
+                                              }
+                                              } @else {
+                                              <p class="text-center py-3 text-muted">No log details found</p>
+                                              }
+                                            </div>
+                                          </details>
+                                          }
+                                        </div>
+
+                                        <!-- Simplified Chat Messages Tab -->
+                                        <div *ngIf="res.showChatMessages && res.activeTab === 'chat'" class="tab-body">
+                                          <div class="border rounded">
+                                            <div class="border rounded mb-2">
+                                              <div class="p-2 border-bottom bg-light">
+                                                <strong style="color: #737373;">Input</strong>
+                                              </div>
+                                              <div class="p-2">
+                                                <pre
+                                                  class="mb-0 text-break">{{ getFirstChatMessage(res, 'input') }}</pre>
+                                              </div>
+                                            </div>
+                                            <div class="border rounded">
+                                              <div class="p-2 border-bottom bg-light">
+                                                <strong style="color: #737373;">Output</strong>
+                                              </div>
+                                              <div class="p-2">
+                                                <pre
+                                                  class="mb-0 text-break">{{ getFirstChatMessage(res, 'output') }}</pre>
+                                              </div>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  <!-- Regular explanation text (fallback) -->
+                                  <ng-template #showExplanation>
+                                    <div class="formatted-text">
+                                      <pre class="border p-3 bg-eee" style="white-space: pre-wrap; font-size: 14px;">
+                {{ res.explanation }}
+              </pre>
+                                    </div>
+                                  </ng-template>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </ng-template>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <!-- Feedback Bar -->
+            <div class="feedback-bar" *ngIf="
+                  !isPopupVisible &&
+                  isChatOpenedByAgent &&
+                  chatResponses.length > 0 &&  
+      (isPrivilegeExecute || isPrivilegeEditPromptRepo || isPrivilegeAddPromptRepo)
+                ">
+                <span>Share your feedback</span>
+                <span class="stars">
+                  <span class="star" *ngFor="let s of [1, 2, 3, 4, 5]; let i = index" [class.active]="
+                      hoveredRating > i || (isRecentChat && selectedRating > i)
+                    " (mouseenter)="
+                      !isRecentChat &&
+                        !isFeedbackSubmitted &&
+                        (hoveredRating = i + 1)
+                    " (mouseleave)="
+                      !isRecentChat &&
+                        !isFeedbackSubmitted &&
+                        (hoveredRating = selectedRating)
+                    " (click)="openFeedbackPopup(i + 1)">
+                    ★
+                  </span>
+                </span>
+              </div>
+
+              <!-- Feedback Popup - Same original design, now smartly handles both new and recent chats -->
+             <!-- Feedback Popup -->
+<div class="feedback-popup" *ngIf="isPopupVisible">
+  <div class="close-btn" (click)="closeFeedbackPopup()">×</div>
+  
+  <h2 class="popup-title">
+    {{ isRecentChat || isFeedbackSubmitted ? "Your submitted feedback" : "Share your feedback" }}
+  </h2>
+
+  <div class="stars-popup mb-2">
+    <span class="star" 
+          *ngFor="let s of [1, 2, 3, 4, 5]; let i = index"
+          [class.active]="selectedRating > i"
+          (click)="(!isRecentChat && !isFeedbackSubmitted) && (selectedRating = i + 1)"
+          [style.cursor]="(!isRecentChat && !isFeedbackSubmitted) ? 'pointer' : 'default'">
+      ★
+    </span>
+  </div>
+
+  <label class="popup-label">Feedback</label>
+  <textarea class="popup-textarea" 
+            placeholder="Enter your feedback" 
+            [(ngModel)]="feedbackText"
+            [readOnly]="isRecentChat || isFeedbackSubmitted">
+  </textarea>
+
+  <div class="popup-actions">
+ 
+    <!-- Main Submit Button -->
+ <button 
+  class="btn bg-orange text-white fs-12 submit-btn me-2"
+  [class.disabled]="isRecentChat || isFeedbackSubmitted || !feedbackText.trim()"
+  (click)="!isRecentChat && !isFeedbackSubmitted && submitFeedback1()">
+  
+  {{ isRecentChat || isFeedbackSubmitted ? "Feedback Submitted" : "Submit Feedback" }}
+</button>
+
+    <!-- Save to Repository Button -->
+    <!-- <button 
+      class="btn bg-orange text-white fs-12 submit-btn me-2"
+      [disabled]="isRecentChat || isPromptSaved "
+      [class.saved]="isPromptSaved"
+      (click)="!isPromptSaved && saveToRepository(chatResponses.length - 1)">
+      
+      {{ isPromptSaved ? "Saved to Prompt Repository" : "Save Prompt to Repository" }}
+    </button> -->
+<button
+  class="btn bg-orange text-white fs-12 submit-btn me-2"
+  [disabled]="isPromptUpdated || !canSaveOrUpdateToRepo()"
+  (click)="saveOrUpdatePromptToRepository(chatResponses.length - 1)">
+  {{ getRepositoryButtonText() }}
+</button>
+
+  </div>
+</div>
+            </div>
+          </ng-container>
+	 <app-header></app-header>
+
+          <ng-container *ngIf="isagentrouted">
+            <div class="d-flex pos-chatbot1">
+              <div class="d-flex h-100" style="position: relative;">
+
+                <!-- Resizable Sidebar -->
+                <div #sidebar class="border-end p-3 overflow-auto" [style.width.px]="sidebarWidth"
+                  style="min-width: 0px; max-width: 800px; flex-shrink: 0;">
+
+                  <!-- Left panel content remains the same -->
+                  <div class="h-76" #mainContainers>
+                    <div class="welcome-panel pad-3">
+                      <div class="d-flex align-items-center mb-2">
+                        <img [src]="getAgentIcon(selectedAgent.agent_name)" alt="{{ selectedAgent.agent_name }}"
+                          width="20" height="24" class="me-2" />
+                        <strong>{{ selectedAgent.agent_name }}</strong>
+                      </div>
+                      <p>
+                        I'm your {{ selectedAgent.agent_name }} — your AI-powered
+                        partner for all
+                        {{
+                        selectedAgent.agent_name.includes("Quality")
+                        ? "Quality Engineering"
+                        : "your needs"
+                        }}.
+                      </p>
+                      <p>
+                        You have selected
+                        <strong>{{ selectedAgent.agent_name }}</strong>. I will fetch relevant user story from
+                        <strong>JIRA</strong>.
+                      </p>
+                    </div>
+
+                    <div *ngIf="isLoading" class="loader-box">
+                      <div class="fw-semibold mb-2 d-flex align-items-center">
+                        <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                        <span class="fs-12"><i class="bi bi-feather"></i> Thinking</span>
+                      </div>
+
+                      <div class="steps-scroll-area ms-1 shimmer-text" style="max-height: 250px; overflow-y: auto">
+                        <div *ngFor="
+                            let step of loaderSteps
+                              | slice : 0 : currentLoaderStep + 1;
+                            let i = index
+                          ">
+                          <div [ngClass]="{
+                              'text-muted': i > currentLoaderStep,
+                              'text-dark': i <= currentLoaderStep
+                            }">
+                            <div>
+                              <strong class="fs-12">{{ step.icon }} {{ step.title }}</strong>
+                            </div>
+                            <div *ngIf="i <= currentLoaderStep" class="ps-4 fst-italic small">
+                              {{ step.desc }}
+                            </div>
+                          </div>
+                          <br />
+                        </div>
+                      </div>
+                    </div>
+                    <div class="accordion p-2" id="accordionExample">
+                      <div *ngFor="let res of eventResponses; let i = index" class="accordion-item mb-2 rounded-2">
+                        <h2 class="accordion-header">
+                          <button class="accordion-button box-shadow-none" type="button" data-bs-toggle="collapse"
+                            [attr.data-bs-target]="'#collapse' + i" [attr.aria-expanded]="i === 0 ? 'true' : 'false'"
+                            [attr.aria-controls]="'collapse' + i" [class.collapsed]="i !== 0">
+                            <strong style="margin-right: 10px">UC-{{ 880 + i + 1 }}:</strong>
+                            {{
+                            getParsedData(res)?.test_case_title || "Test Case"
+                            }}
+                          </button>
+                        </h2>
+                        <div [id]="'collapse' + i" class="accordion-collapse collapse" [class.show]="i === 0"
+                          data-bs-parent="#accordionExample">
+                          <div class="accordion-body pt-0 bg-eee">
+                            <!-- Use Case Description -->
+                            <div class="mb-3">
+                              <strong>Use Case Description:</strong>
+                              {{
+                              getParsedData(res)?.user_story ||
+                              "No description available"
+                              }}
+                            </div>
+
+                            <!-- Acceptance Criteria -->
+                            <div class="mb-2">
+                              <strong>Acceptance Criteria</strong>
+                            </div>
+                            <ul class="mb-3">
+                              <li *ngFor="
+                                  let criteria of getParsedData(res)
+                                    ?.acceptance_criteria
+                                ">
+                                {{ criteria }}
+                              </li>
+                              <li *ngIf="
+                                  !getParsedData(res)?.acceptance_criteria?.length
+                                ">
+                                No acceptance criteria defined
+                              </li>
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- Empty State -->
+                      <div *ngIf="!eventResponses?.length && !isLoading" class="text-center p-4 text-muted">
+                        No test cases available. Please generate some test cases
+                        first.
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="position-relative">
+                    <i class="fa-solid fa-microphone pos-microphone"></i>
+                    <input type="text" class="form-control rounded-4 ps-s1 fs-14" placeholder="Ask anything" />
+                  </div>
+                </div>
+                <!-- Draggable Resizer -->
+                <div class="resizer" (mousedown)="startResizing($event)">
+                </div>
+              </div>
+              <!-- Right panel with view toggles -->
+              <div class="" style="overflow: auto;width: -webkit-fill-available;">
+                <div class="d-flex border-bottom pb-2 align-items-center">
+                  <div class="ps-3 pt-2 mt-2">
+                    <h6>Test Cases</h6>
+                  </div>
+                  <div class="fw-bold fs-20 me-auto p-3 pb-0"></div>
+
+                  <!-- View toggle buttons -->
+                  <div class="d-flex align-items-center me-2">
+                    <button type="button" class="btn btn-outline-secondary btn-sm"
+                      [class.active]="currentView === 'text'" (click)="changeView('text')" title="Text View">
+                      <i class="fa-solid fa-align-left"></i>
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm"
+                      [class.active]="currentView === 'table'" (click)="changeView('table')" title="Table View">
+                      <i class="fa-solid fa-table"></i>
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm"
+                      [class.active]="currentView === 'json'" (click)="changeView('json')" title="JSON View">
+                      <i class="fa-solid fa-code"></i>
+                    </button>
+
+                    <!-- Action buttons -->
+                    <ng-container *ngTemplateOutlet="
+                        textDownloadOption;
+                        context: { onClick: 'downloadResponses' }
+                      ">
+                    </ng-container>
+
+                    <button class="btn btn-sm btn-outline-secondary" type="button" (click)="copyResponses()"
+                      title="Copy">
+                      <i class="fa-solid fa-copy"></i>
+                    </button>
+                    <button class="btn btn-outline-secondary btn-sm" type="button"
+                      [class.active]="currentView === 'explanation'" (click)="changeView('explanation')"
+                      title="Explanation">
+                      <i class="fa-solid fa-exclamation-circle"></i>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Content area with different views -->
+                <div class="p-2" style="height: 67vmin; overflow: auto">
+                  <div *ngIf="currentView === 'text'" class="text-view">
+                    <div #workflowTextAccordion class="accordion" id="workflowTextAccordion">
+                      <div *ngFor="let res of eventResponses; let i = index" class="accordion-item mb-2 rounded-2">
+                        <h2 class="accordion-header">
+                          <button class="accordion-button box-shadow-none" type="button" data-bs-toggle="collapse"
+                            [attr.data-bs-target]="'#textCollapseMain' + i"
+                            [attr.aria-expanded]="i === 0 ? 'true' : 'false'"
+                            [attr.aria-controls]="'textCollapseMain' + i" [class.collapsed]="i !== 0">
+                            <div>
+                              <input type="checkbox" [(ngModel)]="selectedResponseIndex[i]" class="border" />
+                            </div>
+                            <strong style="margin-right: 8px" class="ms-3">UC-{{ 880 + i + 1 }}:</strong>
+                            {{
+                            getParsedData(res)?.test_case_title || "Test Case"
+                            }}
+                          </button>
+                        </h2>
+                        <div [id]="'textCollapseMain' + i" class="accordion-collapse collapse" [class.show]="i === 0"
+                          data-bs-parent="#textAccordion">
+                          <div class="accordion-body pt-0 bg-eee">
+                            <div class="mb-3">
+                              <div *ngFor="
+                                  let testCase of getParsedData(res)
+                                    ?.test_cases;
+                                  let j = index
+                                " class="test-case-item p-3 border rounded">
+                                <h6>
+                                  <strong>TC-{{ j + 1 }}:
+                                    {{ testCase.test_case_name }}</strong>
+                                </h6>
+                                <div class="mb-2">
+                                  <strong>Objective:</strong>
+                                  {{ testCase.objective }}
+                                </div>
+                                <div class="mb-2">
+                                  <strong>Preconditions:</strong>
+                                  <ul class="mb-0 ps-3">
+                                    <li *ngFor="let pre of testCase.preconditions">
+                                      {{ pre }}
+                                    </li>
+                                  </ul>
+                                </div>
+                                <div class="mb-2">
+                                  <strong>Test Steps:</strong>
+                                  <ol class="mb-0 ps-3">
+                                    <li *ngFor="let step of testCase.test_steps">
+                                      {{ step }}
+                                    </li>
+                                  </ol>
+                                </div>
+                                <div class="mb-2">
+                                  <strong>Expected Results:</strong>
+                                  <ul class="mb-0 ps-3">
+                                    <li *ngFor="
+                                        let result of testCase.expected_results
+                                      ">
+                                      {{ result }}
+                                    </li>
+                                  </ul>
+                                </div>
+                                <div class="mb-2">
+                                  <strong>AI Accuracy:</strong>
+                                  <ul class="mb-0 ps-3">
+                                    <li>80%</li>
+                                  </ul>
+                                </div>
+                              </div>
+
+                              <!-- ⭐ Feedback bar per story -->
+                              <div *ngIf="
+                                  !res.isPopupVisible &&
+                                  getParsedData(res)?.test_cases?.length
+                                " style="padding-left: 355px">
+                                <span>Share your feedback</span>
+                                <span class="stars">
+                                  <span class="star" *ngFor="
+                                      let s of [1, 2, 3, 4, 5];
+                                      let k = index
+                                    " [class.active]="res.hoveredRating > k" (mouseenter)="res.hoveredRating = k + 1"
+                                    (mouseleave)="
+                                      res.hoveredRating = res.selectedRating
+                                    " (click)="openFeedbackPopup1(i, k + 1)">★</span>
+                                </span>
+                              </div>
+
+                              <!-- Feedback popup per story -->
+                              <div class="feedback-popup" *ngIf="res.isPopupVisible">
+                                <div class="close-btn" (click)="closeFeedbackPopup1(i)">
+                                  ×
+                                </div>
+                                <h2 class="popup-title">Share your feedback</h2>
+
+                                <div class="stars-popup mb-2">
+                                  <span class="star" *ngFor="
+                                      let s of [1, 2, 3, 4, 5];
+                                      let k = index
+                                    " [class.active]="res.selectedRating > k"
+                                    (click)="res.selectedRating = k + 1">★</span>
+                                </div>
+
+                                <label class="popup-label">Feedback</label>
+                                <textarea class="popup-textarea" placeholder="Enter your feedback"
+                                  [(ngModel)]="res.feedbackText"></textarea>
+
+                                <div class="popup-actions">
+                                  <button class="btn bg-orange text-white fs-12 submit-btn"
+                                    [disabled]="!res.feedbackText?.trim()" (click)="submitFeedback(i)">
+                                    Submit
+                                  </button>
+                                </div>
+                              </div>
+
+                              <div *ngIf="!getParsedData(res)?.test_cases?.length" class="text-center text-muted p-3">
+                                No test cases available
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- TABLE VIEW -->
+                  <div *ngIf="currentView === 'table'" class="table-view">
+                    <div class="accordion" id="tableAccordion">
+                      <div *ngFor="let res of eventResponses; let i = index" class="accordion-item mb-2 rounded-2">
+                        <h2 class="accordion-header position-relative d-flex align-items-center">
+                          <div>
+                            <input type="checkbox" [(ngModel)]="selectedResponseIndex[i]" class="border ms-3" />
+                          </div>
+                          <button class="accordion-button box-shadow-none" type="button" data-bs-toggle="collapse"
+                            [attr.data-bs-target]="'#tableCollapseMain' + i"
+                            [attr.aria-expanded]="i === 0 ? 'true' : 'false'"
+                            [attr.aria-controls]="'tableCollapseMain' + i" [class.collapsed]="i !== 0">
+                            <strong style="margin-right: 8px">UC-{{ 880 + i + 1 }}:</strong>
+                            {{
+                            getParsedData(res)?.test_case_title || "Test Case"
+                            }}
+                          </button>
+                        </h2>
+                        <div [id]="'tableCollapseMain' + i" class="accordion-collapse collapse" [class.show]="i === 0"
+                          data-bs-parent="#tableAccordion">
+                          <div class="accordion-body pt-0 bg-eee">
+                            <div class="table-responsive">
+                              <table class="table table-bordered table-striped" aria-label="Test Cases Table">
+                                <thead>
+                                  <tr>
+                                    <th>#</th>
+                                    <th>Test Case Name</th>
+                                    <th>Objective</th>
+                                    <th>Preconditions</th>
+                                    <th>Test Steps</th>
+                                    <th>Expected Results</th>
+                                    <th>AI Accuracy</th>
+                                    <th>Human Verified</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  <tr *ngFor="
+                                      let testCase of parseTestCases(res);
+                                      let j = index
+                                    ">
+                                    <td>{{ j + 1 }}</td>
+                                    <td>{{ testCase.test_case_name }}</td>
+                                    <td>{{ testCase.objective }}</td>
+                                    <td>
+                                      <ul class="mb-0 ps-3">
+                                        <li *ngFor="
+                                            let pre of testCase.preconditions
+                                          ">
+                                          {{ pre }}
+                                        </li>
+                                      </ul>
+                                    </td>
+                                    <td>
+                                      <ul class="mb-0 ps-3">
+                                        <li *ngFor="
+                                            let step of testCase.test_steps
+                                          ">
+                                          {{ step }}
+                                        </li>
+                                      </ul>
+                                    </td>
+                                    <td>
+                                      <ul class="mb-0 ps-3">
+                                        <li *ngFor="
+                                            let result of testCase.expected_results
+                                          ">
+                                          {{ result }}
+                                        </li>
+                                      </ul>
+                                    </td>
+                                    <td>80%</td>
+                                    <td><input type="checkbox" /></td>
+                                  </tr>
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- JSON VIEW -->
+                  <div *ngIf="currentView === 'json'" class="json-view">
+                    <div class="accordion" id="jsonAccordion">
+                      <div *ngFor="let res of eventResponses; let i = index" class="accordion-item mb-2 rounded-2">
+                        <h2 class="accordion-header">
+
+                          <button class="accordion-button box-shadow-none" type="button" data-bs-toggle="collapse"
+                            [attr.data-bs-target]="'#jsonCollapseMain' + i"
+                            [attr.aria-expanded]="i === 0 ? 'true' : 'false'"
+                            [attr.aria-controls]="'jsonCollapseMain' + i" [class.collapsed]="i !== 0">
+                            <div>
+                              <input type="checkbox" [(ngModel)]="selectedResponseIndex[i]" class="border" />
+                            </div>
+                            <strong class="ms-3" style="margin-right: 8px">UC-{{ 880 + i + 1 }}:</strong>
+                            {{
+                            getParsedData(res)?.test_case_title || "Test Case"
+                            }}
+                          </button>
+                        </h2>
+                        <div [id]="'jsonCollapseMain' + i" class="accordion-collapse collapse" [class.show]="i === 0"
+                          data-bs-parent="#jsonAccordion">
+                          <div class="accordion-body pt-0 bg-eee">
+                            <pre class="bg-eee border p-3 rounded">{{
+                              convertToJson(res)
+                            }}</pre>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- EXPLANATION VIEW -->
+                  <div *ngIf="currentView === 'explanation'" class="explanation-view">
+                    <div class="accordion" id="explanationAccordion">
+                      <div *ngFor="let res of eventResponses; let i = index" class="accordion-item mb-2 rounded-2">
+                        <h2 class="accordion-header">
+                          <button class="accordion-button box-shadow-none" type="button" data-bs-toggle="collapse"
+                            [attr.data-bs-target]="
+                              '#explanationCollapseMain' + i
+                            " [attr.aria-expanded]="i === 0 ? 'true' : 'false'"
+                            [attr.aria-controls]="'explanationCollapseMain' + i" [class.collapsed]="i !== 0">
+                            <strong style="margin-right: 8px">AI Explanation:</strong>
+                            {{
+                            getParsedData(res)?.test_case_title || "Details"
+                            }}
+                          </button>
+                        </h2>
+                        <div [id]="'explanationCollapseMain' + i" class="accordion-collapse collapse"
+                          [class.show]="i === 0" data-bs-parent="#explanationAccordion">
+                          <div class="accordion-body pt-0 bg-eee">
+                            <div class="formatted-text">
+                              <pre class="bg-eee border p-3 rounded" style="white-space: pre-wrap; font-size: 14px">{{ res.explanation }}
+            </pre>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </ng-container>
+
+          <ng-container *ngIf="isWorkflowrouted">
+            <div class="d-flex pos-chatbot1">
+
+              <div class="d-flex h-100" style="position: relative;">
+
+                <!-- Resizable Sidebar -->
+                <div #sidebar class="border-end p-3" [style.width.px]="sidebarWidth"
+                  style="min-width: 610px; max-width: 1000px; flex-shrink: 0;">
+
+                  <div class="h-76" #mainContainer>
+                    <!-- Workflow header -->
+                    <div class="welcome-panel pad-3" *ngIf="workflowDetails">
+                      <div class="d-flex align-items-center mb-2">
+                        <img src="assets/img/default.png" alt="Workflow" width="24" height="24" class="me-2" />
+                        <strong>{{ workflowDetails.flow_name }}</strong>
+                      </div>
+                      <p>
+                        I'm your {{ workflowDetails.flow_name }} — your AI-powered
+                        partner for all <strong>{{ workflowDetails.agency_name }}</strong>.
+                      </p>
+
+                      <div class="card border-light bg-light-subtle mb-3">
+                        <div class="card-body py-1 px-2 small d-flex align-items-start gap-2">
+                          <div class="" style="font-style: italic;"> <img src="assets/img/workflow-info.svg" alt="Info"
+                              style="width: 14px; height: 14px;" class="me-2"> {{ workflowDetails.description }}</div>
+                        </div>
+                      </div>
+
+                      <!-- Optional: list of steps -->
+                      <div *ngIf="workflowDetails.steps?.length" class="mt-3">
+                        <p class="mb-1"><strong>Steps:</strong></p>
+                        <ol class="ps-3 mb-0 small">
+                          <li *ngFor="let step of workflowDetails.steps">
+                            {{ step.name }}
+                          </li>
+                        </ol>
+                      </div>
+                    </div>
+                    <div class="chat-container" #chatContainer>
+                      <div *ngFor="let message of chatMessages" class="row">
+                        <div *ngIf="
+                          isGreatMessage(message.text);
+                          else regularMessage
+                        " class="chat-line agent-response mt-3 pb-3">
+                          {{ message.text }}
+                        </div>
+                        <ng-template #regularMessage>
+                          <div [ngClass]="{ 'left-cont': message.from === 'user' }" class="chat-bubble">
+                            {{ message.text }}
+                          </div>
+                        </ng-template>
+                      </div>
+                    </div>
+                    <!-- Enhanced thinking/loader section for workflow -->
+                    <div class="d-flex justify-content-start mb-3" style="margin-top: 1rem">
+                      <!-- Loading steps section - EXACTLY SAME AS CHATBOT -->
+                      <div *ngIf="isWorkflowThinkingLoading && !workflowAllLogsLoaded" class="loader-box">
+                        <div class="fw-semibold mb-2 d-flex align-items-center justify-content-between">
+                          <div class="d-flex align-items-center">
+                            <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                            <span><i class="bi bi-feather"></i>Processing Workflow</span>
+                          </div>
+                        </div>
+
+                        <div class="steps-scroll-area ms-1 shimmer-text" style="max-height: 300px; overflow-y: auto">
+                          <!-- Only show real logs when they arrive - EXACTLY SAME AS CHATBOT -->
+                          <div *ngIf="logsDuringWorkflowLoading.length > 0" class="real-logs">
+                            <div *ngFor="let log of logsDuringWorkflowLoading; let i = index" class="log-step-item">
+                              <div class="d-flex align-items-start">
+                                <div class="step-icon me-2">{{ log.icon }}</div>
+                                <div class="flex-grow-1">
+                                  <div class="step-title">{{ log.title }}</div>
+                                  <div class="step-desc text-muted small">{{ log.desc }}</div>
+                                </div>
+                                <div class="step-time text-muted small">{{ log.timestamp }}</div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- Existing thinking section for after loading is complete -->
+                      <div *ngIf="!isWorkflowThinkingLoading && workflowAllLogsLoaded && showThinking" class="left-cont"
+                        style="margin-left: 1rem">
+                        <button type="button" (click)="toggleThinkingVisibility()"
+                          style="all: unset; display: block; cursor: pointer">
+                          <img
+                            [src]="isWorkflowThinkingCollapsed ? 'assets/img/thinking.png' : 'assets/img/thinking2.png'"
+                            width="140" height="40" alt="thinking" style="display: block" />
+                        </button>
+
+                        <div class="mt-3" [class.d-none]="isWorkflowThinkingCollapsed"
+                          style="background-color: #f8f9fa; padding: 10px; border-radius: 5px; max-height: 400px !important; overflow-y: auto !important;">
+                          <div class="card card-body border-0 border-start pt-0 pb-0 ms-2">
+                            <!-- Display the logs grouped by agent -->
+                            <div class="thinking-logs">
+                              <div *ngFor="let agent of workflowThinkingLogs; let agentIndex = index"
+                                class="agent-section mb-3">
+                                <!-- Agent Name -->
+                                <div class="agent-header" (click)="toggleAgentSection(agentIndex)">
+                                  <span class="me-2">{{ agent.expanded ? '▼' : '▶' }}</span>
+                                  <strong>{{ agent.agentName }}</strong>
+                                </div>
+
+                                <!-- Agent Logs  -->
+                                <div *ngIf="agent.expanded" class="agent-logs ms-3 mt-2">
+                                  <div *ngFor="let log of agent.logs; let logIndex = index" class="log-item mb-2">
+                                    <!-- Log Title (Collapsible) -->
+                                    <div class="log-header" (click)="toggleLogItem(agentIndex, logIndex)">
+                                      <span class="me-2">{{ log.expanded ? '▼' : '▶' }}</span>
+                                      {{ log.title }}
+                                    </div>
+
+                                    <!-- Log Content -->
+                                    <div *ngIf="log.expanded" class="log-content ms-3 mt-1 p-2 bg-white rounded">
+                                      <div [innerHTML]="log.content"></div>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+
+                  <div class="d-flex justify-content-end" style="height: 6%;">
+                    <button type="button" class="btn border-0 bg-transparent ps-3 pe-1 hover-image-btn"
+                      title="Execute Import Workflow" (click)="submitQuery('import_workflow')" [disabled]="isWorkflowDisabled">
+                      <!-- Image toggles between two states -->
+                      <img *ngIf="!isActive || !isPrivilegeExecuteWorkflow" src="assets/img/run-import-workflow-h.svg" class="workflow-icon"
+                        alt="Execute / Play" [ngClass]="{'disabled-icon': isWorkEnd}"
+                        style="width: 35px; height: 35px;">
+                      <img *ngIf="isActive" src="assets/img/run-import-workflow-e.svg" class="workflow-icon"
+                        alt="Active / Check" [ngClass]="{'disabled-icon': isWorkEnd}"
+                        style="width: 35px; height: 35px;">
+                    </button>
+                  </div>
+
+                  <div class="position-relative">
+                    <i class="fa-solid fa-microphone pos-microphone"></i>
+                    <input type="text" autocomplete="off" class="form-control rounded-4 ps-s1 fs-14"
+                      placeholder="Ask anything" [(ngModel)]="userQuery1" (ngModelChange)="onInputChange1()"
+                      (keydown.enter)="submitQuery('')" [disabled]="!isPrivilegeExecuteWorkflow" />
+
+                    <button *ngIf="showSendIcon1" (click)="submitQuery('')"
+                      class="btn position-absolute top-50 end-0 translate-middle-y me-3 p-0 border-0 bg-transparent">
+                      <img src="assets/img/chat-enter.png" alt="Up Arrow" class="fs-16"
+                        style="width: 25px; height: 25px" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <!-- Top bar: tabs on the left, controls on the right -->
+              <div class="workflow-container" style="width: -webkit-fill-available;">
+                <!-- Tab Navigation -->
+                <ul class="nav nav-tabs" id="mainTabs" role="tablist">
+                  <li class="nav-item" role="presentation">
+                    <button class="nav-link txt-black" [ngClass]="{ active: activeTab === 'workflow' }" type="button"
+                      (click)="activeTab = 'workflow'">
+                      Workflow
+                    </button>
+                  </li>
+
+                  <li class="nav-item" role="presentation">
+                    <button class="nav-link txt-black d-flex align-items-center" style="height: 5vmin"
+                      [ngClass]="{ active: activeTab === 'output' }" type="button" (click)="activeTab = 'output'">
+                      <!-- Tab label (left) -->
+                      <span>Output</span>
+                    </button>
+                  </li>
+                  <!-- View Controls (right) -->
+                  <div class="d-flex align-items-center" style="margin-left: 40vmin" *ngIf="activeTab === 'output'">
+                    <button type="button" class="btn btn-outline-secondary btn-sm me-1"
+                      [class.active]="currentView === 'text'" (click)="changeView('text')" title="Text View">
+                      <i class="fa-solid fa-align-left"></i>
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm me-1"
+                      [class.active]="currentView === 'table'" (click)="changeView('table')" title="Table View">
+                      <i class="fa-solid fa-table"></i>
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm me-1"
+                      [class.active]="currentView === 'json'" (click)="changeView('json')" title="JSON View">
+                      <i class="fa-solid fa-code"></i>
+                    </button>
+
+                    <ng-container>
+                      <ng-container *ngTemplateOutlet="
+                          textDownloadOption;
+                          context: { onClick: 'downloadChatResponses' }
+                        ">
+                      </ng-container>
+
+                      <button class="btn btn-sm btn-outline-secondary me-1" type="button" (click)="copyChatResponses()"
+                        title="Copy">
+                        <i class="fa-solid fa-copy"></i>
+                        <span #copyTooltip class="copy-tooltip">Copied!</span>
+                      </button>
+                    </ng-container>
+
+                    <button type="button" class="btn btn-outline-secondary btn-sm"
+                      [class.active]="currentView === 'explanation'" (click)="changeView('explanation')"
+                      title="Explanation">
+                      <i class="fa-solid fa-exclamation-circle"></i>
+                    </button>
+                  </div>
+                </ul>
+                <!-- Tab Content -->
+                <div class="tab-content" id="mainTabContent">
+                  <!-- ========== WORKFLOW TAB ========== -->
+                  <div class="tab-pane fade" [ngClass]="{ 'show active': activeTab === 'workflow' }" id="workflow">
+                    <div class="p-2 rounded-4 border" style="
+                        height: 67vmin;
+                        width: 120vmin;
+                        overflow: auto;
+                        margin: 10px 10px 10px;
+                        background: #f7f9fb;
+                      ">
+                      <!-- Always render vflow container, but conditionally show content -->
+                      <ng-container *ngIf="IsWorkFlowLoad">
+                        <div class="step-content" #vflowContainer (click)="handleNodeClick($event)">
+                          <vflow view="auto" [nodes]="$any(nodes)" [edges]="edges" [alignmentHelper]="true" dndDropzone
+                            [background]="{
+                              type: 'dots',
+                              backgroundColor: '#FFFFFF'
+                            }" (dndDrop)="createNode($event)" (onConnect)="createEdge($event)">
+                            <!-- Node Template -->
+                            <ng-template let-ctx nodeHtml>
+                              <div class="workflow-node" [id]="ctx.node.id" [class.selected]="
+                                  selectedNode?.id === ctx.node.id
+                                " (click)="onNodeClick(ctx.node)">
+                                <span class="icon-wrapper">
+                                  @if(ctx.node.data().icon.startsWith("assets"))
+                                  {
+                                  <img [src]="ctx.node.data().icon" alt="node" />
+                                  } @else {
+                                  <span [innerHTML]="ctx.node.data().icon"></span>
+                                  }
+                                </span>
+                                <span class="label">{{
+                                  ctx.node.data().label
+                                  }}</span>
+                                <span class="desc">
+                                  @if(nodesFormState[ctx.node.id] &&
+                                  $any(nodesFormState[ctx.node.id])?.agent) {
+                                  {{
+                                  $any(nodesFormState[ctx.node.id])
+                                  ?.agentDetails?.name
+                                  }}
+                                  } @else {
+                                  {{ ctx.node.data().type | uppercase }}
+                                  }
+                                </span>
+
+                                <!-- Status + Progress + Time -->
+                                @if(nodeStatus[ctx.node.id]) {
+                                <div class="status-row">
+                                  <!-- Status badge with icon, text, and live time -->
+                                  <div class="status-badge-wrapper">
+                                    <span class="status-badge" [class.status-not-started]="
+                                        nodeStatus[ctx.node.id].status ===
+                                        'Not Started'
+                                      " [class.status-running]="
+                                        nodeStatus[ctx.node.id].status ===
+                                        'Running'
+                                      " [class.status-completed]="
+                                        nodeStatus[ctx.node.id].status ===
+                                        'Completed'
+                                      ">
+                                      @if(nodeStatus[ctx.node.id].status ===
+                                      'Not Started') {
+                                      <span class="status-text">Not Started</span>
+                                      } @else if(nodeStatus[ctx.node.id].status
+                                      === 'Running') {
+                                      <img src="assets/img/status-running.png" alt="Running" class="status-icon" />
+                                      <span class="status-text">Running...</span>
+                                      } @else if(nodeStatus[ctx.node.id].status
+                                      === 'Completed') {
+                                      <img src="assets/img/status-completed.png" alt="Completed" class="status-icon" />
+                                      <span class="status-text">Completed</span>
+                                      }
+                                    </span>
+
+                                    <!-- Show elapsed time only for Running/Completed -->
+                                    @if(nodeStatus[ctx.node.id].status !== 'Not Started') {
+                                    <span class="time">{{
+                                      nodeStatus[ctx.node.id].elapsedTime ||
+                                      0
+                                      }}s</span>
+                                    }
+                                  </div>
+
+                                  <!-- Progress bar section -->
+                                  @if(nodeStatus[ctx.node.id].status ===
+                                  'Running' || nodeStatus[ctx.node.id].status
+                                  === 'Completed') {
+                                  <div class="progress-section">
+                                    @if(nodeStatus[ctx.node.id].status ===
+                                    'Running') {
+                                    <div class="running-bar" [appProgressBar]="
+                                        nodeStatus[ctx.node.id].progress ?? 0
+                                      "></div>
+                                    } @else {
+                                    <div class="running-bar completed" [style.width.%]="100"></div>
+                                    }
+                                  </div>
+                                  }
+                                </div>
+                                }
+
+                                <handle type="source" position="right" />
+                                <handle type="target" position="left" />
+                              </div>
+                            </ng-template>
+
+                            <!-- Edge Template -->
+                            <ng-template let-ctx edge>
+                              <svg:g customTemplateEdge>
+                                <svg:path fill="none" [attr.d]="ctx.path()" class="vflow-edge" stroke-width="2"
+                                  stroke="#725A69" stroke-dasharray="5,5" />
+                              </svg:g>
+                            </ng-template>
+
+                            <!-- Edge Label Template -->
+                            <ng-template let-ctx edgeLabelHtml>
+                              <div class="d-flex align-items-center gap-1">
+                                @if($any(nodesFormState[ctx.edge.source])?.true_cond_ids)
+                                {
+                                <div class="workflow-edge-label" (click)="toggleCondition($event, ctx.edge)"
+                                  [attr.data-yes]="
+                                    $any(
+                                      nodesFormState[ctx.edge.source]
+                                    )?.true_cond_ids?.includes(ctx.edge.target)
+                                  " [attr.data-no]="
+                                    $any(
+                                      nodesFormState[ctx.edge.source]
+                                    )?.false_cond_ids?.includes(ctx.edge.target)
+                                  ">
+                                  @if
+                                  ($any(nodesFormState[ctx.edge.source])?.true_cond_ids?.includes(ctx.edge.target))
+                                  { Yes } @if
+                                  ($any(nodesFormState[ctx.edge.source])?.false_cond_ids?.includes(ctx.edge.target))
+                                  { No }
+                                </div>
+                                }
+                                <span *ngIf="isWorkFlowExternal" class="delete-edge-button"
+                                  (click)="deleteEdge(ctx.edge)">
+                                  <i class="fa-solid fa-trash-can delete-edge-button"></i>
+                                </span>
+                              </div>
+
+
+                            </ng-template>
+                          </vflow>
+                          <!-- Node Details Popup -->
+                          <div *ngIf="selectedNodeData" class="node-details-panel">
+                            <!-- Header -->
+                            <div class="panel-header">
+                              <div class="header-content">
+                                <!-- Only show "Next Agent:" label when the node is in 'Running' state -->
+                                <span class="next-agent-label" *ngIf="isStarted">
+                                  Next Agent:
+                                </span>
+
+                                <img *ngIf="!useIcon" src="assets/img/agent-icon.png" alt="Agent" width="20" height="20"
+                                  class="agent-icon" />
+
+                                <i *ngIf="useIcon" class="fa-solid fa-code-branch" style="font-size: 20px;"></i>
+
+                                <!-- Always show the agent name (safe with fallback) -->
+                                <span class="agent-name">
+                                  {{
+                                  getAgentDisplayName()
+                                  }}
+                                </span>
+
+                                <span class="status-pop-badge" [class.status-pop-completed]="
+                                    isCompleted" [class.status-pop-running]="
+                                    isRunning ||
+                                    isStarted
+                                  ">
+                                  <!-- Completed -->
+                                  <div *ngIf="isCompleted" class="status-item">
+                                    <img src="assets/img/status-completed.png" alt="Completed"
+                                      class="status-pop-icon me-1" />
+                                    <span>Completed</span>
+                                  </div>
+
+                                  <!-- Running -->
+                                  <div *ngIf="isRunning" class="status-item">
+                                    <img src="assets/img/status-running.png" alt="Running"
+                                      class="status-pop-icon me-1" />
+                                    <span>Running</span>
+                                  </div>
+
+                                  <!-- Started (visually same as Running) -->
+                                  <div *ngIf="
+                                      isStarted
+                                    " class="status-item">
+                                    <img src="assets/img/status-running.png" alt="Started"
+                                      class="status-pop-icon me-1" />
+                                    <span>Started</span>
+                                  </div>
+                                </span>
+
+                                <span class="duration" *ngIf="
+                                    isCompleted
+                                  ">
+                                  <i class="fa-regular fa-clock"></i>
+                                  {{ selectedNodeData.elapsedTime || 0 }}s
+                                </span>
+                              </div>
+
+                              <button class="close-pop-btn" (click)="closeDetailsPanel()">
+                                <i class="fa-solid fa-xmark"></i>
+                              </button>
+                            </div>
+
+                            <!-- Body: ONLY the raw agent response -->
+                            <div class="panel-body">
+                              <div class="response-content" [innerHTML]="formattedResponse"></div>
+                            </div>
+                          </div>
+                        </div>
+                      </ng-container>
+                      <!-- Zoom Controls -->
+                      <div class="workflow-controls">
+                        <button (click)="onZoomIn()">
+                          <i class="fa-solid fa-plus"></i>
+                        </button>
+                        <button (click)="onZoomOut()">
+                          <i class="fa-solid fa-minus"></i>
+                        </button>
+                        <button (click)="onZoomReset()">
+                          <i class="fa-solid fa-expand"></i>
+                        </button>
+                      </div>
+                    </div>
+
+                    <!-- Status Bar (Bottom of Workflow Tab) -->
+                    <div
+                      class="d-flex justify-content-between align-items-center mt-2 px-3 py-2 bg-white rounded-4 border"
+                      style="background: F7F9FB; margin: 10px 10px 10px">
+                      <div class="d-flex align-items-center gap-3">
+                        <span><i class="fa-solid fa-circle text-warning me-1"></i>
+                          Running: {{ runningCount }}</span>
+                        <span><i class="fa-solid fa-circle text-success me-1"></i>
+                          Completed: {{ completedCount }}</span>
+                        <span><i class="fa-solid fa-circle text-danger me-1"></i>
+                          Failed: {{ failedCount }}</span>
+                      </div>
+                      <!-- In your template -->
+                      <div *ngIf="avgDuration > 0">
+                        Avg Duration : {{ avgDuration | number : "1.2-2" }}s
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- ========== OUTPUT TAB ========== -->
+                  <div class="tab-pane fade" [ngClass]="{ 'show active': activeTab === 'output' }" id="output">
+                    <!-- Responses Container -->
+                    <div class="p-2 rounded-4 border" style="
+                        height: 67vmin;
+                        width: 120vmin;
+                        overflow: auto;
+                        margin: 10px 10px 10px;
+                        background: #f7f9fb;
+                      ">
+                      <div class="responses-container">
+                        <div *ngFor="let res of chatResponses; let i = index" class="d-flex">
+                          <div *ngIf="res" class="w-100" style="font-size: 14px">
+                            <ng-container>
+                              <!-- Text View -->
+                              <div *ngIf="currentView === 'text'" class="text-view">
+                                <div class="accordion" [id]="'textAccordion' + i">
+                                  <div class="accordion-item mb-2 rounded-2">
+                                    <h2 class="accordion-header position-relative d-flex align-items-center">
+                                      <div>
+                                        <input type="checkbox" class="border ms-3"
+                                          [(ngModel)]="selectedResponseIndex[i]" />
+                                      </div>
+                                      <button class="accordion-button box-shadow-none" type="button"
+                                        data-bs-toggle="collapse" [attr.data-bs-target]="
+                                          '#textCollapseMain' + i
+                                        " [attr.aria-expanded]="
+                                          i === 0 ? 'true' : 'false'
+                                        " [attr.aria-controls]="
+                                          'textCollapseMain' + i
+                                        " [class.collapsed]="i !== 0">
+                                        <strong style="margin-right: 8px" class="truncate-2-lines"
+                                          [appTooltip]="res.title">
+                                          {{ res.title }}
+                                        </strong>
+                                      </button>
+                                    </h2>
+                                    <div [id]="'textCollapseMain' + i" class="accordion-collapse collapse"
+                                      [class.show]="i === 0" [attr.data-bs-parent]="
+                                        '#textAccordion' + i
+                                      ">
+                                      <div class="accordion-body pt-0 bg-eee">
+                                        <div [innerHTML]="res.html" class="formatted-text"></div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+
+                              <!-- Table View -->
+                              <div *ngIf="currentView === 'table'" class="table-view">
+                                <div class="accordion" [id]="'tableAccordion' + i">
+                                  <div class="accordion-item mb-2 rounded-2">
+                                    <h2 class="accordion-header position-relative d-flex align-items-center">
+
+                                      <!-- Checkbox added like in your example -->
+                                      <div>
+                                        <input type="checkbox" [(ngModel)]="selectedResponseIndex[i]"
+                                          class="border ms-3" />
+                                      </div>
+
+                                      <button class="accordion-button box-shadow-none" type="button"
+                                        data-bs-toggle="collapse" [attr.data-bs-target]="'#tableCollapseMain' + i"
+                                        [attr.aria-expanded]="i === 0 ? 'true' : 'false'"
+                                        [attr.aria-controls]="'tableCollapseMain' + i" [class.collapsed]="i !== 0">
+                                        <!-- Title with truncate class like your example -->
+                                        <strong class="truncate-2-lines" style="margin-right: 8px;">
+                                          {{ res.title }}
+                                        </strong>
+                                      </button>
+
+                                    </h2>
+
+                                    <div [id]="'tableCollapseMain' + i" class="accordion-collapse collapse"
+                                      [class.show]="i === 0" [attr.data-bs-parent]="'#tableAccordion' + i">
+                                      <div class="accordion-body pt-0 bg-eee table-view">
+                                        <div class="table-responsive fs-14">
+
+                                          <!-- 
+              CASE 1: Render existing HTML table if it contains <table>
+              (similar to your second example)
+            -->
+                                          <ng-container *ngIf="renderTables(res)">
+                                            <chatbot-editable-table [tables]="res.tables"
+                                              (update)="updateTables($event, i)" />
+                                          </ng-container>
+
+                                          <!-- 
+              CASE 2: Render structured table data when no raw HTML table exists
+            -->
+                                          <ng-container *ngIf="!renderTables(res)">
+                                         <ng-container
+                                        *ngIf="res.tables && res.tables.length > 0 && res.tables[0].rows.length > 0">
+                                        <table class="table table-striped table-hover" aria-label="Dynamic data table">
+                                          <caption class="visually-hidden"> Response</caption>
+                                          <thead class="table-light">
+                                            <tr>
+                                              <!-- Loop over the headers of the first table -->
+                                              <th *ngFor="let header of res.tables[0].headers" scope="col">{{ header }}
+                                              </th>
+                                            </tr>
+                                          </thead>
+                                          <tbody>
+                                            <!-- Loop over the rows of the first table -->
+                                            <tr *ngFor="let row of res.tables[0].rows">
+
+                                              <td *ngFor="let header of res.tables[0].headers"
+                                                [innerHTML]="row[header]"></td>
+                                            </tr>
+                                          </tbody>
+                                        </table>
+                                      </ng-container>
+
+                                            <!-- Fallback / empty state (optional) -->
+                                            <ng-container *ngIf="!res.table || !res.table.headers?.length">
+                                              <div class="text-muted p-3">No table data available</div>
+                                            </ng-container>
+                                          </ng-container>
+
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+
+
+                              <!-- JSON View -->
+                              <div *ngIf="currentView === 'json'" class="json-view">
+                                <div class="accordion" [id]="'jsonAccordion' + i">
+                                  <div class="accordion-item mb-2 rounded-2">
+                                    <h2 class="accordion-header position-relative d-flex align-items-center">
+                                      <div>
+                                        <input type="checkbox" [(ngModel)]="selectedResponseIndex[i]"
+                                          class="border ms-3" />
+                                      </div>
+                                      <button class="accordion-button box-shadow-none" type="button"
+                                        data-bs-toggle="collapse" [attr.data-bs-target]="
+                                          '#jsonCollapseMain' + i
+                                        " [attr.aria-expanded]="
+                                          i === 0 ? 'true' : 'false'
+                                        " [attr.aria-controls]="
+                                          '#jsonCollapseMain' + i
+                                        " [class.collapsed]="i !== 0">
+                                        <strong style="margin-right: 8px">{{
+                                          res.title
+                                          }}</strong>
+                                      </button>
+                                    </h2>
+                                    <div [id]="'jsonCollapseMain' + i" class="accordion-collapse collapse"
+                                      [class.show]="i === 0" [attr.data-bs-parent]="
+                                        '#jsonAccordion' + i
+                                      ">
+                                      <div class="accordion-body pt-0 bg-eee">
+                                         @if(res.serializedBddJson) {
+                                          <pre class="bg-eee border p-3 rounded">{{ res.serializedBddJson | json }}</pre>
+                                          } @else {
+                                          <pre class="bg-eee border p-3 rounded">{{ res.json | json }}</pre>
+                                          }
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+
+                              <!-- Explanation View - Updated -->
+                              <div *ngIf="currentView === 'explanation'" class="explanation-view">
+                                <div class="accordion" [id]="'explanationAccordion' + i">
+                                  <div class="accordion-item mb-2 rounded-2">
+                                    <h2 class="accordion-header">
+                                      <button class="accordion-button box-shadow-none" type="button"
+                                        data-bs-toggle="collapse" [attr.data-bs-target]="'#explanationCollapseMain' + i"
+                                        [attr.aria-expanded]="i === 0 ? 'true' : 'false'"
+                                        [attr.aria-controls]="'explanationCollapseMain' + i"
+                                        [class.collapsed]="i !== 0">
+                                        <strong style="margin-right: 8px">AI Explanation</strong>
+                                        <!-- Add this loading indicator -->
+                                        @if (isLoadingExplanationData && !explanationDataRetrieved.has(res.nodeId)) {
+                                        <span class="ms-2">
+                                          <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                                          <span class="text-muted">Loading...</span>
+                                        </span>
+                                        }
+                                      </button>
+                                    </h2>
+                                    <div [id]="'explanationCollapseMain' + i" class="accordion-collapse collapse"
+                                      [class.show]="i === 0" [attr.data-bs-parent]="'explanationAccordion' + i">
+                                      <div class="accordion-body pt-0 bg-eee">
+                                        <!-- Always show the explanation container -->
+                                        <div class="trace-details-container">
+                                          <div class="card border mb-3">
+                                            <!-- Card Header with Tabs -->
+                                            <div class="card-header bg-light p-0">
+                                              <div class="d-flex justify-content-between align-items-center">
+                                                <!-- Tabs - Always show all tabs -->
+                                                <div class="details-tab">
+                                                  <button (click)="res.activeTab = 'trace'"
+                                                    [class.active]="res.activeTab === 'trace' || !res.activeTab">
+                                                    <i class="fa-solid fa-info-circle me-1"></i>Trace Details
+                                                  </button>
+                                                  <button (click)="res.activeTab = 'logs'"
+                                                    [class.active]="res.activeTab === 'logs'">
+                                                    <i class="fa-solid fa-list-alt me-1"></i>Log Details
+                                                  </button>
+                                                  <button *ngIf="res.showChatMessages" (click)="res.activeTab = 'chat'"
+                                                    [class.active]="res.activeTab === 'chat'">
+                                                    <i class="fa-solid fa-robot me-1"></i>Run Details
+                                                  </button>
+                                                </div>
+
+                                                <!-- Toggle Button - Show/Hide Run Details -->
+                                                <button type="button" class="btn btn-outline-secondary btn-sm me-3"
+                                                  (click)="toggleChatMessages(res)">
+                                                  <i
+                                                    class="fa-solid fa-{{ res.showChatMessages ? 'eye-slash' : 'eye' }}"></i>
+                                                  {{ res.showChatMessages ? 'Hide' : 'Show' }} Run Details
+                                                </button>
+                                              </div>
+                                            </div>
+
+                                            <!-- Tab Contents -->
+                                            <div class="card-body">
+                                              <!-- Trace Details Tab -->
+                                              <div *ngIf="!res.activeTab || res.activeTab === 'trace'" class="tab-body">
+                                                <div *ngIf="res.traceDetails && res.traceDetails.length > 0">
+                                                  <div *ngFor="let trace of res.traceDetails; let traceIndex = index">
+                                                    @for (span of trace.spans; track $index) {
+                                                    <details class="span-accordion mb-3 border rounded shadow-sm">
+                                                      <summary
+                                                        class="d-flex justify-content-between align-items-center px-3 py-2 bg-light">
+                                                        <div>
+                                                          <strong class="me-2" style="color:#737373;">{{ span.SpanName |
+                                                            titlecase }}</strong>
+                                                        </div>
+                                                        <div class="d-flex align-items-center">
+                                                          <span class="logs-count">{{ (span['Events.Name']?.length || 0)
+                                                            }} logs</span>
+                                                          <i
+                                                            class="fa-solid fa-chevron-down transition-transform ms-2"></i>
+                                                        </div>
+                                                      </summary>
+
+                                                      <div class="p-3 bg-white">
+                                                        <!-- Metadata Table for Span Attributes -->
+                                                        <div class="metadata-table">
+                                                          <div class="metadata-table-title">
+                                                            <i class="fa-solid fa-info-circle"></i>
+                                                            <span>Metadata</span>
+                                                          </div>
+                                                          <div class="metadata-table-body">
+                                                            <table class="table table-sm table-borderless">
+															 <caption>Metadata information table</caption>
+                                                              <tbody>
+                                                                @let entries = span.SpanAttributes | keyvalue;
+                                                                @let filteredEntries = filterEmptyEntries(entries);
+                                                                @for (entry of filteredEntries; track entry.key) {
+                                                                <tr>
+                                                                  <th class="th-width-30">{{ formatKey(entry.key) }}</th>
+                                                                  <td>{{ entry.value }}</td>
+                                                                </tr>
+                                                                }
+                                                              </tbody>
+                                                            </table>
+                                                          </div>
+                                                        </div>
+
+                                                        <!-- Events Attributes if available -->
+                                                        @if (span['Events.Attributes'] &&
+                                                        span['Events.Attributes'].length > 0) {
+                                                        <div class="mb-4">
+                                                          @for (attrSet of span['Events.Attributes']; track $index) {
+                                                          <div class="metadata-table">
+                                                            <div class="metadata-table-title">
+                                                              <i class="fa-solid fa-tag"></i>
+                                                              <span>Attributes</span>
+                                                            </div>
+                                                            <div class="metadata-table-body">
+                                                              <table class="table table-sm table-borderless">
+															  <caption>Metadata information table</caption>
+                                                                <tbody>
+                                                                  @let entries = attrSet | keyvalue;
+                                                                  @let filteredEntries = filterEmptyEntries(entries);
+                                                                  @for (entry of filteredEntries; track entry.key) {
+                                                                  <tr>
+                                                                    <th class="th-width-30">{{ formatKey(entry.key) }}</th>
+                                                                    <td>{{ entry.value }}</td>
+                                                                  </tr>
+                                                                  }
+                                                                </tbody>
+                                                              </table>
+                                                            </div>
+                                                          </div>
+                                                          }
+                                                        </div>
+                                                        }
+                                                      </div>
+                                                    </details>
+                                                    }
+                                                  </div>
+                                                </div>
+                                                <div *ngIf="!res.traceDetails || res.traceDetails.length === 0"
+                                                  class="text-center p-3">
+                                                  <p class="text-muted">No trace details available</p>
+                                                </div>
+                                              </div>
+
+                                              <!-- Log Details Tab - Updated to match Trace Details structure exactly -->
+                                              <!-- Log Details Tab - Updated to handle the new structure -->
+                                              <div *ngIf="res.activeTab === 'logs'" class="tab-body">
+                                                <div *ngIf="res.logDetails && res.logDetails.length > 0">
+                                                  @for (logAgent of res.logDetails; track $index) {
+                                                  <!-- Check if logs exist in the agent object -->
+                                                  @if (logAgent.logs && logAgent.logs.length > 0) {
+                                                  @for (log of logAgent.logs; track $index) {
+                                                  <details class="span-accordion mb-3 border rounded shadow-sm">
+                                                    <summary
+                                                      class="d-flex justify-content-between align-items-center px-3 py-2 bg-light">
+                                                      <div>
+                                                        <strong class="me-2" style="color:#737373;">
+                                                          <i class="fa-solid me-2"
+                                                            [class]="getLogFeatureIcon(log.feature)"></i>
+                                                          {{ log.feature || log.event_type | titlecase }}
+                                                        </strong>
+
+                                                      </div>
+                                                      <div class="d-flex align-items-center">
+
+                                                        <i
+                                                          class="fa-solid fa-chevron-down transition-transform ms-2"></i>
+                                                      </div>
+                                                    </summary>
+
+                                                    <div class="p-3 bg-white">
+                                                      <!-- Metadata Table for Log Attributes (same as Trace Details) -->
+                                                      <div class="metadata-table">
+                                                        <div class="metadata-table-title">
+                                                          <i class="fa-solid fa-info-circle"></i>
+                                                          <span>Metadata</span>
+                                                        </div>
+                                                        <div class="metadata-table-body">
+                                                          <table class="table table-sm table-borderless">
+														  <caption>Metadata information table</caption>
+                                                            <tbody>
+                                                              @let entries = log | keyvalue;
+                                                              @let filteredEntries = filterEmptyEntries(entries);
+                                                              @for (entry of filteredEntries; track entry.key) {
+                                                              <tr>
+                                                                <th class="th-width-30">{{ formatKey(entry.key) }}</th>
+                                                                <td>
+                                                                  @if (isComplexObject(entry.value)) {
+                                                                  <!-- Inline expandable data with JSON display -->
+                                                                  <div class="expandable-data">
+                                                                    <div class="data-preview"
+                                                                      (click)="toggleExpandedData($index, entry.key)">
+                                                                      <span class="preview-text">View Data</span>
+                                                                      <button class="play-button"
+                                                                        [class]="{ 'expanded': isDataExpanded($index, entry.key) }">
+                                                                        <i class="fa-solid"
+                                                                          [class]="isDataExpanded($index, entry.key) ? 'fa-chevron-up' : 'fa-play'"></i>
+                                                                      </button>
+                                                                    </div>
+                                                                    <div class="data-full"
+                                                                      [class]="{ 'show': isDataExpanded($index, entry.key) }">
+                                                                      <pre>{{ entry.value | json }}</pre>
+                                                                    </div>
+                                                                  </div>
+                                                                  } @else {
+                                                                  <!-- Simple value -->
+                                                                  {{ formatData(entry.value) }}
+                                                                  }
+                                                                </td>
+                                                              </tr>
+                                                              }
+                                                            </tbody>
+                                                          </table>
+                                                        </div>
+                                                      </div>
+
+                                                      <!-- Message if available (similar to chat_messages in Trace Details) -->
+                                                      @if (log.message && log.message.trim()) {
+                                                      <div class="metadata-table mt-3">
+                                                        <div class="metadata-table-title">
+                                                          <i class="fa-solid fa-message"></i>
+                                                          <span>Message</span>
+                                                        </div>
+                                                        <div class="metadata-table-body">
+                                                          <div class="p-2 bg-light rounded">
+                                                            {{ log.message }}
+                                                          </div>
+                                                        </div>
+                                                      </div>
+                                                      }
+                                                    </div>
+                                                  </details>
+                                                  }
+                                                  } @else {
+                                                  <!-- No logs available for this agent -->
+                                                  <div class="text-center p-3">
+                                                    <p class="text-muted">No logs available for this agent</p>
+                                                  </div>
+                                                  }
+                                                  }
+                                                </div>
+                                                <div *ngIf="!res.logDetails || res.logDetails.length === 0"
+                                                  class="text-center p-3">
+                                                  <p class="text-muted">No log details available</p>
+                                                </div>
+                                              </div>
+
+                                              <!-- Chat Messages Tab - Run Details -->
+                                              <div *ngIf="res.activeTab === 'chat' && res.showChatMessages"
+                                                class="tab-body">
+                                                <div class="border rounded">
+                                                  <div class="border rounded mb-2">
+                                                    <div class="p-2 border-bottom bg-light">
+                                                      <strong style="color: #737373;">Input</strong>
+                                                    </div>
+                                                    <div class="p-2">
+                                                      <pre
+                                                        class="mb-0 text-break">{{ getFirstChatWfMessage(res, 'input') }}</pre>
+                                                    </div>
+                                                  </div>
+                                                  <div class="border rounded">
+                                                    <div class="p-2 border-bottom bg-light">
+                                                      <strong style="color: #737373;">Output</strong>
+                                                    </div>
+                                                    <div class="p-2">
+                                                      <pre
+                                                        class="mb-0 text-break">{{ getFirstChatWfMessage(res, 'output') }}</pre>
+                                                    </div>
+                                                  </div>
+                                                </div>
+                                              </div>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </ng-container>
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- Workflow Running Loader -->
+                      <div *ngIf="isWorkflowLoading && firstResponseLoaded" class="d-flex justify-content-center p-3">
+                        <div class="spinner-border spinner-border-sm text-primary"></div>
+                        <span class="ms-2 align-self-center">Running workflow…</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <!-- Feedback Bar -->
+            <div class="feedback-bar" *ngIf="
+                !isPopupVisible &&
+                isChatOpenedByAgent &&
+                chatResponses.length > 0
+              ">
+              <span>Share your feedback</span>
+              <span class="stars">
+                <span class="star" *ngFor="let s of [1, 2, 3, 4, 5]; let i = index" [class.active]="hoveredRating > i"
+                  (mouseenter)="hoveredRating = i + 1" (mouseleave)="hoveredRating = selectedRating"
+                  (click)="openFeedbackPopup(i + 1)">★</span>
+              </span>
+            </div>
+
+            <!-- Feedback Popup -->
+            <div class="feedback-popup" *ngIf="isPopupVisible">
+              <div class="close-btn" (click)="closeFeedbackPopup()">×</div>
+              <h2 class="popup-title">Share your feedback</h2>
+              <div class="stars-popup mb-2">
+                <span class="star" *ngFor="let s of [1, 2, 3, 4, 5]; let i = index" [class.active]="selectedRating > i"
+                  (click)="selectedRating = i + 1">★</span>
+              </div>
+              <label class="popup-label">Feedback</label>
+              <textarea class="popup-textarea" placeholder="Enter your feedback" [(ngModel)]="feedbackText"></textarea>
+              <div class="popup-actions">
+                <button class="btn bg-orange text-white fs-12 submit-btn" [disabled]="!feedbackText.trim()"
+                  (click)="submitFeedback1()">
+                  Submit
+                </button>
+              </div>
+            </div>
+          </ng-container>
+
+
+          <ng-container *ngIf="isWorkflowrouted1">
+            <div class="d-flex pos-chatbot1">
+              <div class="d-flex h-100" style="position: relative;">
+
+                <!-- Resizable Sidebar -->
+                <div #sidebar class="border-end p-3 overflow-auto" [style.width.px]="sidebarWidth"
+                  style="min-width: 500px; max-width: 1000px; flex-shrink: 0;">
+
+                  <div class="h-76" #mainContainer>
+                    <!-- Workflow header -->
+                    <div class="welcome-panel pad-3" *ngIf="workflowDetails">
+                      <div class="d-flex align-items-center mb-2">
+                        <img src="assets/img/default.png" alt="Workflow" width="24" height="24" class="me-2" />
+                        <strong>{{ workflowDetails.flow_name }}</strong>
+                      </div>
+                      <p>
+                        I'm your {{ workflowDetails.flow_name }} — your AI-powered
+                        partner for all <strong>{{ workflowDetails.agency_name }}</strong>.
+                      </p>
+                      <p>{{ workflowDetails.description }}
+                      </p>
+
+                      <!-- ACCORDION – shows description + acceptance criteria -->
+                      <div class="accordion p-2" id="reviewAccordion">
+                        <div *ngFor="let res of eventResponses; let i = index" class="accordion-item mb-2 rounded-2">
+                          <h2 class="accordion-header">
+                            <button class="accordion-button box-shadow-none" type="button" data-bs-toggle="collapse"
+                              [attr.data-bs-target]="'#collapse' + i" [attr.aria-expanded]="i === 0 ? 'true' : 'false'"
+                              [attr.aria-controls]="'collapse' + i" [class.collapsed]="i !== 0">
+                              <strong style="margin-right: 10px">{{
+                                res.key || "Response"
+                                }}</strong>
+                            </button>
+                          </h2>
+
+                          <div [id]="'collapse' + i" class="accordion-collapse collapse" [class.show]="i === 0"
+                            data-bs-parent="#accordionExample">
+                            <div class="accordion-body pt-0 bg-eee">
+                              <div class="bg-eee border p-3 rounded">
+                                <!-- DESCRIPTION (user story) -->
+                                <div class="mb-3">
+                                  <strong>User Story Description:</strong>
+                                  <div>
+                                    {{
+                                    res.description ||
+                                    "No description available"
+                                    }}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          <!-- Empty state -->
+                          <div *ngIf="!eventResponses?.length && !isLoading" class="text-center p-4 text-muted">
+                            No steps available.
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <!-- No input box – read-only -->
+                  </div>
+                  <div class="position-relative">
+                    <i class="fa-solid fa-microphone pos-microphone"></i>
+                    <input type="text" autocomplete="off" class="form-control rounded-4 ps-s1 fs-14"
+                      placeholder="Ask anything" [(ngModel)]="userQuery1" (ngModelChange)="onInputChange1()"
+                      (keydown.enter)="submitQuery('')" [disabled]="!isPrivilegeExecute" />
+
+                    <button *ngIf="showSendIcon1" (click)="submitQuery('')"
+                      class="btn position-absolute top-50 end-0 translate-middle-y me-3 p-0 border-0 bg-transparent">
+                      <img src="assets/img/chat-enter.png" alt="Up Arrow" class="fs-16"
+                        style="width: 25px; height: 25px" />
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Draggable Resizer -->
+                <div class="resizer" (mousedown)="startResizing($event)">
+                </div>
+
+              </div>
+              <!-- Right panel with view toggles -->
+              <div class="" style="overflow: auto;width: -webkit-fill-available;">
+                <div class="d-flex border-bottom pb-2 align-items-center">
+                  <div class="ps-3 pt-2 mt-2"></div>
+                  <div class="fw-bold fs-20 me-auto p-3 pb-0"></div>
+
+                  <!-- View toggle buttons -->
+                  <div class="d-flex align-items-center me-2 mt-2">
+                    <button type="button" class="btn btn-outline-secondary btn-sm"
+                      [class.active]="currentView === 'text'" (click)="changeView('text')" title="Text View">
+                      <i class="fa-solid fa-align-left"></i>
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm"
+                      [class.active]="currentView === 'table'" (click)="changeView('table')" title="Table View">
+                      <i class="fa-solid fa-table"></i>
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm"
+                      [class.active]="currentView === 'json'" (click)="changeView('json')" title="JSON View">
+                      <i class="fa-solid fa-code"></i>
+                    </button>
+
+                    <ng-container>
+                      <ng-container *ngTemplateOutlet="
+                          textDownloadOption;
+                          context: { onClick: 'downloadChatResponses' }
+                        ">
+                      </ng-container>
+                      <button class="btn btn-sm btn-outline-secondary" type="button" (click)="copyChatResponses()"
+                        title="Copy">
+                        <i class="fa-solid fa-copy"></i>
+                        <span #copyTooltip class="copy-tooltip">Copied!</span>
+                      </button>
+                    </ng-container>
+                    <button type="button" class="btn btn-outline-secondary btn-sm"
+                      [class.active]="currentView === 'explanation'" (click)="changeView('explanation')"
+                      title="Explanation">
+                      <i class="fa-solid fa-exclamation-circle"></i>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Content area with different views -->
+                <div class="p-2" style="height: 67vmin; overflow: auto">
+                  <div *ngIf="!chatResponses?.length" class="text-center p-4 text-muted">
+                    No test cases available. Please generate some test cases
+                    first.
+                  </div>
+
+                  <div *ngFor="let res of chatResponses; let i = index" class="d-flex">
+                    <div *ngIf="res" class="w-100" style="font-size: 14px">
+                      <ng-container *ngIf="res.isLoading; else showResponse">
+                        <div class="response-loader w-100 d-flex justify-content-center p-3">
+                          <img src="assets/img/loader.gif" alt="Loading..." style="height: 70vmin; overflow: auto" />
+                        </div>
+                      </ng-container>
+
+                      <ng-template #showResponse>
+                        <!-- Text View -->
+                        <div *ngIf="currentView === 'text'" class="text-view">
+                          <div class="accordion" [id]="'textAccordion' + i">
+                            <div class="accordion-item mb-2 rounded-2">
+                              <h2 class="accordion-header position-relative d-flex align-items-center">
+                                <div>
+                                  <input type="checkbox" class="border ms-3" [(ngModel)]="selectedResponseIndex[i]" />
+                                </div>
+                                <button class="accordion-button box-shadow-none" type="button" data-bs-toggle="collapse"
+                                  [attr.data-bs-target]="
+                                    '#textCollapseMain' + i
+                                  " [attr.aria-expanded]="
+                                    i === 0 ? 'true' : 'false'
+                                  " [attr.aria-controls]="'textCollapseMain' + i" [class.collapsed]="i !== 0">
+                                  <strong style="margin-right: 8px" class="truncate-2-lines" [appTooltip]="res.title">{{
+                                    res.title }}</strong>
+                                </button>
+                              </h2>
+                              <div [id]="'textCollapseMain' + i" class="accordion-collapse collapse"
+                                [class.show]="i === 0" [attr.data-bs-parent]="'#textAccordion' + i">
+                                <div class="accordion-body pt-0 bg-eee">
+                                  <div [innerHTML]="res.html" class="formatted-text"></div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div *ngIf="currentView === 'table'" class="table-view">
+                          <div class="accordion" [id]="'tableAccordion' + i">
+                            <div class="accordion-item mb-2 rounded-2">
+                              <h2 class="accordion-header position-relative d-flex align-items-center">
+                                <button class="accordion-button box-shadow-none" type="button" data-bs-toggle="collapse"
+                                  [attr.data-bs-target]="
+                                    '#tableCollapseMain' + i
+                                  " [attr.aria-expanded]="
+                                    i === 0 ? 'true' : 'false'
+                                  " [attr.aria-controls]="'tableCollapseMain' + i" [class.collapsed]="i !== 0">
+                                  <strong style="margin-right: 8px">{{
+                                    res.title
+                                    }}</strong>
+                                </button>
+                                <button class="btn btn-sm btn-outline-secondary" type="button"
+                                  (click)="downloadResponses(true)" title="Download">
+                                  <i class="fa-solid fa-download"></i>
+                                </button>
+                              </h2>
+                              <div [id]="'tableCollapseMain' + i" class="accordion-collapse collapse"
+                                [class.show]="i === 0" [attr.data-bs-parent]="'#tableAccordion' + i">
+                                <div class="accordion-body pt-0 bg-eee">
+                                  <div class="table-responsive fs-14">
+                                    <table class="table table-bordered table-striped" aria-label="Data Table">
+                                      <thead>
+                                        <tr>
+                                          <th *ngFor="
+                                              let header of res.table.headers
+                                            ">
+                                            {{ header }}
+                                          </th>
+                                        </tr>
+                                      </thead>
+                                      <tbody>
+                                        <tr *ngFor="let row of res.table.rows">
+                                          <td *ngFor="
+                                              let header of res.table.headers
+                                            ">
+                                            <ul class="mb-0 ps-3">
+                                              <li *ngFor="
+                                                  let v of cleanTableValue(
+                                                    row[header]
+                                                  )
+                                                ">
+                                                {{ v }}
+                                              </li>
+                                            </ul>
+                                          </td>
+                                        </tr>
+                                      </tbody>
+                                    </table>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <!-- JSON View -->
+                        <div *ngIf="currentView === 'json'" class="json-view">
+                          <div class="accordion" [id]="'jsonAccordion' + i">
+                            <div class="accordion-item mb-2 rounded-2">
+                              <h2 class="accordion-header">
+                                <button class="accordion-button box-shadow-none" type="button" data-bs-toggle="collapse"
+                                  [attr.data-bs-target]="
+                                    '#jsonCollapseMain' + i
+                                  " [attr.aria-expanded]="
+                                    i === 0 ? 'true' : 'false'
+                                  " [attr.aria-controls]="'jsonCollapseMain' + i" [class.collapsed]="i !== 0">
+                                  <strong style="margin-right: 8px">{{
+                                    res.title
+                                    }}</strong>
+                                </button>
+                              </h2>
+                              <div [id]="'jsonCollapseMain' + i" class="accordion-collapse collapse"
+                                [class.show]="i === 0" [attr.data-bs-parent]="'#jsonAccordion' + i">
+                                <div class="accordion-body pt-0 bg-eee">
+                                  <pre class="bg-eee border p-3 rounded">{{
+                                    res.json | json
+                                  }}</pre>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <!-- Explanation View -->
+                        <div *ngIf="currentView === 'explanation'" class="explanation-view">
+                          <div class="accordion" [id]="'explanationAccordion' + i">
+                            <div class="accordion-item mb-2 rounded-2">
+                              <h2 class="accordion-header">
+                                <button class="accordion-button box-shadow-none" type="button" data-bs-toggle="collapse"
+                                  [attr.data-bs-target]="
+                                    '#explanationCollapseMain' + i
+                                  " [attr.aria-expanded]="
+                                    i === 0 ? 'true' : 'false'
+                                  " [attr.aria-controls]="
+                                    'explanationCollapseMain' + i
+                                  " [class.collapsed]="i !== 0">
+                                  <strong style="margin-right: 8px">AI Explanation</strong>
+                                </button>
+                              </h2>
+                              <div [id]="'explanationCollapseMain' + i" class="accordion-collapse collapse"
+                                [class.show]="i === 0" [attr.data-bs-parent]="
+                                  '#explanationAccordion' + i
+                                ">
+                                <div class="accordion-body pt-0 bg-eee">
+                                  <!-- Show explanation text directly -->
+                                  <div class="formatted-text">
+                                    <pre class="border p-3 bg-eee" style="
+                                        white-space: pre-wrap;
+                                        font-size: 14px;
+                                      ">
+                                  {{ res.explanation }}
+                                </pre>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </ng-template>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <!-- Feedback Bar -->
+              <div class="feedback-bar" *ngIf="
+                  !isPopupVisible &&
+                  isChatOpenedByAgent &&
+                  chatResponses.length > 0
+                ">
+                <span>Share your feedback</span>
+                <span class="stars">
+                  <span onkeyup class="star" *ngFor="let s of [1, 2, 3, 4, 5]; let i = index"
+                    [class.active]="hoveredRating > i" (mouseenter)="hoveredRating = i + 1"
+                    (mouseleave)="hoveredRating = selectedRating" (click)="openFeedbackPopup(i + 1)">★</span>
+                </span>
+              </div>
+
+              <!-- Feedback Popup -->
+              <div class="feedback-popup" *ngIf="isPopupVisible">
+                <div class="close-btn" onkeyup (click)="closeFeedbackPopup()">×</div>
+                <h2 class="popup-title">Share your feedback</h2>
+                <div class="stars-popup mb-2">
+                  <span onkeyup class="star" *ngFor="let s of [1, 2, 3, 4, 5]; let i = index"
+                    [class.active]="selectedRating > i" (click)="selectedRating = i + 1">★</span>
+                </div>
+                <label class="popup-label" for="feedback-text-area">Feedback</label>
+                <textarea id="feedback-text-area" class="popup-textarea" placeholder="Enter your feedback"
+                  [(ngModel)]="feedbackText"></textarea>
+                <div class="popup-actions">
+                  <button class="btn bg-orange text-white fs-12 submit-btn" [disabled]="!feedbackText.trim()"
+                    (click)="submitFeedback1()">
+                    Submit
+                  </button>
+                </div>
+              </div>
+            </div>
+          </ng-container>
+
+             </div>
+      </div>
+
+
+      <ng-template #textDownloadOption let-onClick="onClick">
+        @if(currentView !== 'text') {
+        <button
+          class="btn btn-sm btn-outline-secondary"
+          type="button"
+          (click)="handleDownload(onClick, true)"
+          title="Download"
+        >
+          <i class="fa-solid fa-download"></i>
+        </button>
+        } @else {
+        <div>
+          <button
+            class="btn btn-sm btn-outline-secondary me-2"
+            data-bs-toggle="dropdown"
+            aria-expanded="false"
+            type="button"
+          >
+            <i class="fa-solid fa-download"></i>
+          </button>
+          <ul class="dropdown-menu dropdown-menu-end fs-12">
+            <li
+              onKeyup
+              class="dropdown-item cursor-pointer fs-14 d-flex align-items-center"
+              (click)="handleDownload(onClick, true)"
+            >
+              <img
+                src="assets/img/text.png"
+                style="width: 16px"
+                class="me-2"
+                alt="text-download"
+              />
+              Text
+            </li>
+            <li
+              onKeyup
+              class="dropdown-item cursor-pointer fs-14 d-flex align-items-center"
+              (click)="downloadDocx(handleDownload(onClick, false))"
+            >
+              <img
+                src="assets/img/docx.png"
+                style="width: 16px"
+                class="me-2"
+                alt="docx-download"
+              />
+              DOCX
+            </li>
+          </ul>
+        </div>
+        }
+      </ng-template>
+
+    </div>
+  </div>
+</div>
+
+
+<!-- Save to Repository Modal -->
+<div class="modal" *ngIf="saveToRepoModalVisible" [class.show]="saveToRepoModalVisible" style="display: block;">
+  <div class="modal-dialog modal-dialog-centered" style="max-width: 500px;">
+    <div class="modal-content">
+      <div class="modal-header border-0">
+        <h5 class="modal-title fw-semibold">Save to Prompt Repository</h5>
+        <button type="button" class="btn-close" (click)="closeSaveToRepoModal()"></button>
+      </div>
+      
+      <div class="modal-body">
+        <p class="mb-3">Do you want to customize the title before saving?</p>
+
+        <!-- Title Input (conditionally shown) -->
+        <div class="mb-3" *ngIf="isEditingTitle">
+          <label class="form-label fw-semibold">Prompt Title</label>
+          <input 
+            type="text" 
+            class="form-control" 
+            [(ngModel)]="repoTitle" 
+            placeholder="Enter title"
+            (keyup.enter)="saveWithCustomTitle()"
+          />
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="d-flex gap-2 justify-content-end">
+          
+          <button 
+            class="btn custom-option-btn" 
+            *ngIf="!isEditingTitle" 
+            (click)="isEditingTitle = true">
+            Yes
+          </button>
+          
+          <button 
+            class="btn bg-orange text-white submit-btn" 
+            *ngIf="isEditingTitle" 
+            (click)="saveWithCustomTitle()">
+            Save
+          </button>
+          
+          <button 
+            class="btn btn-outline-secondary" 
+            *ngIf="!isEditingTitle" 
+            (click)="directSaveToRepository()">
+            No
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Backdrop -->
+  <div class="modal-backdrop fade show" style="z-index: 1050;"></div>
+</div>
+
+<!-- Toast Containers -->
+<div id="successToast" class="toast align-items-center text-white bg-success border-0 position-fixed top-0 end-0 m-4"
+     role="alert" aria-live="assertive" aria-atomic="true" data-bs-delay="4000" style="z-index: 9999;">
+  <div class="d-flex">
+    <div class="toast-body">
+      {{ toastMessage }}
+    </div>
+    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+  </div>
+</div>
+
+      <!-- Error Toast -->
+      <!-- Custom Warning Toast -->
+      <div
+        id="errorToast"
+        class="toast align-items-center border-0 position-fixed bottom-0 end-0 m-3 custom-toast"
+        role="alert"
+        aria-live="assertive"
+        aria-atomic="true"
+        style="z-index: 1060"
+      >
+        <div class="d-flex align-items-center w-100">
+          <!-- Icon -->
+          <img
+            src="assets/img/warning.png"
+            alt="Warning"
+            class="me-2 ps-2"
+            style="width: 30px; height: 20px"
+          />
+
+          <!-- Message -->
+          <div class="toast-body flex-grow-1 ps-1">
+            {{ toastMessage }}
+          </div>
+
+          <!-- Close button -->
+          <button
+            type="button"
+            class="btn-close custom-close me-2 m-auto"
+            data-bs-dismiss="toast"
+            aria-label="Close"
+          ></button>
+        </div>
+      </div>

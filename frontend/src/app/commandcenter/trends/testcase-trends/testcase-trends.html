@@ -1,0 +1,92 @@
+@let activeUseCases = filterStore.activeUseCases();
+@let visualization = filterStore.visualization();
+
+@for (item of activeUseCases; track item) {
+  @switch (item) {
+    @case (useCases.AVERAGE_TESTCASE) {
+      <kpi-card
+        label="Average Testcase Per Day"
+        class="kpi-card"
+        [description]="
+          `Mean testcase reported daily.
+      Formula: Total testcase ÷ Days
+      Ex: 210 testcase / 30 days = 7/day`
+        "
+        [value]="[`${kpis().avg_testcase_per_day} NEW`]"
+        [loading]="kpisQuery.isLoading()"
+        style="grid-column: span 6"
+      />
+    }
+
+    @case (useCases.SIMILAR_TESTCASE) {
+      <kpi-card
+        label="Similar Testcases"
+        class="kpi-card"
+        [description]="
+          `Testcase sharing patterns or causes.
+      Formula: (Similar Testcase ÷ Total Testcase) × 100
+      Ex: 60/200 × 100 = 30% similar`
+        "
+        [value]="[`${kpis().similar_testcase.length}`]"
+        [loading]="kpisQuery.isLoading()"
+        (clickAction)="openSimilarDefectsModal()"
+        style="grid-column: span 6"
+      />
+    }
+
+    @case (useCases.TESTCASE_ANALYTICS) {
+      <entity-analytics
+        [data]="analytics()"
+        [total]="meta().total_testcase || 0"
+        [options]="{
+          label: 'Testcase Analytics',
+          centerText: 'Testcases',
+          filterByOptions: ['status', 'priority', 'severity', 'category'],
+          tooltip:
+            'Testcase Analytics provides a visual breakdown of testcase across status, priority, severity, category, and service—helping identify trends and operational bottlenecks.',
+        }"
+        class="chart-card"
+        [loading]="kpisQuery.isLoading()"
+        (selectData)="onSelectData($event)"
+        style="grid-column: span 6"
+      />
+    }
+
+    @case (useCases.TESTCASE_FREQUENCY) {
+      <testcase-frequency class="chart-card" style="grid-column: span 6" />
+    }
+
+    @default {
+      @if (visualization[item]) {
+        <widget-renderer
+          [case]="item"
+          [config]="visualization[item]"
+          useCaseType="trends"
+          (select)="selectDynamicData($event)"
+          style="grid-column: span 6"
+        />
+      }
+    }
+  }
+}
+
+@let dynamicWidgetData = dynamicData();
+<entity-table
+  [open]="!!dynamicWidgetData.headings.length"
+  [data]="dynamicWidgetData.data"
+  [headings]="dynamicWidgetData.headings"
+  (close)="dynamicData.set({ headings: [], data: [] })"
+  [withCloseButton]="true"
+/>
+
+<similar-entity-modal
+  [data]="selectSimilarTestcase() || []"
+  [open]="!!selectSimilarTestcase()?.length"
+  (close)="selectSimilarTestcase.set(null)"
+/>
+
+<testcase-table-modal
+  [data]="selectedTestcaseData() || []"
+  [open]="!!selectedTestcaseData()"
+  (close)="selectTestcase(null)"
+/>

@@ -1,0 +1,9 @@
+{
+  "apiServer": {
+    "url": "http://127.0.0.1:5000/api",
+    "captcha": true,
+    "SessionTime": 30,
+    "isMinDateMonth": true,
+    "minDateOffsetMonthsOrDate": 2
+  }
+}

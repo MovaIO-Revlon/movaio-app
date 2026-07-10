@@ -1,0 +1,77 @@
+@let useCases = dynamicUseCases();
+@if (useCases.length) {
+  <app-dynamic-form
+    class="h-100"
+    [schema]="formSchema()"
+    [options]="options()"
+    [(formData)]="formConfig"
+    [(isValid)]="isFormValid"
+  >
+    <div>
+      <label class="form-label"
+        >Use Case <span class="text-danger">*</span></label
+      >
+      @let active = activeUseCase();
+      <select
+        class="form-select"
+        (change)="onSelectUseCase($any($event.target).value)"
+      >
+        <option [selected]="active === ''" value="">Select Use Case</option>
+        @for (useCase of useCases; track $index) {
+          <option
+            [selected]="active === useCase.description"
+            [value]="useCase.description"
+            [title]="useCase.description"
+          >
+            {{ useCase.description | slice: 0 : 50 }}
+            @if (useCase.description.length >= 50) {
+              ...
+            }
+          </option>
+        }
+      </select>
+    </div>
+  </app-dynamic-form>
+  <div class="preview-section d-flex flex-column py-3">
+    <div class="fw-medium mb-2">Live Preview</div>
+    @let config = validatedConfig();
+
+    @if (config) {
+      <widget-renderer
+        [config]="config"
+        [dataSource]="dataSource()"
+        (select)="selectDynamicData($event)"
+      />
+    } @else {
+      @let rootConfig = formConfig();
+      <app-widget-card
+        [title]="rootConfig.chartTitle || 'Title'"
+        [showInfo]="!!rootConfig.infoText?.trim()"
+        [infoText]="rootConfig.infoText || ''"
+        class="bg-secondary-subtle"
+      >
+        <div
+          class="h-100 fs-14 text-secondary d-flex align-items-center justify-content-center p-2"
+        >
+          <p>Select chart type and fields to Preview visualization</p>
+        </div>
+      </app-widget-card>
+    }
+
+    @let dynamicWidgetData = dynamicData();
+    <entity-table
+      [open]="!!dynamicWidgetData.headings.length"
+      [data]="dynamicWidgetData.data"
+      [headings]="dynamicWidgetData.headings"
+      (close)="dynamicData.set({ headings: [], data: [] })"
+      [withCloseButton]="true"
+    />
+  </div>
+} @else {
+  <div
+    style="grid-column: 1 / -1; min-height: 25rem"
+    class="d-flex align-items-center justify-content-center text-muted"
+  >
+    <p>No Configuration needed for this step.</p>
+  </div>
+}

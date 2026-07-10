@@ -1,0 +1,259 @@
+@let cacheEnabled = filterStore.cacheEnabled();
+@let tempFilters = filterStore.tempFilters();
+@let tempEntity = tempFilters.entity;
+@let entity = cacheEnabled ? tempEntity : filterStore.appliedFilters().entity;
+
+@let requestConfig = filterStore.apiLimit();
+@let exhausted = requestConfig.remaining === 0;
+@let isMissingFilters = filterStore.isMissingFilters();
+@let hasUseCases = !!filterStore.activeUseCases().length;
+@let privilegeConfig = privilege();
+
+<div class="header">
+  <div class="d-flex align-items-center gap-2 fs-12">
+    <span class="fw-semibold">Entity</span>
+    <app-select
+      placeholder="Select"
+      [options]="filterStore.entityOptions"
+      (onSelect)="filterStore.onEntitySelect($event)"
+      [(value)]="filterStore.tempFilters().entity"
+      [allowSearch]="false"
+      style="
+        --min-height: auto;
+        --width: 5.5rem;
+        --option-font-size: 0.7rem;
+        --font-size: 0.7rem;
+      "
+      [disabled]="cacheEnabled"
+    />
+  </div>
+
+  <div class="d-flex align-items-center gap-2 fs-12">
+    <span class="fw-semibold">Index</span>
+    <app-select
+      [disabled]="!tempEntity"
+      placeholder="Select"
+      [options]="filterStore.indexOptions()"
+      (onSelect)="filterStore.onIndexSelect($event)"
+      [(value)]="filterStore.tempFilters().index"
+      style="
+        --width: 8rem;
+        --min-height: auto;
+        --option-font-size: 0.7rem;
+        --font-size: 0.7rem;
+      "
+      [disabled]="cacheEnabled || !tempEntity"
+      [parentWidth]="false"
+    />
+  </div>
+
+  <div class="d-flex align-items-center gap-2 fs-12">
+    <span class="fw-semibold">Agent</span>
+    <app-select
+      style="
+        --width: 9rem;
+        --min-height: auto;
+        --option-font-size: 0.7rem;
+        --font-size: 0.7rem;
+      "
+      [disabled]="true"
+      placeholder="All Agents"
+      [(value)]="filterStore.tempFilters().agent"
+      [allowSearch]="false"
+      [options]="filterStore.agentOptions()"
+    />
+  </div>
+
+  <div class="d-flex align-items-center gap-2 fs-12">
+    <span class="fw-semibold">Usecases</span>
+    <app-multi-select
+      [withSelectAll]="true"
+      class="cursor-pointer"
+      [class.disabled]="filterStore.hasTempFilter()"
+      [parentWidth]="false"
+      style="
+        --width: 8rem;
+        --label-padding-y: 0.4rem;
+        --label-font-size: 0.7rem;
+        --option-font-size: 0.7rem;
+        --options-max-width: 18rem;
+        --checkbox-size: 0.9rem;
+        --min-height: auto;
+      "
+      placeholder="Select Use Cases"
+      (onSelect)="filterStore.selectUseCases($event)"
+      [value]="filterStore.selectedUseCases()"
+      [options]="filterStore.useCaseOptions()"
+    />
+  </div>
+
+  <div class="d-flex align-items-center gap-2 fs-12">
+    <span class="fw-semibold text-nowrap">Date Range</span>
+    <app-datepicker
+      [allowSingleDate]="false"
+      [(value)]="filterStore.dateRange"
+      style="
+        --label-font-size: 0.75rem;
+        --label-min-width: 12rem;
+        --label-min-height: auto;
+      "
+      [disabled]="cacheEnabled"
+    >
+      <img icon src="/assets/img/calendar.svg" alt="calendar icon" />
+    </app-datepicker>
+  </div>
+
+  <div class="d-flex align-items-center">
+    <button
+      [disabled]="
+        !filterStore.isFilterChanged() ||
+        !privilegeConfig.execute ||
+        cacheEnabled ||
+        exhausted
+      "
+      type="button"
+      (click)="filterStore.applyFilters()"
+      class="btn text-white fw-normal fs-12"
+      style="background: #ffa242 !important"
+    >
+      Apply Filters
+    </button>
+  </div>
+
+  <div class="d-flex align-items-center">
+    @if (["incident", "defect"].includes(tempEntity)) {
+      <button
+        [disabled]="filterStore.hasTempFilter() || !privilegeConfig.execute"
+        type="button"
+        (click)="toggleSmartInsight(true)"
+        class="btn text-white fw-normal fs-12"
+        style="background: #ffa242 !important"
+      >
+        Smart Insights
+      </button>
+    }
+  </div>
+
+  <div
+    class="ms-auto d-flex align-items-center justify-content-center flex-column form-switch p-0"
+  >
+    <input
+      [appTooltip]="'Cache Mode'"
+      class="form-check-input m-0"
+      [disabled]="filterStore.hasTempFilter()"
+      (click)="filterStore.toggleSmartCache()"
+      [checked]="filterStore.cacheEnabled()"
+      type="checkbox"
+      role="switch"
+      style="accent-color: #6f42c1"
+      id="cache-mode"
+    />
+    <label
+      for="cache-mode"
+      style="font-size: 0.7rem"
+      class="text-nowrap text-muted fw-medium"
+      >Cache Mode</label
+    >
+  </div>
+</div>
+
+@if (
+  (isMissingFilters &&
+    !filterStore.appliedFilters().history &&
+    !cacheEnabled) ||
+  !hasUseCases
+) {
+  <div class="charts position-relative" style="min-height: 400px">
+    <card-loader
+      [loading]="false"
+      [noData]="true"
+      class="text-muted"
+      [noDataText]="
+        isMissingFilters && !hasUseCases
+          ? 'Select use cases to load visualization'
+          : 'Select entity and index to load insights'
+      "
+    />
+  </div>
+} @else {
+  @switch (entity) {
+    @case ("incident") {
+      <incident-insights
+        class="insight-group"
+        [(isSmartInsightOpen)]="isSmartInsightOpen"
+      />
+    }
+    @case ("defect") {
+      <defect-insights
+        class="insight-group"
+        [(isSmartInsightOpen)]="isSmartInsightOpen"
+      />
+    }
+    @case ("testcase") {
+      <testcase-insights
+        class="insight-group"
+        [(isSmartInsightOpen)]="isSmartInsightOpen"
+      />
+    }
+  }
+}
+
+<div
+  class="limit-popup border rounded-2 fs-12 d-flex gap-2"
+  [attr.data-open]="
+    filterStore.apiLimitToast() && !filterStore.apiRateLimitQuery.isLoading()
+  "
+>
+  <div class="ps-2">
+    <span
+      style="width: 2rem; height: 2rem"
+      class="icon bg-warning-subtle text-warning rounded-circle d-flex justify-content-center align-items-center"
+    >
+      <svg style="height: 50%; width: 50%">
+        <use href="assets/img/info-circle.svg"></use>
+      </svg>
+    </span>
+  </div>
+  <div class="d-flex flex-column gap-3">
+    <div class="d-flex gap-2 justify-content-between">
+      <div class="fw-medium flex-grow-1" style="max-width: 70%">
+        @if (exhausted) {
+          Todays agent execution limit has been reached
+        } @else if (requestConfig.msg) {
+          {{ requestConfig.msg }}
+        } @else {
+          You have
+          <span class="text-warning">
+            {{ requestConfig.remaining }} of {{ requestConfig.max }}</span
+          >
+          agent execution remaining today
+        }
+
+        <div class="d-flex gap-1 mt-1">
+          @for (item of getSteps(requestConfig.max); track $index) {
+            <div
+              class="flex-grow-1 rounded-1"
+              style="height: 0.3rem"
+              [class]="
+                $index < requestConfig.remaining
+                  ? 'bg-warning'
+                  : 'bg-warning-subtle'
+              "
+            ></div>
+          }
+        </div>
+      </div>
+      <button
+        (click)="filterStore.apiLimitToast.set(false)"
+        class="btn-close btn-sm bg-white text-muted fs-12"
+      ></button>
+    </div>
+
+    <div>
+      <svg style="height: 1rem; width: 1rem" class="text-warning me-1">
+        <use href="assets/img/calendar.svg"></use>
+      </svg>
+      Resets tomorrow at 12:00 AM IST
+    </div>
+  </div>
+</div>

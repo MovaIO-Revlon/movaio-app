@@ -1,0 +1,19 @@
+<div
+  class="popover-trigger"
+  #defaultTrigger
+  (click)="toggle()"
+  [style.anchor-name]="anchorName()"
+  [ariaDisabled]="disabled()"
+>
+  <ng-content select="[trigger]">Trigger</ng-content>
+</div>
+
+<div
+  #popover
+  popover="manual"
+  class="popover-content"
+  [style.position-anchor]="anchorName()"
+  (click)="handleContentClick($event)"
+>
+  <ng-content select="[content]"></ng-content>
+</div>

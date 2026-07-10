@@ -1,0 +1,104 @@
+<popover
+  [(isOpen)]="isOpen"
+  [attr.popover-position]="popoverPosition()"
+  [disabled]="disabled()"
+>
+  <div trigger class="label-wrapper">
+    <ng-content>
+      <input
+        class="label"
+        type="button"
+        [class]="classes()?.label"
+        [value]="label()"
+        [class.disabled]="disabled()"
+      />
+    </ng-content>
+    <div class="icon">
+      <ng-content select="[icon]">
+        <i class="fa-solid fa-calendar"></i>
+      </ng-content>
+    </div>
+  </div>
+
+  <div content class="dropdown">
+    <div class="range-sidebar">
+      @for (range of dateRangeOptions(); track range.label) {
+        <div
+          class="range"
+          (click)="selectRange(range.range)"
+          [class.active]="isRangeSelected(range.range)"
+        >
+          {{ range.label }}
+        </div>
+      }
+    </div>
+    <div class="calendar">
+      <div class="header">
+        <button type="button" (click)="prev()">
+          <i class="fa-solid fa-chevron-left"></i>
+        </button>
+        <button type="button" class="month" (click)="togglePickerMode()">
+          {{ heading() }}
+        </button>
+        <button type="button" (click)="next()">
+          <i class="fa-solid fa-chevron-right"></i>
+        </button>
+      </div>
+
+      @switch (mode()) {
+        @case ("year") {
+          <div class="years">
+            @for (year of yearRange(); track year) {
+              <button type="button" class="year" (click)="selectYear(year)">
+                {{ year }}
+              </button>
+            }
+          </div>
+        }
+        @case ("month") {
+          <div class="months">
+            @for (month of months; track month.key) {
+              <button type="button" class="month" (click)="selectMonth($index)">
+                {{ month.value }}
+              </button>
+            }
+          </div>
+        }
+        @default {
+          <div class="days">
+            @for (weekDay of weekDays; track weekDay) {
+              <div class="weekday">{{ weekDay }}</div>
+            }
+
+            @for (cell of calendarGrid(); track $index) {
+              <div
+                class="day"
+                [class.startDate]="cell.startDate"
+                [class.endDate]="cell.endDate"
+                [class.inMonth]="cell.inMonth"
+                [class.inRange]="cell.inRange"
+                [attr.disabled]="cell.disabled"
+                (click)="selectDate(cell)"
+              >
+                {{ cell.date }}
+              </div>
+            }
+          </div>
+        }
+      }
+
+      <div class="footer">
+        <button type="button" (click)="cancel()">Cancel</button>
+        <button
+          [disabled]="applyDisabled()"
+          [class.disabled]="applyDisabled()"
+          type="button"
+          class="apply"
+          (click)="commit()"
+        >
+          Apply
+        </button>
+      </div>
+    </div>
+  </div>
+</popover>

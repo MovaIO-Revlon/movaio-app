@@ -1,0 +1,711 @@
+/*Agency management*/
+.card-agency {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  margin: 5px;
+  border: 1px solid #e1e5e9;
+}
+
+.header-agency {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.title-section {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.logo-agency {
+  width: 40px;
+  height: 40px;
+  background: #d9d9d9;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: bold;
+  font-size: 18px;
+}
+
+.logo-agency2 {
+  width: 70px;
+  height: 70px;
+  background: #d9d9d9;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: bold;
+  font-size: 18px;
+}
+
+.title-agency {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.fire-icon {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.description {
+  color: #6b7280;
+  font-size: 14px;
+  line-height: 1.4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.agents {
+  font-size: 14px;
+  color: #1a1a1a;
+  margin-bottom: 16px;
+}
+
+.agents-label {
+  font-weight: 600;
+}
+
+.usage-section {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 14px;
+}
+
+.usage-text {
+  color: #1a1a1a;
+}
+
+.usage-text:after {
+  content: '|';
+  color: #cacaca;
+}
+
+.rating {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.star {
+  color: #fbbf24;
+  font-size: 16px;
+}
+
+.rating-value {
+  color: #1a1a1a;
+  font-weight: 500;
+}
+
+.tags-agency {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.tag-agency {
+  background: #f3f4f6;
+  color: #6b7280;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.tag-agency:last-child {
+  background: #e5e7eb;
+  color: #4b5563;
+}
+
+/*sidebar*/
+.left-p1 {
+  padding: 0 36px;
+}
+
+.sidebar-agency {
+  position: absolute;
+  top: 70px;
+  left: 12px;
+  width: 60px;
+  height: 87vh;
+  overflow-y: auto;
+  transition: width 0.3s ease;
+  box-sizing: border-box;
+  z-index: 1;
+  border-radius: 10px;
+}
+
+.sidebar-agency:hover {
+  width: 200px;
+}
+
+.sidebar-agency ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.sidebar-agency li {
+  display: flex;
+  align-items: center;
+  padding: 12px 15px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.sidebar-agency li a {
+  color: #4f3144;
+  font-size: 16px;
+  display: flex;
+}
+
+.sidebar-agency li .icon {
+  font-size: 16px;
+  width: 30px;
+  min-width: 30px;
+  text-align: center;
+}
+
+.sidebar-agency li .text {
+  opacity: 0;
+  margin-left: 0px;
+  transition: opacity 0.3s ease;
+  overflow: hidden;
+  width: 0;
+
+}
+
+.sidebar-agency:hover li .text {
+  opacity: 1;
+  width: auto;
+}
+
+.sidebar-agency li:hover {
+  background-color: #f1eef0;
+}
+
+/*Agent composition*/
+
+.agent-composition-wrapper {
+  background: #fff;
+  background-image: radial-gradient(#ddd 1px, transparent 1px), radial-gradient(#ddd 1px, #f7f9fb 1px);
+  background-position: 0 0, 20px 20px;
+  background-size: 40px 40px;
+}
+
+
+.agent-composition {
+  width: 100%;
+  background: #fff;
+  position: relative;
+  background-image: radial-gradient(#ddd 1px, transparent 1px), radial-gradient(#ddd 1px, #f7f9fb 1px);
+  background-position: 0 0, 20px 20px;
+  background-size: 40px 40px;
+  padding-top: 10px;
+  padding-bottom: 66px;
+}
+
+.title {
+  font-weight: 600;
+  font-size: 15px;
+  color: #1a1a1a;
+}
+
+.nodes {
+  position: relative;
+  height: 180px;
+}
+
+.node-top {
+  position: absolute;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.05);
+  width: auto;
+  padding: 10px 30px 10px 10px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+}
+
+.node {
+  position: absolute;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.05);
+  width: auto;
+  padding: 10px 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+}
+
+.pos-sett {
+  position: absolute;
+  right: 4px;
+  top: 4px;
+}
+
+.icon-node {
+  width: 27px;
+  height: 27px;
+  background: #d5cad4;
+  border-radius: 8px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: #685e6a;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.text-agent {
+  text-align: center;
+  width: 100px;
+}
+
+.text-agent .name {
+  font-weight: 600;
+  color: #222;
+  margin-bottom: 4px;
+  line-height: 1.1;
+}
+
+.text-agent .role {
+  font-weight: 400;
+  font-size: 12px;
+  color: #6b6a70;
+  line-height: 1.1;
+}
+
+.settings-icon {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  fill: #b7b5bf;
+  top: 8px;
+  right: 8px;
+  cursor: pointer;
+}
+
+.settings-icon:hover {
+  fill: #565656;
+}
+
+/* node positions */
+#planning {
+  top: 20px;
+  left: calc(50% - 60px);
+  z-index: 3;
+}
+
+#nexora {
+  top: 120px;
+  left: 40px;
+}
+
+#quantaX {
+  top: 120px;
+  left: 180px;
+}
+
+#lumina {
+  top: 120px;
+  left: 320px;
+}
+
+#cognix {
+  top: 120px;
+  left: 460px;
+}
+
+/* SVG container */
+svg.lines {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.zoom-wrapper {
+  position: relative;
+  overflow: auto;
+  width: 100% !important;
+  height: 100% !important;
+  background: #fff;
+  background-image: radial-gradient(#ddd 1px, transparent 1px), radial-gradient(#ddd 1px, #f7f9fb 1px);
+  background-size: 40px 40px;
+  background-position: 0 0, 20px 20px;
+}
+
+.zoom-controls {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: auto;
+}
+
+.zoom-controls button {
+  width: 40px;
+  height: 40px;
+  border: 1px solid #d9d9d9;
+  border-radius: 8px;
+  background: #fff;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  font-size: 20px;
+}
+
+.zoom-controls-popup {
+  position: fixed;
+  right: 17% !important;
+  bottom: 15% !important;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: auto;
+}
+
+.zoom-controls-popup button {
+  width: 40px;
+  height: 40px;
+  border: 1px solid #d9d9d9;
+  border-radius: 8px;
+  background: #fff;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  font-size: 20px;
+}
+
+/*Create new agency*/
+.bg-loa {
+  background: #eceaec;
+  border-radius: 5px;
+  padding: 7px 13px;
+}
+
+.hover-loa:hover {
+  background: #fafafb;
+}
+
+.h-99 {
+  height: 58vmin;
+}
+
+.list-overflow {
+  overflow-y: auto;
+  height: 577px;
+}
+
+svg.connections {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.composition-container {
+  position: relative;
+  overflow: auto;
+  background: #fff;
+  background-image:
+    radial-gradient(#ddd 1px, transparent 1px),
+    radial-gradient(#ddd 1px, #f7f9fb 1px);
+  background-position: 0 0, 20px 20px;
+  background-size: 40px 40px;
+  min-width: 400px;
+  min-height: 512px;
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+  transform-origin: 0 0;
+}
+
+.connection-lines {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
+  overflow: visible;
+}
+
+.node-ac {
+  position: absolute;
+  z-index: 1;
+  width: 200px;
+  height: 80px;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  padding: 12px 16px 12px 46px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  text-align: left;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-sizing: border-box;
+}
+.settings-ac {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  font-size: 16px;
+  cursor: pointer;
+  color: #666;
+}
+.icon-ac {
+  position: absolute;
+  left: 10px
+}
+.node-title-ac{
+  overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    width: 155px;
+    margin: auto;
+}
+
+.delete-ac {
+  position: absolute;
+  top: 6px;
+  right: 26px; /* slightly left of settings icon */
+  font-size: 14px;
+  cursor: pointer;
+  color: #c00;
+}
+
+
+.node,
+.node-top {
+  width: 200px;
+  height: 80px;
+  border: 2px solid #3399ff;
+  border-radius: 8px;
+  background: white;
+  text-align: center;
+  padding: 10px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+}
+
+.btn-delete {
+  background-color: #fff;
+  border-color: gray;
+  color: gray;
+}
+
+.btn-edit {
+  background-color: #fff;
+  border-color: gray;
+  color: gray;
+}
+
+.btn-delete:hover {
+  background-color: #fff;
+  border-color: red;
+  color: red;
+}
+
+.btn-edit:hover {
+  background-color: #fff;
+  border-color: blue;
+  color: blue;
+}
+
+.scroll-section-master {
+  max-height: 200px;
+  /* Set heights as needed for each section */
+  overflow-y: auto;
+  overflow-x: hidden;
+  border: 1px solid #eee;
+  border-radius: 4px;
+  background: #fff;
+}
+
+.scroll-section-others {
+  max-height: 200px;
+  /* Set heights as needed for each section */
+  overflow-y: auto;
+  overflow-x: hidden;
+  border: 1px solid #eee;
+  border-radius: 4px;
+  background: #fff;
+  /* Optional: adjust padding etc. */
+}
+.agencysidebarAgent{
+  height: auto !important;
+}
+
+/* Make the left sidebar card stretch to the viewport height and let body scroll */
+.agencysidebarAgent.sidebarAgency {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 120px);
+}
+.agencysidebarAgent.sidebarAgency .card {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+.agencysidebarAgent.sidebarAgency .card .card-body {
+  flex: 1 1 auto;
+  overflow: auto;
+}
+
+.box-shad{
+  box-shadow:none !important;
+}
+.accordion-button.box-shad:not(.collapsed)::after {
+  transform: rotate(0deg);
+}
+.accordion-button.box-shad::after {
+  transform: rotate(-90deg);
+  
+}
+/* Remove blue text when accordion is open */
+.accordion-button.box-shad {
+  color: inherit !important;       /* Keep normal text color */
+  background-color: transparent !important;
+  box-shadow: none !important;
+  z-index: 0;
+}
+
+/* Prevent any color change when active/open */
+.accordion-button.box-shad:not(.collapsed) {
+  color: inherit !important;
+  background-color: transparent !important;
+}
+
+
+/* ---------------------------------- */
+.steps {
+  display: flex;
+  height: 100%;
+  transition: all 0.5s linear;
+  border-top: 1px solid #e1e0e3;
+}
+
+.step-card {
+  display: flex;
+  flex-direction: column;
+  transition: all 0.1s ease;
+  border-right: 1px solid #e1e0e3;
+}
+
+.step-card.open:last-of-type {
+  border-right: 0;
+}
+
+.step-card .title {
+  width: 2.75rem;
+  display: flex;
+  padding: 0.938rem 0;
+  justify-content: center;
+  align-items: center;
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  transform: rotate(180deg);
+  flex: 1;
+  background: #fff;
+  font-weight: 500;
+  font-size: 0.875rem;
+}
+
+.step-card .title .step-label {
+  flex: 1;
+}
+.step-card .title .step-placeholder {
+  height: 35%;
+}
+
+.step-card .title button {
+  border: 0;
+  background: none;
+  transition: 0.1s linear;
+}
+
+.step-card .step-content {
+  overflow: hidden;
+  width: 0;
+  height: 0;
+}
+
+.step-card.open .title button {
+  transform: rotate(90deg);
+  transition: all 0.1s linear;
+}
+
+.step-card.open .step-content {
+  border-top: 1px solid #e1e0e3;
+  padding: 1.25rem 1.125rem;
+  width: auto;
+  height: auto;
+  overflow: auto;
+}
+
+.step-card.open .title {
+  writing-mode: horizontal-tb;
+  text-orientation: mixed;
+  transform: rotate(0deg);
+  flex: none;
+  width: auto;
+  padding: 0.938rem 1.25rem;
+}
+.step-card.open .title .step-placeholder {
+  display: none;
+}
+
+.step-card.open {
+  flex: 1;
+  transition: all 0.2s ease;
+}
+
+.step-card:nth-child(1) {
+  max-width: 17.5rem;
+}
+
+.step-card:nth-child(2) {
+  max-width: 16.125rem;
+}
+
+.step-card:is(.open):nth-child(3) .step-content {
+  height: 100%;
+  padding: 0;
+}
+
+.step-card .form-label,
+.form-control {
+  font-size: 0.875rem;
+}
+
+/* -------------------------------------------------- */

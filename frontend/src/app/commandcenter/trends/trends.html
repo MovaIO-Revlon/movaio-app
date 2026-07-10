@@ -1,0 +1,168 @@
+@let isMissingFilters = filterStore.isMissingFilters();
+@let hasUseCases = !!filterStore.activeUseCases().length;
+@let cacheEnabled = filterStore.cacheEnabled();
+@let tempFilters = filterStore.tempFilters();
+@let tempEntity = tempFilters.entity;
+
+<div class="header">
+  <div class="d-flex align-items-center gap-2 fs-12">
+    <span class="fw-semibold">Entity</span>
+    <app-select
+      placeholder="Select"
+      [options]="filterStore.entityOptions"
+      (onSelect)="filterStore.onEntitySelect($event)"
+      [(value)]="filterStore.tempFilters().entity"
+      [allowSearch]="false"
+      style="
+        --min-height: auto;
+        --width: 5.5rem;
+        --option-font-size: 0.7rem;
+        --font-size: 0.7rem;
+      "
+      [disabled]="cacheEnabled"
+    />
+  </div>
+
+  <div class="d-flex align-items-center gap-2 fs-12">
+    <span class="fw-semibold">Index</span>
+    <app-select
+      [disabled]="!filterStore.tempFilters().entity"
+      placeholder="Select"
+      [options]="filterStore.indexOptions()"
+      (onSelect)="filterStore.onIndexSelect($event)"
+      [(value)]="filterStore.tempFilters().index"
+      style="
+        --width: 8rem;
+        --min-height: auto;
+        --option-font-size: 0.7rem;
+        --font-size: 0.7rem;
+      "
+      [disabled]="cacheEnabled || !tempEntity"
+      [parentWidth]="false"
+    />
+  </div>
+
+  <div class="d-flex align-items-center gap-2 fs-12">
+    <span class="fw-semibold">Agent</span>
+    <app-select
+      style="
+        --width: 9rem;
+        --min-height: auto;
+        --option-font-size: 0.7rem;
+        --font-size: 0.7rem;
+      "
+      [disabled]="true"
+      placeholder="All Agents"
+      [(value)]="filterStore.tempFilters().agent"
+      [allowSearch]="false"
+      [options]="filterStore.agentOptions()"
+    />
+  </div>
+
+  <div class="d-flex align-items-center gap-2 fs-12">
+    <span class="fw-semibold">Usecases</span>
+    <app-multi-select
+      [withSelectAll]="true"
+      class="cursor-pointer"
+      [class.disabled]="filterStore.hasTempFilter()"
+      [parentWidth]="false"
+      style="
+        --width: 8rem;
+        --label-padding-y: 0.4rem;
+        --label-font-size: 0.7rem;
+        --option-font-size: 0.7rem;
+        --options-max-width: 18rem;
+        --checkbox-size: 0.9rem;
+        --min-height: auto;
+      "
+      placeholder="Select Use Cases"
+      (onSelect)="filterStore.selectUseCases($event)"
+      [value]="filterStore.selectedUseCases()"
+      [options]="filterStore.useCaseOptions()"
+    />
+  </div>
+
+  <div class="d-flex align-items-center gap-2 fs-12">
+    <span class="fw-semibold text-nowrap">Date Range</span>
+    <app-datepicker
+      [allowSingleDate]="false"
+      [(ngModel)]="filterStore.dateRange"
+      style="
+        --label-font-size: 0.75rem;
+        --label-min-width: 12rem;
+        --label-min-height: auto;
+      "
+      [disabled]="cacheEnabled"
+    >
+      <img icon src="/assets/img/calendar.svg" alt="calendar icon" />
+    </app-datepicker>
+  </div>
+
+  <div class="me-3 d-flex align-items-center">
+    <button
+      [disabled]="
+        !filterStore.isFilterChanged() || !isPrivilegeExecute || cacheEnabled
+      "
+      type="button"
+      (click)="filterStore.applyFilters()"
+      class="btn text-white fw-normal fs-12"
+      style="background: #ffa242 !important"
+    >
+      Apply Filters
+    </button>
+  </div>
+
+  <div
+    class="ms-auto d-flex align-items-center justify-content-center flex-column form-switch p-0"
+  >
+    <input
+      [appTooltip]="'Cache Mode'"
+      class="form-check-input m-0"
+      [disabled]="filterStore.hasTempFilter()"
+      (click)="filterStore.toggleSmartCache()"
+      [checked]="filterStore.cacheEnabled()"
+      type="checkbox"
+      role="switch"
+      style="accent-color: #6f42c1"
+      id="cache-mode"
+    />
+    <label
+      for="cache-mode"
+      style="font-size: 0.7rem"
+      class="text-nowrap text-muted fw-medium"
+      >Cache Mode</label
+    >
+  </div>
+</div>
+
+@if (
+  (isMissingFilters &&
+    !filterStore.appliedFilters().history &&
+    !cacheEnabled) ||
+  !hasUseCases
+) {
+  <div class="charts position-relative" style="min-height: 400px">
+    <card-loader
+      [loading]="false"
+      [noData]="true"
+      class="text-muted"
+      [noDataText]="
+        isMissingFilters && !hasUseCases
+          ? 'Select use cases to load visualization'
+          : 'Select entity and index to load trends'
+      "
+    />
+  </div>
+} @else {
+  @switch (filterStore.appliedFilters().entity) {
+    @case ("incident") {
+      <incident-trends class="insight-group" />
+    }
+    @case ("defect") {
+      <defect-trends class="insight-group" />
+    }
+    @case ("testcase") {
+      <testcase-trends class="insight-group" />
+    }
+  }
+}

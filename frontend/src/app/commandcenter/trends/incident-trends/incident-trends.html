@@ -1,0 +1,143 @@
+@let activeUseCases = filterStore.activeUseCases();
+@let visualization = filterStore.visualization();
+
+@for (item of activeUseCases; track item) {
+  @switch (item) {
+    @case (useCases.AVERAGE_MTTR) {
+      <kpi-card
+        label="Average MTTR"
+        class="kpi-card"
+        [description]="
+          `Average time to resolve incidents.
+      Formula: Total resolution time ÷ Number of incidents
+      Ex: 300 hrs / 50 incidents = 6 hrs`
+        "
+        [value]="[`${kpis().avg_mttr || 0} Hours`]"
+        [loading]="kpisQuery.isLoading()"
+        style="grid-column: span 2"
+      />
+    }
+
+    @case (useCases.AVERAGE_INCIDENT) {
+      <kpi-card
+        label="Average Incidents Per Day"
+        class="kpi-card"
+        [description]="
+          `Mean incidents reported daily.
+      Formula: Total incidents ÷ Days
+      Ex: 210 incidents / 30 days = 7/day`
+        "
+        [value]="[`${kpis().avg_incidents_per_day || 0} NEW`]"
+        [loading]="kpisQuery.isLoading()"
+        style="grid-column: span 2"
+      />
+    }
+
+    @case (useCases.SLA_COMPLIANCE) {
+      <kpi-card
+        label="SLA Compliance %"
+        class="kpi-card"
+        [description]="
+          `% of incidents resolved within SLA.
+      Formula: (Incidents meeting SLA ÷ Total incidents) × 100
+      Ex: 180/200 × 100 = 90%`
+        "
+        [value]="[`${kpis().sla_compliance_pct || 0}%`]"
+        [loading]="kpisQuery.isLoading()"
+        style="grid-column: span 2"
+      />
+    }
+
+    @case (useCases.RECURRING_ISSUE) {
+      <kpi-card
+        label="Recurring Issue %"
+        class="kpi-card"
+        [description]="
+          `Same issue repeating over time.
+      Formula: (Recurring incidents ÷ Total incidents) × 100
+      Ex: 45/300 × 100 = 15% recurring`
+        "
+        [value]="[`${kpis().recurring_issue_pct || 0}%`]"
+        [loading]="kpisQuery.isLoading()"
+        style="grid-column: span 2"
+      />
+    }
+
+    @case (useCases.SIMILAR_INCIDENT) {
+      <kpi-card
+        label="Similar Incident"
+        class="kpi-card"
+        [description]="
+          `Incidents sharing patterns or causes.
+      Formula: (Similar incidents ÷ Total incidents) × 100
+      Ex: 60/200 × 100 = 30% similar`
+        "
+        [value]="[`${kpis().similar_incidents?.length || 0}`]"
+        [loading]="kpisQuery.isLoading()"
+        (clickAction)="openSimilarIncidentModal()"
+        style="grid-column: span 2"
+      />
+    }
+
+    @case (useCases.INCIDENT_ANALYTICS) {
+      <entity-analytics
+        [data]="analytics()"
+        [total]="meta().total_incidents || 0"
+        [options]="{
+          label: 'Incident Analytics',
+          centerText: 'Incidents',
+          filterByOptions: ['status', 'priority', 'severity', 'category'],
+          tooltip:
+            'Incident Analytics provides a visual breakdown of incidents across status, priority, severity, category, and service—helping identify trends and operational bottlenecks.',
+        }"
+        (selectData)="onSelectData($event)"
+        class="chart-card"
+        style="grid-column: span 6"
+        [loading]="kpisQuery.isLoading()"
+      />
+    }
+
+    @case (useCases.TRENDS_ANALYTICS) {
+      <trend-analysis
+        [data]="trend()"
+        (selectTrend)="selectIncidents($event)"
+        class="chart-card"
+        [loading]="kpisQuery.isLoading()"
+        style="grid-column: span 6"
+      />
+    }
+
+    @default {
+      @if (visualization[item]) {
+        <widget-renderer
+          [case]="item"
+          [config]="visualization[item]"
+          useCaseType="trends"
+          (select)="selectDynamicData($event)"
+          style="grid-column: span 6"
+        />
+      }
+    }
+  }
+}
+
+@let dynamicWidgetData = dynamicData();
+<entity-table
+  [open]="!!dynamicWidgetData.headings.length"
+  [data]="dynamicWidgetData.data"
+  [headings]="dynamicWidgetData.headings"
+  (close)="dynamicData.set({ headings: [], data: [] })"
+  [withCloseButton]="true"
+/>
+
+<similar-entity-modal
+  [data]="selectedSimilarIncidentData() || []"
+  [open]="!!selectedSimilarIncidentData()?.length"
+  (close)="selectedSimilarIncidentData.set(null)"
+/>
+
+<incident-table-modal
+  [data]="selectedIncidentData() || []"
+  [open]="!!selectedIncidentData()"
+  (close)="selectIncidents(null)"
+/>

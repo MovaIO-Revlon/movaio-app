@@ -1,0 +1,420 @@
+<app-header></app-header>
+<div class="d-flex h-100 w-100">
+	<div class="dashboard-container w-100">
+		<div class="bg-white" style="position: fixed;width: 100%;">
+
+			<div class="header p-3 ">
+				<p class="fw-bold m-0">Greetings! Workflows are executed as instructed. Ready for your inputs on next
+					steps.</p>
+			</div>
+			<div class="d-flex border-bottom border-top pt-2 ps-3">
+				<div class="tabsagent d-flex">
+					<div class="tabsagent2" *ngFor="let item of loadTabMenu; index as i"
+						 [ngClass]="{ activeagent: activeTabIndex === i }"  (click)="setActiveCountTab(i)">
+						<span> <img [src]="item.imgurl" width="17" alt="url" /> {{ item.label }}</span>
+					</div>
+				</div>
+			</div>
+		</div>
+		<div style="margin-top: 90px;height: calc(100% - 115px);position: relative;">
+				
+			<div *ngIf="activeTabIndex === 0">
+			<app-agent-eval></app-agent-eval>
+			</div>
+
+			<div *ngIf="activeTabIndex === 1">
+				<div class="filters p-3">
+					<!-- For Tab 0 (Tasks) -->
+					<ng-container *ngIf="activeTabIndex === 1">
+						<div class="w-75">
+							<input type="text" placeholder="Search Task" class="w-50 me-auto form-control search-input"
+								[(ngModel)]="agencySearch" (input)="filterAgenciesBySearch()" />
+						</div>
+
+						<div class="d-flex w-50">
+							<span class="pt-2 pe-2">Status</span>
+							<select class="filter-select form-select" [(ngModel)]="selectedConfidenceStatus"
+								(change)="filterAgenciesBySearch()">
+								<option value="">All Status</option>
+								<option *ngFor="let status of statusOptions" [value]="status">
+									{{ status }}
+								</option>
+								<option value="Active agents">Active agents</option>
+							</select>
+
+							<span class="pt-2 ps-3 pe-2 text-nowrap">Date Range</span>
+							<select class="filter-select form-select" [(ngModel)]="selectedDateRange"
+								(change)="filterAgenciesBySearch()">
+								<option *ngFor="let option of dateRangeOptions" [value]="option.value">
+									{{ option.label }}
+								</option>
+							</select>
+						</div>
+					</ng-container>
+				</div>
+				<!-- No Data Message for Tasks -->
+                <div *ngIf="filteredAgencies.length === 0" class="text-center py-5">
+                    <p class="text-muted fs-14 fw-semibold">Task has no data available</p>
+                </div>
+				<div class="row m-0 ps-2" style="overflow: auto;height: 86%;position: absolute;width: 100%;top: 65px;">
+					<div class="col-md-4 mb-2 px-2" *ngFor="let agency of filteredAgencies">
+						<div class="d-flex flex-column bg-white rounded-4 border">
+							<div class="rounded-top-4 border bottom card-header-cc mb-3"
+								[attr.data-status]="agency.confidence_status">
+								<div class="text-block-cc">
+									<h3 class="title-cc">{{ agency.agent_name }}</h3>
+									<div class="d-flex">
+										<p class="subtitle-cc">{{ agency.description }}
+										</p>
+										<i class="align-self-end fa-solid fa-circle-info route-menu"
+											[appTooltip]="agency.description">
+										</i>
+									</div>
+								</div>
+								<div class="right-block-cc">
+									<span class="pill-cc" [attr.data-status]="agency.confidence_status">
+										{{ agency.confidence_status }}
+									</span>
+									<div class="confidence-cc"
+										[attr.data-confidence]="getConfidenceLevel(agency.confidence_perc)">
+										{{ agency.confidence_perc || 0 }} %
+									</div>
+									<div class="confidence-label-cc">Confidence</div>
+								</div>
+							</div>
+
+							<div class="d-flex ps-3 pe-3 pb-3">
+								<div class="info-item w-50">
+									<span class="info-icon"><img src="assets/img/Assigned_To_Icon.svg" alt="assigned_to" width="17" /></span>
+									<div>
+										<p class="info-label">Assigned to</p>
+										<p class="info-value">{{ agency.agencies[0]?.assigned_to || 'Unkown' }}</p>
+									</div>
+								</div>
+								<div class="info-item">
+									<span class="info-icon">
+										<img [src]="agency.avatar || 'assets/img/AI_Agenct_Icon.svg'" width="18" alt="agency_avatar"/>
+									</span>
+									<div>
+										<p class="info-label">AI Agent</p>
+
+										<!-- Only show clickable link if name matches -->
+
+										<a class="agent-link test-space" href="javascript:void(0)"
+											(click)="loadAgency(agency)" *ngIf="isPrivilegeExecuteTask">
+											{{ agency.agent_name }}
+											<span class="external-icon">
+												<img src="assets/img/AI_Agenct_Icon.svg" alt="AI_Agent" width="10" />
+											</span>
+										</a>	
+										<span class="agent-link test-space" *ngIf="!isPrivilegeExecuteTask">
+											{{ agency.agent_name }}
+											<span class="external-icon">
+												<img src="assets/img/AI_Agenct_Icon.svg" alt="AI_Agent" width="10" />
+											</span>
+										</span>						
+									</div>
+
+								</div>
+							</div>
+
+							<div class="d-flex ps-3 pe-3 pb-3">
+								<div class="info-item w-50">
+									<span class="info-icon"><img src="assets/img/Agency_Map_Icon.svg" alt="info"
+											width="17" /></span>
+									<div>
+										<p class="info-label">Agency</p>
+										<p class="info-value">{{ agency.agencies[0]?.agency_name }}</p>
+									</div>
+								</div>
+								<div class="info-item">
+									<span class="info-icon"><img src="assets/img/Exceution_TIme_Icon.svg" alt="exe_time"
+											width="17" /></span>
+									<div>
+										<p class="info-label">Execution Time</p>
+										<p class="info-value">
+											{{ agency.last_completed_ts ? (agency.last_completed_ts | timeAgo) : 'N/A'
+											}}
+										</p>
+									</div>
+								</div>
+							</div>
+
+							<div class="action-section-cc rounded-bottom-4">
+								<div class="action-required-cc">
+									<div class="icon-cc">!</div>
+									<span>Action Required</span>
+								</div>
+
+								<div class="buttons-cc">
+									<button class="btn-cc btn-primary-cc" (click)="OpenGeneratedCaseDetails(agency)">
+									{{ agency?.review_status }}
+								</button>
+
+									<button class="btn-cc btn-secondary-cc" disabled>View Details</button>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+			<div *ngIf="activeTabIndex === 2" class="h-100">
+				<app-insights />
+			</div>
+			<div *ngIf="activeTabIndex === 3" class="h-100">
+				<trends />
+			</div>
+
+			<!-- Knowledge Graph Tab -->
+			<div *ngFor="let item of loadTabMenu; index as i" [ngClass]="{ activeagent: item.active }"
+				(click)="setActiveCountTab(i)">
+			</div>
+			<!-- Knowledge Graph tab content -->
+			<div *ngIf="activeTabIndex === 4">
+				<div class="position-relative" style="height: 66vh; width: 100%;">
+
+					<!-- Controls overlay: dropdown + day/night + filter button -->
+					<div class="controls-overlay d-flex align-items-center gap-2" [ngStyle]="{'position': 'absolute','top.px': 16,'left.px': 16,'z-index': 10,'padding.px': 8,
+				'border-radius': '8px'}">
+
+						<span class="pt-2 pe-2 fs-14 text-nowrap" [style.color]="isNight ? 'black': 'white'">
+							Knowledge Graph Name
+						</span>
+
+						<select class="filter-select form-select-form-sm kg-dropdown-height fs-14 me-2"
+							[(ngModel)]="selectedRagId" (change)="onRagIdChange()"
+							style="min-width: 220px;   border: 2px solid #595858 !important; box-shadow: 0 0 8px #dddcdb !important;border-radius: 4px;"
+							[ngClass]="{ 'night-dropdown': isNight }">
+							<option value="">Select Knowledge Graph</option>
+							<option *ngFor="let graph of knowledgeGraphList" [value]="graph.rag_id">
+							{{ graph.collection_name }}
+						</option>
+						</select>
+
+						<button class="bg-white border rounded-2 ps-2 pe-2 day-night me-2" (click)="toggleDayNight()"
+							[attr.aria-pressed]="isNight" aria-label="Toggle day/night mode" [disabled]="!selectedRagId">
+							<i class="fa" [ngClass]="isNight ? 'fa-sun day-icon' :'fa-moon night-icon'"></i>
+						</button>
+						
+						<input type="text" class="form-control search-input fs-14" placeholder="Search..."
+							[(ngModel)]="searchKgTerm" (input)="onSearchInput($event)" style="min-width: 180px; max-width: 280px; border: 2px solid #595858 !important; 
+                  box-shadow: 0 0 8px #dddcdb !important; border-radius: 4px;" [disabled]="!selectedRagId">
+
+						<button id="filterButton" class="bg-white border rounded-2 ps-2 pe-2 node-relation-filter"
+							data-bs-toggle="modal" data-bs-target="#filt" aria-label="Open filter modal">
+							<i class="fa fa-sliders" aria-hidden="true"></i>
+						</button>
+					</div>
+					<!-- Add this zoom control block: -->
+						<!-- Draggable Zoom Controls -->
+					<div class="graph-zoom-controls pb-2" #zoomControls style="position: absolute; top: 70%; left: 16px; z-index: 12; 
+            display: flex; flex-direction: column; cursor: move;" (mousedown)="startDragging($event)"
+						(touchstart)="startDragging($event)">
+
+						<button class="zoom-btn" (click)="zoomIn()" title="Zoom In">+</button>
+						<button class="zoom-btn" (click)="zoomOut()" title="Zoom Out">−</button>
+						<button class="zoom-btn" (click)="toggleFullScreen()" title="Full Screen">⛶</button>
+					</div>
+
+					<!-- Graph container fills entire parent -->
+				<div *ngIf="graphData.nodes && graphData.nodes.length > 0; else noData" #graphContainer id="graphdb-container"
+					style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;">
+				</div>
+
+				<!-- Template shown when no graph data -->
+				<ng-template #noData>
+                    <div *ngIf="NoDataAvailable" style="padding: 15%; text-align: center; color: gray;">
+                        {{ NoDataAvailable}}
+                    </div>
+                    <div *ngIf="!NoDataAvailable" style="padding: 15%; text-align: center; color: gray;">
+                        'Knowledge Graph has no data available'
+                    </div>
+                </ng-template>
+				</div>
+			</div>
+
+					<div *ngIf="activeTabIndex === 5">
+  <div class="filters p-3">
+    <div class="w-75">
+      <input type="text" placeholder="Search Workflow" 
+             class="w-50 me-auto form-control search-input"
+             [(ngModel)]="workflowSearch" (input)="filterWorkflows()" />
+    </div>
+
+    <div class="d-flex w-50">
+      <span class="pt-2 pe-2">Status</span>
+      <select class="filter-select form-select" [(ngModel)]="workflowStatus" (change)="filterWorkflows()">
+        <option value="">All Status</option>
+        <option value="Active">Active</option>
+        <option value="inactive">Inactive</option>
+      </select>
+
+      <span class="pt-2 ps-3 pe-2 text-nowrap">Date Range</span>
+      <select class="filter-select form-select" [(ngModel)]="workflowDateRange" (change)="filterWorkflows()">
+        <option value="">All Dates</option>
+        <option value="1">Today</option>
+        <option value="7">Last 7 Days</option>
+        <option value="30">Last 30 Days</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- No Data Message -->
+  <div *ngIf="filteredWorkflows.length === 0" class="text-center py-5">
+    <p class="text-muted fs-14 fw-semibold">No workflows available</p>
+  </div>
+
+  <!-- Workflow Cards - EXACTLY LIKE TASK TAB -->
+  <div class="row m-0 ps-2" style="overflow: auto;height: 86%;position: absolute;width: 100%;top: 65px;">
+    <div class="col-md-4 mb-2 px-2" *ngFor="let wf of filteredWorkflows">
+      <div class="d-flex flex-column bg-white rounded-4 border">
+        
+        <!-- HEADER - SAME AS TASK -->
+        <div class="rounded-top-4 border bottom card-header-cc mb-3" [attr.data-status]="wf.confidence_status">
+          <div class="text-block-cc">
+            <h3 class="title-cc">{{ wf.flow_name }}</h3>
+            <div class="d-flex">
+              <p class="subtitle-cc">{{ wf.description }}</p>
+              <i class="align-self-end fa-solid fa-circle-info route-menu" [appTooltip]="wf.description"></i>
+            </div>
+          </div>
+          <div class="right-block-cc">
+            <span class="pill-cc" [attr.data-status]="wf.confidence_status">
+               {{ wf.confidence_status || 'Active' }}
+            </span>
+          </div>
+        </div>
+
+        <!-- ROW 1 - SAME AS TASK -->
+        <div class="d-flex ps-3 pe-3 pb-3">
+          <div class="info-item w-50">
+            <span class="info-icon">
+              <img src="assets/img/Assigned_To_Icon.svg" width="17" alt="assigned_to"/>
+            </span>
+            <div>
+              <p class="info-label">Assigned to</p>
+              <p class="info-value">{{wf.assigned_to }}</p>
+            </div>
+          </div>
+          <div class="info-item">
+            <span class="info-icon">
+              <img [src]="wf.avatar || 'assets/img/AI_Agenct_Icon.svg'" width="18" alt="AI_Agent"/>
+            </span>
+            <div>
+              <p class="info-label">Workflow</p>
+              <a class="agent-link test-space" *ngIf="isPrivilegeExecuteWorkflow"href="javascript:void(0)" (click)="loadWorkflow(wf)">
+                {{ wf.flow_name }}
+                <span class="external-icon">
+                  <img src="assets/img/AI_Agenct_Icon.svg" width="10" alt="AI_Agent"/>
+                </span>
+              </a>
+			  <span class="agent-link test-space" *ngIf="!isPrivilegeExecuteWorkflow">
+                {{ wf.flow_name }}
+                <span class="external-icon">
+                  <img src="assets/img/AI_Agenct_Icon.svg" width="10" alt="AI_Agent"/>
+                </span>
+			  </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- ROW 2 - SAME AS TASK -->
+        <div class="d-flex ps-3 pe-3 pb-3">
+          <div class="info-item w-50">
+            <span class="info-icon">
+              <img src="assets/img/Agency_Map_Icon.svg" width="17" alt="agency_map"/>
+            </span>
+            <div>
+              <p class="info-label">Agency</p>
+              <p class="info-value">{{ wf.agency_name }}</p>
+            </div>
+          </div>
+          <div class="info-item">
+            <span class="info-icon">
+              <img src="assets/img/Exceution_TIme_Icon.svg" width="17" alt="exe_time" />
+            </span>
+            <div>
+              <p class="info-label">Execution Time</p>
+              <p class="info-value">
+                {{ wf.updated_ts ? (wf.updated_ts | timeAgo) : 'N/A' }}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- ACTION FOOTER - SAME AS TASK -->
+        <div class="action-section-cc rounded-bottom-4">
+          <div class="action-required-cc">
+            <div class="icon-cc">!</div>
+            <span>Action Required</span>
+          </div>
+          <div class="buttons-cc">
+              <button class="btn-cc btn-primary-cc" (click)="OpenGeneratedWorkflowDetails(wf)" [class.disabled]="wf.status == undefined">
+              Review
+            </button>
+            <button class="btn-cc btn-secondary-cc">
+              View Details
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+		</div>
+	</div>
+</div>
+<!-- Modal -->
+<div #filt class="modal fade" id="filt" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1"
+	aria-labelledby="exampleModalLabel" aria-hidden="true">
+	<div class="modal-dialog filter-cont">
+		<div class="modal-content filter-h300">
+			<div class="modal-header border-0">
+				<h1 class="modal-title fs-5 fw-semibold" id="exampleModalLabel"> Filters </h1>
+				<button type="button" class="btn-close b-close" data-bs-dismiss="modal" aria-label="Close">
+					<i class="fa-solid fa-xmark "></i>
+				</button>
+			</div>
+			<div class="modal-body agent-overflow fs-14 fw-semibold">
+				<div class="col-md-12">
+					<div class="">
+						<span class="ms-2 pt-2 pe-2 fs-14 text-nowrap">Node Type</span>
+						<ng-multiselect-dropdown [placeholder]="'Select Node Types'"
+							class="custom-filter-width custom-filter-height fs-14" [data]="nodeTypes"
+							[(ngModel)]="selectedNodeTypes" [settings]="multiSelectSettings"
+							(onSelectAll)="OnSelectAllTypes(true)" (onDeSelectAll)="onDeselectAllTypes(true)"
+							[disabled]="!selectedRagId">
+						</ng-multiselect-dropdown>
+					</div>
+				</div>
+				<div class="col-md-12">
+					<div class="">
+						<span class="pt-2 px-2 fs-14 text-nowrap">Link Type</span>
+						<ng-multiselect-dropdown [placeholder]="'Select Link Types'"
+							class="custom-filter-width custom-filter-height fs-14" [data]="linkTypes"
+							[(ngModel)]="selectedLinkTypes" [settings]="multiSelectSettings"
+							(onSelectAll)="OnSelectAllTypes(false)" (onDeSelectAll)="onDeselectAllTypes(false)"
+							[disabled]="!selectedRagId">
+						</ng-multiselect-dropdown>
+
+					</div>
+				</div>
+			</div>
+			<div class="modal-footer border-0">
+				<button type="button" class="btn bg-white border fs-12" data-bs-dismiss="modal"
+					(click)="clearFilters()">Clear
+					Filters</button>
+				<button type="button" class="btn btn-primary bg-orange border-0 fs-12" (click)="applyFilters()">Apply
+					Filters</button>
+			</div>
+		</div>
+	</div>
+</div>
+
+@if(newChatbot) {
+<app-chatbot></app-chatbot>
+<app-chatbot *ngIf="selectedAgency1"></app-chatbot>
+<app-chatbot *ngIf="selectedAgency2"></app-chatbot>
+<app-chatbot *ngIf="workflowId"></app-chatbot>
+<app-chatbot *ngIf="selectedWorkflowId"></app-chatbot>
+}

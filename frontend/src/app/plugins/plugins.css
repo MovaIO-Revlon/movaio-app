@@ -1,0 +1,27 @@
+.plugins-tab .tab-content .tab-pane.active {
+  display: flex;
+}
+
+.plugins-tab .table {
+  margin-bottom: 0;
+}
+
+.plugins-tab .table th {
+  background-color: #f7f7f8;
+  color: #262e2b;
+  font-size: 0.875rem;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+
+.plugins-tab .table th:nth-child(1),
+.plugins-tab .table tbody td:nth-child(1) {
+  width: 2.813rem;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.plugins-tab .table tbody tr:last-of-type td {
+  border-bottom-width: 0;
+}

@@ -1,0 +1,116 @@
+@let activeUseCases = filterStore.activeUseCases();
+@let visualization = filterStore.visualization();
+
+@for (item of activeUseCases; track item) {
+  @switch (item) {
+    @case (useCases.AVERAGE_MTTR) {
+      <kpi-card
+        label="Average MTTR"
+        class="kpi-card"
+        [description]="
+          `Average time to resolve defects.
+      Formula: Total resolution time ÷ Number of defects
+      Ex: 300 hrs / 50 defects = 6 hrs`
+        "
+        [value]="[`${kpis().avg_mttr || 0} Hours`]"
+        [loading]="kpisQuery.isLoading()"
+        style="grid-column: span 4"
+      />
+    }
+
+    @case (useCases.AVERAGE_DEFECT) {
+      <kpi-card
+        label="Average Defects Per Day"
+        class="kpi-card"
+        [description]="
+          `Mean defects reported daily.
+      Formula: Total defects ÷ Days
+      Ex: 210 defects / 30 days = 7/day`
+        "
+        [value]="[`${kpis().avg_defects_per_day} NEW`]"
+        [loading]="kpisQuery.isLoading()"
+        style="grid-column: span 4"
+      />
+    }
+
+    @case (useCases.SIMILAR_DEFECTS) {
+      <kpi-card
+        label="Similar Defects"
+        class="kpi-card"
+        [description]="
+          `Defects sharing patterns or causes.
+      Formula: (Similar defects ÷ Total defects) × 100
+      Ex: 60/200 × 100 = 30% similar`
+        "
+        [value]="[`${kpis().similar_defects.length}`]"
+        [loading]="kpisQuery.isLoading()"
+        (clickAction)="openSimilarDefectsModal()"
+        style="grid-column: span 4"
+      />
+    }
+
+    @case (useCases.DEFECT_ANALYTICS) {
+      <entity-analytics
+        [data]="analytics()"
+        [total]="meta().total_defects || 0"
+        [options]="{
+          label: 'Defect Analytics',
+          centerText: 'Defects',
+          filterByOptions: ['status', 'priority', 'severity', 'category'],
+          tooltip:
+            'Defects Analytics provides a visual breakdown of defects across status, priority, severity, category, and service—helping identify trends and operational bottlenecks.',
+        }"
+        class="chart-card"
+        [loading]="kpisQuery.isLoading()"
+        (selectData)="onSelectData($event)"
+        style="grid-column: span 6"
+      />
+    }
+
+    @case (useCases.DEFECT_AGE) {
+      <defect-age
+        [data]="defectAge()"
+        class="chart-card"
+        [loading]="kpisQuery.isLoading()"
+        (selectSeries)="selectedDefectData.set($event)"
+        style="grid-column: span 6"
+      />
+    }
+
+    @default {
+      @if (visualization[item]) {
+        <widget-renderer
+          [case]="item"
+          [config]="visualization[item]"
+          useCaseType="trends"
+          (select)="selectDynamicData($event)"
+          style="grid-column: span 6"
+        />
+      }
+    }
+  }
+}
+
+@let dynamicWidgetData = dynamicData();
+<entity-table
+  [open]="!!dynamicWidgetData.headings.length"
+  [data]="dynamicWidgetData.data"
+  [headings]="dynamicWidgetData.headings"
+  (close)="dynamicData.set({ headings: [], data: [] })"
+  [withCloseButton]="true"
+/>
+
+<similar-entity-modal
+  [data]="selectedSimilarDefects() || []"
+  [open]="!!selectedSimilarDefects()?.length"
+  (close)="selectedSimilarDefects.set(null)"
+/>
+
+<defect-table-modal
+  [data]="selectedDefectData() || []"
+  [open]="!!selectedDefectData()"
+  (close)="selectDefects(null)"
+  [hiddenFields]="
+    selectedDefectData()?.[0]?.data?.[0]?.age_days ? [] : ['age_days']
+  "
+/>

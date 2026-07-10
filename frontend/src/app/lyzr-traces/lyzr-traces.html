@@ -1,0 +1,458 @@
+@if (!selectedTraceId) {
+  <!-- Check if we have workflow traces -->
+  @if (hasWorkflowTraces) {
+    <table class="traces-table" aria-label="Workflow Trace details">
+      <caption class="visually-hidden">Workflow Trace details</caption>
+      <thead>
+        <tr>
+          <th scope="col">Agent Name</th>
+          <th scope="col">Trace ID</th>
+          <th scope="col">Duration</th>
+          <th scope="col">Input Tokens</th>
+          <th scope="col">Output Tokens</th>
+          <th scope="col">Credits Consumed</th>
+          <th scope="col">Timestamp</th>
+          <th scope="col"></th>
+        </tr>
+      </thead>
+      <tbody>
+        @if(isTracesLoading) {
+          <tr>
+            <td colspan="9" class="text-center">
+              <ng-container
+                *ngTemplateOutlet="spinner; context: { size: '20px' }"
+              ></ng-container>
+            </td>
+          </tr>
+        } @else if(!workflowTraces.length) {
+          <tr>
+            <td colspan="9" class="text-center">No workflow traces found</td>
+          </tr>
+        } @else {
+          @for (trace of workflowTracesAsLyzrTraces; track trace.trace_id) {
+            <tr>
+              <td>{{ trace.name }}</td>
+              <th scope="row">
+                <span class="trace-id-cell" [appTooltip]="trace.trace_id">{{ trace.trace_id }}</span>
+              </th>
+              <td>{{ trace.trace_duration | number : "1.0-2" }}s</td>
+              <td>{{ trace.llm_input_tokens }}</td>
+              <td>{{ trace.llm_output_tokens }}</td>
+              <td>{{ trace.action_cost | number : "1.0-2" }}</td>
+              <td>{{ trace.trace_start_time | date : "medium" }}</td>
+              <td>
+                <button
+                  class="rounded-2 border bg-light p-1 text-muted"
+                  (click)="onSelectTrace(trace.trace_id)"
+                  style="font-size: 0.6rem"
+                >
+                  Details
+                </button>
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  }
+ @else{
+  <table class="traces-table" aria-label="Trace details">
+ <caption class="visually-hidden">Trace details</caption>
+  <thead>
+    <tr>
+      <th scope="col">Agent Name</th>
+      <th scope="col">Trace ID</th>
+      <th scope="col">Duration</th>
+      <th scope="col">Input Tokens</th>
+      <th scope="col">Output Tokens</th>
+      <th scope="col">Credits Consumed</th>
+      <th scope="col">Timestamp</th>
+      <th scope="col"></th>
+    </tr>
+  </thead>
+  <tbody>
+    @if(isTracesLoading) {
+    <tr>
+      <td colspan="9" class="text-center">
+        <ng-container
+          *ngTemplateOutlet="spinner; context: { size: '20px' }"
+        ></ng-container>
+      </td>
+    </tr>
+    } @else if(!traces.length) {
+    <tr>
+      <td colspan="9" class="text-center">No traces found</td>
+    </tr>
+    } @else {
+    <!--  -->
+    @for (trace of traces; track $index) {
+    <tr>
+      <td>{{ trace.name }}</td>
+      <th scope="row">
+        <span class="trace-id-cell" [appTooltip]="trace.trace_id">{{ trace.trace_id }}</span>
+      </th>
+      <td>{{ trace.trace_duration | number : "1.0-2" }}s</td>
+       <td>{{ trace.llm_input_tokens}}</td>
+       <td>{{ trace.llm_output_tokens }}</td>
+      <td>{{ trace.action_cost | number : "1.0-2" }}</td>
+      <td>{{ trace.trace_start_time | date : "medium" }}</td>
+      <td>
+        <button
+          class="rounded-2 border bg-light p-1 text-muted"
+          (click)="onSelectTrace(trace.trace_id)"
+          style="font-size: 0.6rem"
+        >
+          Details
+        </button>
+      </td>
+    </tr>
+    }
+    <!--  -->
+    }
+  </tbody>
+</table>
+ }
+}
+<div
+  class="trace-viewer-wrapper"
+  [class.open]="selectedTraceId !== ''"
+  (click)="closeTraceDrawer($event)"
+  (keydown.escape)="closeTraceDrawer()"
+  tabindex="-1"
+  [attr.aria-hidden]="selectedTraceId === '' ? 'true' : 'false'"
+>
+  <div class="trace-viewer">
+    <div class="request-details-header d-flex justify-content-between align-items-center px-3 py-2 border-bottom">
+      <div class="fw-medium">Trace Details</div>
+      <button
+        type="button"
+        class="close-btn btn btn-sm text-muted"
+        (click)="closeTraceDrawer()"
+      >
+        <i class="fa-solid fa-xmark fs-5"></i>
+      </button>
+    </div>
+
+    <div class="p-3 overflow-auto" style="height: calc(100% - 52px);">
+      @if (isTraceDetailLoading) {
+        <div class="text-center py-5">
+          <ng-container *ngTemplateOutlet="spinner; context: { size: '40px' }"></ng-container>
+        </div>
+      } @else if (!currentTraceDetails) {
+        <p class="text-center text-muted py-5">No trace details available</p>
+      } @else {
+        <!-- Tabs -->
+        <div class="details-tab mb-3">
+          @for (tab of tabs; track tab) {
+            <button
+              (click)="onSelectTab(tab)"
+              [class.active]="activeTab === tab"
+            >
+              {{ tab }}
+            </button>
+          }
+        </div>
+
+        <!-- Tab contents -->
+        @if (activeTab === 'run') {
+          <div class="tab-body user-tab">
+            <ng-container *ngTemplateOutlet="inputOutputCard; context: { html: messages.input || '--', icon: 'fa-user', label: 'Input' }"></ng-container>
+            <ng-container *ngTemplateOutlet="inputOutputCard; context: { html: messages.output || '--', icon: 'fa-robot', label: 'Output' }"></ng-container>
+          </div>
+        }
+
+        @if (activeTab === 'metadata') {
+          <div class="tab-body">
+            <!-- For workflow traces, show spans as metadata -->
+            @if (isWorkflowTrace && currentTraceDetails.spans && currentTraceDetails.spans.length > 0) {
+              @for (span of currentTraceDetails.spans; track $index) {
+                <details class="span-accordion mb-3 border rounded shadow-sm">
+                  <summary class="d-flex justify-content-between align-items-center px-3 py-2 bg-light">
+                    <div>
+                      <strong class="me-2"  style="color:#737373 ;">{{ formatKey(span.SpanName) }}</strong>
+                      @if (span.SpanAttributes && span.SpanAttributes['status']) {
+                     
+                      }
+                    </div>
+                    <div class="d-flex align-items-center">
+                      <span class="logs-count">{{ (span['Events.Name']?.length || 0) }} logs</span>
+                      <i class="fa-solid fa-chevron-down transition-transform ms-2"></i>
+                    </div>
+                  </summary>
+
+                  <div class="p-3 bg-white">
+                    <!-- Display documents as tags with logs count -->
+                    @if (span['Events.Name'] && span['Events.Name'].length > 0) {
+                      <div class="document-tags">
+                        @for (doc of span['Events.Name']; track $index) {
+                          <span class="document-tag">{{ doc }}</span>
+                        }
+                      </div>
+                    }
+                    
+                    <!-- Events Attributes -->
+                    @if (span['Events.Attributes'] && span['Events.Attributes'].length > 0) {
+                      <div class="mb-4">
+                        @for (attrSet of span['Events.Attributes']; track $index) {
+                          <ng-container *ngTemplateOutlet="metadataTable; context: { title: 'Attributes', attributes: attrSet }"></ng-container>
+                        }
+                      </div>
+                    }
+
+                    <!-- Span Attributes -->
+                    @if (span.SpanAttributes && hasAttributes(span.SpanAttributes)) {
+                      <ng-container *ngTemplateOutlet="metadataTable; context: { title: 'Metadata', attributes: span.SpanAttributes }"></ng-container>
+                    }
+                    
+                    <!-- Fallback -->
+                    @if (!(span.SpanAttributes && hasAttributes(span.SpanAttributes)) &&
+                         !(span['Events.Name'] && span['Events.Name'].length > 0) &&
+                         !(span['Events.Attributes'] && span['Events.Attributes'].length > 0)) {
+                      <p class="text-muted small text-center py-3">
+                        No detailed attributes or events available for this span.
+                      </p>
+                    }
+                  </div>
+                </details>
+              }
+            }
+            <!-- For regular traces, also show spans in accordion format -->
+            @else if (currentTraceDetails.spans && currentTraceDetails.spans.length > 0) {
+              @for (span of currentTraceDetails.spans; track $index) {
+                <details class="span-accordion mb-3 border rounded shadow-sm">
+                  <summary class="d-flex justify-content-between align-items-center px-3 py-2 bg-light">
+                    <div>
+                      <strong class="me-2"  style="color:#737373 ;">{{ formatKey(span.SpanName) }}</strong>
+                      @if (span.SpanAttributes && span.SpanAttributes['status']) {
+                       
+                      }
+                    </div>
+                    <div class="d-flex align-items-center">
+                      <span class="logs-count">{{ (span['Events.Name']?.length || 0) }} logs</span>
+                      <i class="fa-solid fa-chevron-down transition-transform ms-2"></i>
+                    </div>
+                  </summary>
+
+                  <div class="p-3 bg-white">
+                    <!-- Display documents as tags with logs count -->
+                    @if (span['Events.Name'] && span['Events.Name'].length > 0) {
+                      <div class="document-tags">
+                        @for (doc of span['Events.Name']; track $index) {
+                          <span class="document-tag">{{ doc }}</span>
+                        }
+                      </div>
+                    }
+                    
+                    <!-- Events Attributes -->
+                    @if (span['Events.Attributes'] && span['Events.Attributes'].length > 0) {
+                      <div class="mb-4">
+                        @for (attrSet of span['Events.Attributes']; track $index) {
+                          <ng-container *ngTemplateOutlet="metadataTable; context: { title: 'Attributes', attributes: attrSet }"></ng-container>
+                        }
+                      </div>
+                    }
+
+                    <!-- Span Attributes -->
+                    @if (span.SpanAttributes && hasAttributes(span.SpanAttributes)) {
+                      <ng-container *ngTemplateOutlet="metadataTable; context: { title: 'Metadata', attributes: span.SpanAttributes }"></ng-container>
+                    }
+                    
+                    <!-- Fallback -->
+                    @if (!(span.SpanAttributes && hasAttributes(span.SpanAttributes)) &&
+                         !(span['Events.Name'] && span['Events.Name'].length > 0) &&
+                         !(span['Events.Attributes'] && span['Events.Attributes'].length > 0)) {
+                      <p class="text-muted small text-center py-3">
+                        No detailed attributes or events available for this span.
+                      </p>
+                    }
+                  </div>
+                </details>
+              }
+            }
+            <!-- If no spans available for regular traces, show the simple metadata -->
+            @else {
+              <!-- Regular trace metadata display -->
+              <ng-container *ngTemplateOutlet="metadata; context: { label: 'Agent Name', value: currentTraceDetails.agent_name, valueClass: 'fw-bold' }"></ng-container>
+              <ng-container *ngTemplateOutlet="metadata; context: { label: 'Agent ID', value: currentTraceDetails.agent_id, valueClass: 'id' }"></ng-container>
+              <ng-container *ngTemplateOutlet="metadata; context: { label: 'LLM Provider', value: currentTraceDetails.llm_provider, valueClass: 'fw-bold' }"></ng-container>
+              <ng-container *ngTemplateOutlet="metadata; context: { label: 'Language Model', value: currentTraceDetails.language_model, valueClass: 'fw-bold' }"></ng-container>
+              <ng-container *ngTemplateOutlet="metadata; context: { label: 'Duration', value: `${currentTraceDetails.latency_ms / 1000 | number : '1.0-2'}s`, valueClass: 'text-success' }"></ng-container>
+              <ng-container *ngTemplateOutlet="metadata; context: { label: 'Credits Consumed', value: currentTraceDetails.cost | number : '1.5-5', valueClass: 'text-warning' }"></ng-container>
+              <ng-container *ngTemplateOutlet="metadata; context: { label: 'Total Tokens', value: currentTraceDetails.total_tokens, valueClass: 'text-info' }"></ng-container>
+              <ng-container *ngTemplateOutlet="metadata; context: { label: 'Input Messages', value: currentTraceDetails.input_messages?.length || 0, valueClass: 'border px-2 rounded-4' }"></ng-container>
+              <ng-container *ngTemplateOutlet="metadata; context: { label: 'Tool Calls', value: currentTraceDetails.tool_actions, valueClass: 'border px-2 rounded-4' }"></ng-container>
+              <ng-container *ngTemplateOutlet="metadata; context: { label: 'Run ID', value: currentTraceDetails.run_id, valueClass: 'id' }"></ng-container>
+              <ng-container *ngTemplateOutlet="metadata; context: { label: 'Trace ID', value: currentTraceDetails.trace_id, valueClass: 'id' }"></ng-container>
+              <ng-container *ngTemplateOutlet="metadata; context: { label: 'Log ID', value: currentTraceDetails.log_id, valueClass: 'id' }"></ng-container>
+            }
+          </div>
+        }
+
+@if (activeTab === 'logs') {
+  <div class="tab-body">
+    @if (isLogsLoading) {
+      <div class="d-flex justify-content-center py-2">
+        <ng-container *ngTemplateOutlet="spinner; context: { size: '20px' }"></ng-container>
+      </div>
+    } @else if (!groupedLogs || groupedLogs.length === 0) {
+      <p class="text-center py-3 fs-12 text-muted">No Logs found</p>
+    } @else {
+      <div class="tab-body">
+        @for (log of groupedLogs; track log.feature) {
+          <details class="log-group mb-3 border rounded shadow-sm">
+            <summary>
+              <span style="font-weight: 500;">
+                <i class="fa-solid" [class]="logFeatureLabelIconMapping[log.feature]?.[1] || 'fa-info-circle'"></i> 
+                {{ logFeatureLabelIconMapping[log.feature]?.[0] || formatKey(log.feature) }}</span
+              >
+              <i class="fa-solid fa-chevron-right"></i>
+            </summary>
+            @if ($any(logFeatureMapping[log.feature])?.length) {
+              @for (logDetail of logFeatureMapping[log.feature]; track $index) {
+                <!-- Display log data directly within the accordion container -->
+                <div class="metadata-table">
+                  <div class="metadata-table-body">
+                    <div class="metadata-two-column-grid">
+                      <!-- All fields from the response data -->
+                      @let entries = logDetail.data | keyvalue;
+                      @for (i of [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]; track i) {
+                        @if (i < entries.length) {
+                          <div class="metadata-row-pair">
+                            <!-- First column -->
+                            <div class="metadata-column">
+                              <div class="key">{{ formatKey(entries[i].key) }}</div>
+                              <div class="value">
+                                @if (isComplexObject(entries[i].value)) {
+                                  <!-- Inline expandable data with JSON display -->
+                                  <div class="expandable-data">
+                                    <div class="data-preview" (click)="toggleExpandedData($index, entries[i].key)">
+                                      <span class="preview-text">View Data</span>
+                                      <button class="play-button" [class]="{ 'expanded': isDataExpanded($index, entries[i].key) }">
+                                        <i class="fa-solid" [class]="isDataExpanded($index, entries[i].key) ? 'fa-chevron-up' : 'fa-play'"></i>
+                                      </button>
+                                    </div>
+                                    <div class="data-full" [class]="{ 'show': isDataExpanded($index, entries[i].key) }">
+                                      <pre>{{ entries[i].value | json }}</pre>
+                                    </div>
+                                  </div>
+                                } @else {
+                                  <!-- Simple value -->
+                                  {{ formatValue(entries[i].value) }}
+                                }
+                              </div>
+                            </div>
+                            
+                            <!-- Second column -->
+                            @if (i + 1 < entries.length) {
+                              <div class="metadata-column">
+                                <div class="key">{{ formatKey(entries[i + 1].key) }}</div>
+                                <div class="value">
+                                  @if (isComplexObject(entries[i + 1].value)) {
+                                    <!-- Inline expandable data with JSON display -->
+                                    <div class="expandable-data">
+                                      <div class="data-preview" (click)="toggleExpandedData($index, entries[i + 1].key)">
+                                        <span class="preview-text">View Data</span>
+                                        <button class="play-button" [class]="{ 'expanded': isDataExpanded($index, entries[i + 1].key) }">
+                                          <i class="fa-solid" [class]="isDataExpanded($index, entries[i + 1].key) ? 'fa-chevron-up' : 'fa-play'"></i>
+                                        </button>
+                                      </div>
+                                      <div class="data-full" [class]="{ 'show': isDataExpanded($index, entries[i + 1].key) }">
+                                        <pre>{{ entries[i + 1].value | json }}</pre>
+                                      </div>
+                                    </div>
+                                  } @else {
+                                    <!-- Simple value -->
+                                    {{ formatValue(entries[i + 1].value) }}
+                                  }
+                                </div>
+                              </div>
+                            }
+                          </div>
+                        }
+                      }
+                    </div>
+                  </div>
+                </div>
+              }
+            } @else {
+              <p class="text-center py-3 text-muted">No log details found</p>
+            }
+          </details>
+        }
+      </div>
+    }
+  </div>
+}}
+</div>
+  </div>
+
+<ng-template #inputOutputCard let-label="label" let-icon="icon" let-html="html">
+  <div class="input-output-card">
+    <div class="title">
+      <i class="fa-solid" [class]="icon"></i> <span>{{ label }}</span>
+    </div>
+    <div class="body" [innerHTML]="html"></div>
+  </div>
+</ng-template>
+
+<ng-template
+  #metadata
+  let-label="label"
+  let-value="value"
+  let-valueClass="valueClass"
+>
+  <div class="metadata">
+    <div class="label">{{ label }}</div>
+    <div class="value" [class]="valueClass">{{ value }}</div>
+  </div>
+</ng-template>
+
+<ng-template #spinner let-size="size">
+  <div
+    class="spinner-border text-secondary"
+    [style]="`
+      --bs-spinner-width: ${size};
+      --bs-spinner-height: ${size};
+      --bs-spinner-border-width: 0.1em;
+    `"
+    output="status"
+  ></div>
+</ng-template>
+
+<ng-template #metadataTable let-title="title" let-attributes="attributes">
+  <div class="metadata-table">
+    <div class="metadata-table-title">
+      @if (title === 'Metadata') {
+        <i class="fa-solid fa-info-circle"></i>
+      } @else {
+        <i class="fa-solid fa-tag"></i>
+      }
+      <span>{{ title }}</span>
+    </div>
+    <div class="metadata-table-body">
+      <div class="metadata-two-column-grid">
+        @let entries = attributes | keyvalue;
+        @let filteredEntries = this.filterEmptyEntries(entries);
+        @for (i of [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]; track i) {
+          @if (i < filteredEntries.length) {
+            <div class="metadata-row-pair">
+              <!-- First column -->
+              <div class="metadata-column">
+                <div class="key">{{ formatKey($any(filteredEntries[i].key)) }}</div>
+                <div class="value">{{ filteredEntries[i].value }}</div>
+              </div>
+              
+              <!-- Second column -->
+              @if (i + 1 < filteredEntries.length) {
+                <div class="metadata-column">
+                  <div class="key">{{ formatKey($any(filteredEntries[i + 1].key)) }}</div>
+                  <div class="value">{{ filteredEntries[i + 1].value }}</div>
+                </div>
+              }
+            </div>
+          }
+        }
+      </div>
+    </div>
+  </div>
+</ng-template>

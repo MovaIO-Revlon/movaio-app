@@ -1,0 +1,218 @@
+.spinner {
+  margin-left: 10px;
+  width: 20px;
+  height: 20px;
+  border: 3px solid #ccc;
+  border-top: 3px solid #007bff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.user-menu a:focus,
+.user-menu a:hover {
+  background-color:  #f2f2f2 !important; /* orange background */
+  color: #000000 !important; /* white text */
+}
+
+.user-menu a.active,
+.user-menu a:active {
+  background-color:  #f2f2f2 !important;
+  color: #000000 !important;
+}
+
+.selected-dropdown {
+  background: #fff6ef;
+  border: 1px solid #f4a261;
+}
+
+.gear-colour{
+  color:#000000;
+}
+/* Make dropdown menu width same as button */
+.dropdown-menu {
+  min-width: 100%; /* minimum width same as parent */
+  width: 100%;     /* force full width */
+  box-sizing: border-box;
+}
+
+/* Optional: spacing for checkbox items */
+.dropdown-menu .form-check {
+  margin-bottom: 0.25rem;
+  padding: 0.25rem 0.75rem;
+  display: flex;
+  align-items: center;
+}
+
+.dropdown-menu .form-check-input {
+  margin-right: 0.5rem;
+}
+
+.schedule-form label {
+  font-size: 13px;
+  font-weight: bold;
+}
+.schedule-form input[type="radio"] {
+  margin-right: 10px;
+}
+.schedule-form input[type="text"], 
+.schedule-form input[type="time"] {
+  width: 100%;
+  padding: 8px;
+  margin: 10px 0;
+  border-radius: 5px;
+  border: 1px solid #ddd;
+  font-size: 14px;
+}
+.action-button {
+  background-color: #ffa63b;
+  color: white;
+  padding: 6px 12px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 15px;
+  margin-top: 1px;
+}
+.action-button:hover {
+  background-color: #e07e00;
+}
+.added-schedules ul {
+  list-style-type: none;
+  padding: 0;
+}
+.added-schedules li {
+  background-color: #f1f1f1;
+  margin: 5px 0;
+  padding: 10px;
+  border-radius: 5px;
+}
+.but-addsch{
+  background: #fff3e7;
+  border: solid 1px #ffa63b;
+  padding: 23px 9px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 600;
+  width: 150px;
+  text-align: center;
+}
+.mapping-card {
+  background: #fff6ef; /* light background */
+  border: 1px solid #f4a261; /* orange border */
+  border-radius: 8px;
+  padding: 12px 16px;
+}
+.mapping-card div {
+  min-width: 120px;
+}
+.mapping-card strong {
+  font-weight: 600;
+}
+td.text-nowrap {
+  white-space: nowrap;
+}
+.custom-option:disabled {
+  background-color: #ffe0cc; /* Light orange background */
+  color: #333; /* Dark text for readability */
+  position: relative;
+  padding-left: 20px; /* Space for the tick mark */
+}
+
+.custom-option:disabled::after {
+  content: "✓"; /* Tick mark */
+  position: absolute;
+  left: 5px;
+  color: #f4a261; /* Orange tick mark color */
+  font-weight: bold;
+}
+.custom-dropdown {
+  position: relative;
+  width: 100%;
+  font-size: 13px;
+}
+
+.selected-option {
+  padding: 8px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  cursor: pointer;
+  background-color: #fff;
+}
+
+.dropdown-list {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  border: 1px solid #ced4da;
+  border-top: none;
+  border-radius: 0 0 4px 4px;
+  background-color: #fff;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  z-index: 1000;
+  max-height: 200px;
+  overflow-y: auto;
+  display: none;
+}
+
+.dropdown-list.show {
+  display: block;
+}
+
+.dropdown-list li {
+  padding: 8px;
+  cursor: pointer;
+}
+
+.dropdown-list li:hover:not(.disabled) {
+  background-color: #f8f9fa;
+}
+
+.dropdown-list li.disabled {
+  background-color: #ffe0cc;
+  color: #333;
+  position: relative;
+  padding-right: 25px; /* space for right tick */
+}
+
+.dropdown-list li.disabled::after {
+  content: "✓";
+  position: absolute;
+  right: 8px;   /* move to right */
+  top: 50%;
+  transform: translateY(-50%); /* vertical centering */
+  color: #fff6ef;
+  font-weight: bold;
+}
+
+/* For native <select> options (not fully supported in all browsers) */
+select.form-select option:disabled:not(:first-child) {
+  background-color: #fcf0e7 !important;
+  color: #333 !important;
+}
+.dropdown-item.active-project {
+  background-color: #ffe0cc !important; /* light orange */
+  color: #333 !important;
+  pointer-events: none; /* prevent clicking on active project */
+  position: relative;
+
+}
+
+.dropdown-item.active-project::after {
+  content: "✓";
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #e47a23; /* orange tick */
+  font-weight: bold;
+
+}

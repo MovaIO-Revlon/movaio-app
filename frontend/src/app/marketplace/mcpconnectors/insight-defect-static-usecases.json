@@ -1,0 +1,132 @@
+{
+  "Top 10 Defect": {
+    "agent_execution": {
+      "Top 10 Defect": {
+        "date_range_applied": "2000-01-01 to 2026-04-15",
+        "defect_filter_applied": "full set",
+        "summary": "Top 10 defect-prone categories from 2000-01-01 to 2026-04-15 in index 'jira_defect_data' (filter: full set, 75 total defects)",
+        "top_areas": [
+          {
+            "area": "Market Place",
+            "defect_count": 34,
+            "key_insights": "The Market Place area is the most defect-prone, with recurring issues in agent management, UI, and workflow integrations.",
+            "matching_defects": [
+              {
+                "category": "KG Graph is not displayed for sub subscription",
+                "created": "17/Mar/26 6:28 PM",
+                "defect_id": "KKR-171",
+                "priority": "High",
+                "severity": "High",
+                "state": "Done",
+                "title": "KG Graph is not displayed for sub subscription"
+              }
+            ],
+            "rank": 1
+          }
+        ]
+      }
+    }
+  },
+  "Top 10 Features/Epics Impacted": {
+    "agent_execution": {
+      "Top 10 Features/Epics Impacted": {
+        "date_range_applied": "2000-01-01 to 2026-04-15",
+        "defect_filter_applied": "full set",
+        "summary": "Top impacted features and epics from 2000-01-01 to 2026-04-15 based on the full set of defects in 'jira_defect_data'. Date range filter applied.",
+        "top_impacted_areas": [
+          {
+            "defect_count": 34,
+            "feature_or_epic": "Market Place",
+            "key_insights": "Market Place epic has the highest volume, linked to recurring agent, workflow, and UI defects.",
+            "matching_defects": [
+              {
+                "category": "KG Graph is not displayed for sub subscription",
+                "created": "17/Mar/26 6:28 PM",
+                "defect_id": "KKR-171",
+                "priority": "High",
+                "severity": "High",
+                "state": "Done",
+                "title": "KG Graph is not displayed for sub subscription"
+              }
+            ],
+            "rank": 1,
+            "type": "epic"
+          }
+        ]
+      }
+    }
+  },
+  "Top 10 Resolutions": {
+    "agent_execution": {
+      "Top 10 Resolutions": {
+        "date_range_applied": "2000-01-01 to 2026-04-15",
+        "summary": "Top 10 most common resolutions for defects in index 'jira_defect_data' from 2000-01-01 to 2026-04-15 based on Done status and available resolution patterns.",
+        "top_resolutions": [
+          {
+            "average_resolution_time_days": 18,
+            "defect_count": 18,
+            "key_insights": "Front-end inconsistencies, length issues, and missing fields are quickly addressed, typically within 3-25 days.",
+            "matching_defects": [
+              {
+                "category": "Insight Page: UI & Functionality Issues",
+                "created": "23/Jan/26 12:06 PM",
+                "defect_id": "KKR-115",
+                "impact": "Resolved visual overflow and browser compatibility.",
+                "priority": "Medium",
+                "severity": "Medium",
+                "title": "Insight Page: UI & Functionality Issues"
+              }
+            ],
+            "rank": 1,
+            "resolution": "UI/UX Bug Fixes Applied (input fields, output formatting, validation)"
+          }
+        ]
+      }
+    }
+  },
+  "Top 10 Root Causes": {
+    "agent_execution": {
+      "Top 10 Root Causes": {
+        "date_range_applied": "2000-01-01 to 2026-04-15",
+        "summary": "Top 10 root causes for defects from 2000-01-01 to 2026-04-15 (all available records from jira_defect_data analyzed using category/title/description patterns due to absence of explicit root_cause field)",
+        "top_root_causes": [
+          {
+            "defect_count": 16,
+            "key_insights": "Frequent issues with trace details, logs, or run/output information missing or incomplete, especially for agent and workflow executions.",
+            "matching_defects": [
+              {
+                "category": "Agent Logs: Run and log tab details are blank for agent executed from sub subscription",
+                "created": "09/Mar/26 6:42 PM",
+                "defect_id": "KKR-141",
+                "priority": "High",
+                "severity": "High",
+                "state": "Done",
+                "title": "Agent Logs: Run and log tab details are blank for agent executed from sub subscription"
+              }
+            ],
+            "rank": 1,
+            "root_cause": "Log/Trace Details Missing or Not Displayed Properly"
+          }
+        ]
+      }
+    }
+  },
+  "AI Inferences": {
+    "agent_execution": {
+      "AI Inferences": {
+        "ai_inferences": [
+          {
+            "description": "A significant portion of defects relate to missing, incomplete, or incorrect workflow and log trace details (trace IDs, agent run logs, document field data, cluster list updates). This creates debugging challenges and increases incident MTTR.",
+            "impact": "52% of analyzed defects relate to workflow/log UI or trace gaps (high impact)",
+            "severity": "HIGH",
+            "title": "Recurring Workflow and Logging Trace Issues"
+          }
+        ],
+        "date_range_applied": "2000-01-01 to 2026-04-15",
+        "defect_filter_applied": "full set",
+        "summary": "AI inferences for all defects in 'jira_defect_data' from 2000-01-01 to 2026-04-15. Sample size: 75 defects. Data shows patterns in recurring UI, workflow, logging and subscription issues that impact end-user experience and product stability."
+      }
+    }
+  },
+  "Potential regression scenarios": {}
+}

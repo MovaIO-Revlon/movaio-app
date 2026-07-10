@@ -1,0 +1,4 @@
+/* Apply red color to text and tint or border the image */
+.active-menu .menu-text {
+  color: red;
+}

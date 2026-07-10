@@ -1,0 +1,3483 @@
+/* You can add global styles to this file, and also import other style files */
+
+/* cyrillic-ext */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: italic;
+  font-weight: 100;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9A4kDNxMZdWfMOD5VvkrCqUT3fcWTP.woff2) format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+
+/* cyrillic */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: italic;
+  font-weight: 100;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9A4kDNxMZdWfMOD5VvkrCqUTTfcWTP.woff2) format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+
+/* greek-ext */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: italic;
+  font-weight: 100;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9A4kDNxMZdWfMOD5VvkrCqUTzfcWTP.woff2) format('woff2');
+  unicode-range: U+1F00-1FFF;
+}
+
+/* greek */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: italic;
+  font-weight: 100;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9A4kDNxMZdWfMOD5VvkrCqUTPfcWTP.woff2) format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+
+/* vietnamese */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: italic;
+  font-weight: 100;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9A4kDNxMZdWfMOD5VvkrCqUT_fcWTP.woff2) format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+
+/* latin-ext */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: italic;
+  font-weight: 100;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9A4kDNxMZdWfMOD5VvkrCqUT7fcWTP.woff2) format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+/* latin */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: italic;
+  font-weight: 100;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9A4kDNxMZdWfMOD5VvkrCqUTDfcQ.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* cyrillic-ext */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: italic;
+  font-weight: 200;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9f4kDNxMZdWfMOD5VvkrAGQCf1VFn2lg.woff2) format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+
+/* cyrillic */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: italic;
+  font-weight: 200;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9f4kDNxMZdWfMOD5VvkrAGQCf8VFn2lg.woff2) format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+
+/* greek-ext */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: italic;
+  font-weight: 200;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9f4kDNxMZdWfMOD5VvkrAGQCf0VFn2lg.woff2) format('woff2');
+  unicode-range: U+1F00-1FFF;
+}
+
+/* greek */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: italic;
+  font-weight: 200;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9f4kDNxMZdWfMOD5VvkrAGQCf7VFn2lg.woff2) format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+
+/* vietnamese */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: italic;
+  font-weight: 200;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9f4kDNxMZdWfMOD5VvkrAGQCf3VFn2lg.woff2) format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+
+/* latin-ext */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: italic;
+  font-weight: 200;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9f4kDNxMZdWfMOD5VvkrAGQCf2VFn2lg.woff2) format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+/* latin */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: italic;
+  font-weight: 200;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9f4kDNxMZdWfMOD5VvkrAGQCf4VFk.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* cyrillic-ext */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: italic;
+  font-weight: 300;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9f4kDNxMZdWfMOD5VvkrBiQyf1VFn2lg.woff2) format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+
+/* cyrillic */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: italic;
+  font-weight: 300;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9f4kDNxMZdWfMOD5VvkrBiQyf8VFn2lg.woff2) format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+
+/* greek-ext */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: italic;
+  font-weight: 300;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9f4kDNxMZdWfMOD5VvkrBiQyf0VFn2lg.woff2) format('woff2');
+  unicode-range: U+1F00-1FFF;
+}
+
+/* greek */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: italic;
+  font-weight: 300;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9f4kDNxMZdWfMOD5VvkrBiQyf7VFn2lg.woff2) format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+
+/* vietnamese */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: italic;
+  font-weight: 300;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9f4kDNxMZdWfMOD5VvkrBiQyf3VFn2lg.woff2) format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+
+/* latin-ext */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: italic;
+  font-weight: 300;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9f4kDNxMZdWfMOD5VvkrBiQyf2VFn2lg.woff2) format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+/* latin */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: italic;
+  font-weight: 300;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9f4kDNxMZdWfMOD5VvkrBiQyf4VFk.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* cyrillic-ext */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9C4kDNxMZdWfMOD5VvkrjEYTLHdQ.woff2) format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+
+/* cyrillic */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9C4kDNxMZdWfMOD5VvkrjNYTLHdQ.woff2) format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+
+/* greek-ext */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9C4kDNxMZdWfMOD5VvkrjFYTLHdQ.woff2) format('woff2');
+  unicode-range: U+1F00-1FFF;
+}
+
+/* greek */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9C4kDNxMZdWfMOD5VvkrjKYTLHdQ.woff2) format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+
+/* vietnamese */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9C4kDNxMZdWfMOD5VvkrjGYTLHdQ.woff2) format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+
+/* latin-ext */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9C4kDNxMZdWfMOD5VvkrjHYTLHdQ.woff2) format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+/* latin */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9C4kDNxMZdWfMOD5VvkrjJYTI.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* cyrillic-ext */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: italic;
+  font-weight: 500;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9f4kDNxMZdWfMOD5VvkrA6Qif1VFn2lg.woff2) format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+
+/* cyrillic */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: italic;
+  font-weight: 500;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9f4kDNxMZdWfMOD5VvkrA6Qif8VFn2lg.woff2) format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+
+/* greek-ext */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: italic;
+  font-weight: 500;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9f4kDNxMZdWfMOD5VvkrA6Qif0VFn2lg.woff2) format('woff2');
+  unicode-range: U+1F00-1FFF;
+}
+
+/* greek */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: italic;
+  font-weight: 500;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9f4kDNxMZdWfMOD5VvkrA6Qif7VFn2lg.woff2) format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+
+/* vietnamese */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: italic;
+  font-weight: 500;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9f4kDNxMZdWfMOD5VvkrA6Qif3VFn2lg.woff2) format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+
+/* latin-ext */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: italic;
+  font-weight: 500;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9f4kDNxMZdWfMOD5VvkrA6Qif2VFn2lg.woff2) format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+/* latin */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: italic;
+  font-weight: 500;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9f4kDNxMZdWfMOD5VvkrA6Qif4VFk.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* cyrillic-ext */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: italic;
+  font-weight: 600;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9f4kDNxMZdWfMOD5VvkrAWRSf1VFn2lg.woff2) format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+
+/* cyrillic */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: italic;
+  font-weight: 600;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9f4kDNxMZdWfMOD5VvkrAWRSf8VFn2lg.woff2) format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+
+/* greek-ext */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: italic;
+  font-weight: 600;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9f4kDNxMZdWfMOD5VvkrAWRSf0VFn2lg.woff2) format('woff2');
+  unicode-range: U+1F00-1FFF;
+}
+
+/* greek */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: italic;
+  font-weight: 600;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9f4kDNxMZdWfMOD5VvkrAWRSf7VFn2lg.woff2) format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+
+/* vietnamese */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: italic;
+  font-weight: 600;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9f4kDNxMZdWfMOD5VvkrAWRSf3VFn2lg.woff2) format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+
+/* latin-ext */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: italic;
+  font-weight: 600;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9f4kDNxMZdWfMOD5VvkrAWRSf2VFn2lg.woff2) format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+/* latin */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: italic;
+  font-weight: 600;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9f4kDNxMZdWfMOD5VvkrAWRSf4VFk.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* cyrillic-ext */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: italic;
+  font-weight: 700;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9f4kDNxMZdWfMOD5VvkrByRCf1VFn2lg.woff2) format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+
+/* cyrillic */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: italic;
+  font-weight: 700;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9f4kDNxMZdWfMOD5VvkrByRCf8VFn2lg.woff2) format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+
+/* greek-ext */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: italic;
+  font-weight: 700;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9f4kDNxMZdWfMOD5VvkrByRCf0VFn2lg.woff2) format('woff2');
+  unicode-range: U+1F00-1FFF;
+}
+
+/* greek */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: italic;
+  font-weight: 700;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9f4kDNxMZdWfMOD5VvkrByRCf7VFn2lg.woff2) format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+
+/* vietnamese */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: italic;
+  font-weight: 700;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9f4kDNxMZdWfMOD5VvkrByRCf3VFn2lg.woff2) format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+
+/* latin-ext */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: italic;
+  font-weight: 700;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9f4kDNxMZdWfMOD5VvkrByRCf2VFn2lg.woff2) format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+/* latin */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: italic;
+  font-weight: 700;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9f4kDNxMZdWfMOD5VvkrByRCf4VFk.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* cyrillic-ext */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: italic;
+  font-weight: 800;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9f4kDNxMZdWfMOD5VvkrBuRyf1VFn2lg.woff2) format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+
+/* cyrillic */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: italic;
+  font-weight: 800;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9f4kDNxMZdWfMOD5VvkrBuRyf8VFn2lg.woff2) format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+
+/* greek-ext */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: italic;
+  font-weight: 800;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9f4kDNxMZdWfMOD5VvkrBuRyf0VFn2lg.woff2) format('woff2');
+  unicode-range: U+1F00-1FFF;
+}
+
+/* greek */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: italic;
+  font-weight: 800;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9f4kDNxMZdWfMOD5VvkrBuRyf7VFn2lg.woff2) format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+
+/* vietnamese */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: italic;
+  font-weight: 800;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9f4kDNxMZdWfMOD5VvkrBuRyf3VFn2lg.woff2) format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+
+/* latin-ext */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: italic;
+  font-weight: 800;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9f4kDNxMZdWfMOD5VvkrBuRyf2VFn2lg.woff2) format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+/* latin */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: italic;
+  font-weight: 800;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9f4kDNxMZdWfMOD5VvkrBuRyf4VFk.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* cyrillic-ext */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: italic;
+  font-weight: 900;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9f4kDNxMZdWfMOD5VvkrBKRif1VFn2lg.woff2) format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+
+/* cyrillic */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: italic;
+  font-weight: 900;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9f4kDNxMZdWfMOD5VvkrBKRif8VFn2lg.woff2) format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+
+/* greek-ext */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: italic;
+  font-weight: 900;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9f4kDNxMZdWfMOD5VvkrBKRif0VFn2lg.woff2) format('woff2');
+  unicode-range: U+1F00-1FFF;
+}
+
+/* greek */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: italic;
+  font-weight: 900;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9f4kDNxMZdWfMOD5VvkrBKRif7VFn2lg.woff2) format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+
+/* vietnamese */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: italic;
+  font-weight: 900;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9f4kDNxMZdWfMOD5VvkrBKRif3VFn2lg.woff2) format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+
+/* latin-ext */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: italic;
+  font-weight: 900;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9f4kDNxMZdWfMOD5VvkrBKRif2VFn2lg.woff2) format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+/* latin */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: italic;
+  font-weight: 900;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9f4kDNxMZdWfMOD5VvkrBKRif4VFk.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* cyrillic-ext */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: normal;
+  font-weight: 100;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9C4kDNxMZdWfMOD5Vn9LjEYTLHdQ.woff2) format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+
+/* cyrillic */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: normal;
+  font-weight: 100;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9C4kDNxMZdWfMOD5Vn9LjNYTLHdQ.woff2) format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+
+/* greek-ext */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: normal;
+  font-weight: 100;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9C4kDNxMZdWfMOD5Vn9LjFYTLHdQ.woff2) format('woff2');
+  unicode-range: U+1F00-1FFF;
+}
+
+/* greek */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: normal;
+  font-weight: 100;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9C4kDNxMZdWfMOD5Vn9LjKYTLHdQ.woff2) format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+
+/* vietnamese */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: normal;
+  font-weight: 100;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9C4kDNxMZdWfMOD5Vn9LjGYTLHdQ.woff2) format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+
+/* latin-ext */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: normal;
+  font-weight: 100;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9C4kDNxMZdWfMOD5Vn9LjHYTLHdQ.woff2) format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+/* latin */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: normal;
+  font-weight: 100;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9C4kDNxMZdWfMOD5Vn9LjJYTI.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* cyrillic-ext */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: normal;
+  font-weight: 200;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9B4kDNxMZdWfMOD5VnWKneSxf6TF0.woff2) format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+
+/* cyrillic */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: normal;
+  font-weight: 200;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9B4kDNxMZdWfMOD5VnWKneQhf6TF0.woff2) format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+
+/* greek-ext */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: normal;
+  font-weight: 200;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9B4kDNxMZdWfMOD5VnWKneShf6TF0.woff2) format('woff2');
+  unicode-range: U+1F00-1FFF;
+}
+
+/* greek */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: normal;
+  font-weight: 200;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9B4kDNxMZdWfMOD5VnWKneRRf6TF0.woff2) format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+
+/* vietnamese */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: normal;
+  font-weight: 200;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9B4kDNxMZdWfMOD5VnWKneSRf6TF0.woff2) format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+
+/* latin-ext */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: normal;
+  font-weight: 200;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9B4kDNxMZdWfMOD5VnWKneSBf6TF0.woff2) format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+/* latin */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: normal;
+  font-weight: 200;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9B4kDNxMZdWfMOD5VnWKneRhf6.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* cyrillic-ext */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9B4kDNxMZdWfMOD5VnPKreSxf6TF0.woff2) format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+
+/* cyrillic */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9B4kDNxMZdWfMOD5VnPKreQhf6TF0.woff2) format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+
+/* greek-ext */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9B4kDNxMZdWfMOD5VnPKreShf6TF0.woff2) format('woff2');
+  unicode-range: U+1F00-1FFF;
+}
+
+/* greek */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9B4kDNxMZdWfMOD5VnPKreRRf6TF0.woff2) format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+
+/* vietnamese */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9B4kDNxMZdWfMOD5VnPKreSRf6TF0.woff2) format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+
+/* latin-ext */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9B4kDNxMZdWfMOD5VnPKreSBf6TF0.woff2) format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+/* latin */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9B4kDNxMZdWfMOD5VnPKreRhf6.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* cyrillic-ext */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9E4kDNxMZdWfMOD5VvmojLeTY.woff2) format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+
+/* cyrillic */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9E4kDNxMZdWfMOD5Vvk4jLeTY.woff2) format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+
+/* greek-ext */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9E4kDNxMZdWfMOD5Vvm4jLeTY.woff2) format('woff2');
+  unicode-range: U+1F00-1FFF;
+}
+
+/* greek */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9E4kDNxMZdWfMOD5VvlIjLeTY.woff2) format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+
+/* vietnamese */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9E4kDNxMZdWfMOD5VvmIjLeTY.woff2) format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+
+/* latin-ext */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9E4kDNxMZdWfMOD5VvmYjLeTY.woff2) format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+/* latin */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9E4kDNxMZdWfMOD5Vvl4jL.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* cyrillic-ext */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9B4kDNxMZdWfMOD5VnZKveSxf6TF0.woff2) format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+
+/* cyrillic */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9B4kDNxMZdWfMOD5VnZKveQhf6TF0.woff2) format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+
+/* greek-ext */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9B4kDNxMZdWfMOD5VnZKveShf6TF0.woff2) format('woff2');
+  unicode-range: U+1F00-1FFF;
+}
+
+/* greek */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9B4kDNxMZdWfMOD5VnZKveRRf6TF0.woff2) format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+
+/* vietnamese */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9B4kDNxMZdWfMOD5VnZKveSRf6TF0.woff2) format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+
+/* latin-ext */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9B4kDNxMZdWfMOD5VnZKveSBf6TF0.woff2) format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+/* latin */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9B4kDNxMZdWfMOD5VnZKveRhf6.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* cyrillic-ext */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9B4kDNxMZdWfMOD5VnSKzeSxf6TF0.woff2) format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+
+/* cyrillic */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9B4kDNxMZdWfMOD5VnSKzeQhf6TF0.woff2) format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+
+/* greek-ext */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9B4kDNxMZdWfMOD5VnSKzeShf6TF0.woff2) format('woff2');
+  unicode-range: U+1F00-1FFF;
+}
+
+/* greek */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9B4kDNxMZdWfMOD5VnSKzeRRf6TF0.woff2) format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+
+/* vietnamese */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9B4kDNxMZdWfMOD5VnSKzeSRf6TF0.woff2) format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+
+/* latin-ext */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9B4kDNxMZdWfMOD5VnSKzeSBf6TF0.woff2) format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+/* latin */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9B4kDNxMZdWfMOD5VnSKzeRhf6.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* cyrillic-ext */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9B4kDNxMZdWfMOD5VnLK3eSxf6TF0.woff2) format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+
+/* cyrillic */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9B4kDNxMZdWfMOD5VnLK3eQhf6TF0.woff2) format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+
+/* greek-ext */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9B4kDNxMZdWfMOD5VnLK3eShf6TF0.woff2) format('woff2');
+  unicode-range: U+1F00-1FFF;
+}
+
+/* greek */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9B4kDNxMZdWfMOD5VnLK3eRRf6TF0.woff2) format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+
+/* vietnamese */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9B4kDNxMZdWfMOD5VnLK3eSRf6TF0.woff2) format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+
+/* latin-ext */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9B4kDNxMZdWfMOD5VnLK3eSBf6TF0.woff2) format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+/* latin */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9B4kDNxMZdWfMOD5VnLK3eRhf6.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* cyrillic-ext */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9B4kDNxMZdWfMOD5VnMK7eSxf6TF0.woff2) format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+
+/* cyrillic */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9B4kDNxMZdWfMOD5VnMK7eQhf6TF0.woff2) format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+
+/* greek-ext */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9B4kDNxMZdWfMOD5VnMK7eShf6TF0.woff2) format('woff2');
+  unicode-range: U+1F00-1FFF;
+}
+
+/* greek */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9B4kDNxMZdWfMOD5VnMK7eRRf6TF0.woff2) format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+
+/* vietnamese */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9B4kDNxMZdWfMOD5VnMK7eSRf6TF0.woff2) format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+
+/* latin-ext */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9B4kDNxMZdWfMOD5VnMK7eSBf6TF0.woff2) format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+/* latin */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9B4kDNxMZdWfMOD5VnMK7eRhf6.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* cyrillic-ext */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: normal;
+  font-weight: 900;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9B4kDNxMZdWfMOD5VnFK_eSxf6TF0.woff2) format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+
+/* cyrillic */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: normal;
+  font-weight: 900;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9B4kDNxMZdWfMOD5VnFK_eQhf6TF0.woff2) format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+
+/* greek-ext */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: normal;
+  font-weight: 900;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9B4kDNxMZdWfMOD5VnFK_eShf6TF0.woff2) format('woff2');
+  unicode-range: U+1F00-1FFF;
+}
+
+/* greek */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: normal;
+  font-weight: 900;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9B4kDNxMZdWfMOD5VnFK_eRRf6TF0.woff2) format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+
+/* vietnamese */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: normal;
+  font-weight: 900;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9B4kDNxMZdWfMOD5VnFK_eSRf6TF0.woff2) format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+
+/* latin-ext */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: normal;
+  font-weight: 900;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9B4kDNxMZdWfMOD5VnFK_eSBf6TF0.woff2) format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+/* latin */
+@font-face {
+  font-family: 'Fira Sans';
+  font-style: normal;
+  font-weight: 900;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/firasans/v17/va9B4kDNxMZdWfMOD5VnFK_eRhf6.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+html,
+body {
+  height: 100%;
+  font-family: "Fira Sans", sans-serif;
+  font-weight: 400;
+  font-style: normal;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.bg-color {
+  background: #000 !important;
+}
+
+.bt-bg-color {
+  background: #4F3144 !important;
+}
+
+.logcont-1 {
+  border-radius: 50px;
+}
+
+.fs-20 {
+  font-size: 20px;
+}
+
+.fs-27 {
+  font-size: 27px;
+}
+.fs-15 {
+  font-size: 15px;
+}
+
+.br-30 {
+  border-radius: 30px;
+}
+
+.br-clr1 {
+  border-color: #B1B1B1;
+}
+
+.login-p37 {
+  padding: 0 37px;
+}
+
+.btn:hover {
+  background: #4F3144;
+  color: #ffff;
+}
+
+.btn:first-child:active {
+  color: #fff;
+  background-color: #4F3144;
+}
+
+.form-select:focus {
+  border-color: #B1B1B1;
+  outline: 0;
+  box-shadow: none;
+}
+
+.link-clr {
+  color: #3874FF;
+}
+
+.w-325 {
+  width: 325px;
+}
+
+a {
+  text-decoration: none;
+}
+
+.navbar-dropdown-caret:after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  width: 1rem;
+  height: 1rem;
+  top: -9px;
+  right: .9rem;
+  left: auto !important;
+  transform: rotate(45deg);
+  border-top-left-radius: .25rem;
+  border-width: 1px 0 0 1px;
+  border-style: solid;
+  border-color: #cbd0dd;
+  background: inherit;
+}
+
+.tab-clr.active {
+  background-color: orange;
+}
+
+.pad-2 {
+  padding: 2px 12px;
+}
+
+.border-radius-5 {
+  border-radius: 5px;
+}
+
+.tab-cont1 {
+  border: solid 1px #B1B1B1;
+  border-radius: 5px;
+}
+
+.form-control:focus {
+  box-shadow: none;
+}
+
+.table-light1 {
+  --bs-table-bg: #EEF2F6;
+}
+
+.clr-green {
+  color: #04B100;
+}
+
+.clr-orange {
+  color: #F9A84A;
+}
+
+.clr-red {
+  color: #FF0000;
+}
+
+.clr-yellow {
+  color: #FFC000;
+}
+
+.myth-table th {
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.mytd-table td {
+  vertical-align: middle;
+  width: 8%;
+}
+
+.mytd-table td:nth-child(9) {
+  text-align: center;
+}
+
+.myth-table2 th {
+  padding: 7px 9px 8px 9px;
+  vertical-align: middle;
+  white-space: nowrap;
+  text-align: center;
+}
+
+
+.mytd-table2 td {
+  vertical-align: middle;
+  max-width: 100px;
+  text-align: center;
+  white-space: break-spaces;
+}
+
+.mytd-table2 td:nth-child(9) {
+  text-align: center;
+}
+
+
+.mytd-table3 td {
+  padding: 7px 0 7px 20px;
+  vertical-align: middle;
+  width: 8%;
+  text-align: center;
+}
+
+.mytd-table3 td:nth-child(12) {
+  text-align: center;
+}
+
+/* styles.css or component-specific CSS file */
+.disabled-link {
+  pointer-events: none;
+  color: grey;
+  /* You can customize this */
+  cursor: default;
+}
+
+.mandatory {
+  color: red;
+}
+
+.mandatory-field {
+  border-color: red !important;
+}
+
+.error-message {
+  color: red;
+  font-size: 12px;
+}
+
+.forgot-password-button {
+  border-radius: 20px;
+  background-color: transparent;
+  color: #B1B1B1;
+  border: none;
+  padding: 10px 0px;
+  font-size: 14px;
+  cursor: pointer;
+  text-align: end;
+}
+
+.forgot-password-button:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+.gridPagination {
+  margin: -7px;
+}
+
+.ngx-pagination .current {
+  padding: .1875rem .625rem;
+  background: #4F3144 !important;
+  color: #fefefe;
+  cursor: default;
+  border-radius: 8px;
+}
+
+.bootstrap-timepicker-widget .bi-chevron-up,
+.bootstrap-timepicker-widget .bi-chevron-down {
+  font-size: 1.2rem;
+}
+
+.bootstrap-timepicker-meridian,
+.meridian-column {
+  display: none;
+}
+
+/* Hide AM/PM meridian section */
+.bootstrap-timepicker-widget .bootstrap-timepicker-meridian {
+  display: none !important;
+}
+
+/* Ensure the timepicker container adjusts to hide extra content */
+.bootstrap-timepicker-widget {
+  width: auto !important;
+}
+
+/* Ensure that timepicker inputs are editable */
+/*.bootstrap-timepicker-hour input,
+.bootstrap-timepicker-minute input {
+  pointer-events: auto;
+  cursor: text;
+  background-color: #fff;*/
+/* Optional: Set a visible background color */
+/*}*/
+
+
+/* Set a fixed height for the grid container */
+.popup-grid-container {
+  max-height: 215px;
+  /* Adjust the height as needed */
+  overflow-y: auto;
+}
+
+/* Style the scrollbar */
+.popup-grid-container::-webkit-scrollbar {
+  width: 8px;
+  /* Width of the scrollbar */
+}
+
+.popup-grid-container::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  /* Background of the scrollbar track */
+}
+
+.popup-grid-container::-webkit-scrollbar-thumb {
+  background: #888;
+  /* Color of the scrollbar thumb */
+  border-radius: 10px;
+  /* Rounded corners for the thumb */
+}
+
+.popup-grid-container::-webkit-scrollbar-thumb:hover {
+  background: #555;
+  /* Darker color when hovered */
+}
+
+.myth-table3 th {
+  position: sticky;
+  /* Make header cells sticky */
+  top: 0;
+  /* Stick to the top of the container */
+  background-color: #EEF2F6;
+  /* Header background color */
+  z-index: 1;
+  padding: 7px 0 7px 20px;
+  vertical-align: middle;
+  white-space: nowrap;
+  text-align: center;
+}
+
+/* Style for the status container to align content to the right */
+.status-container {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.status {
+  margin-right: 10px;
+  /* Adjust the space between the status text and the icons */
+}
+
+.status a {
+  margin-left: 5px;
+  /* Adjust the space between the icons */
+}
+
+/* Add some padding for better visual alignment */
+td {
+  padding: 2px;
+}
+
+.control-height {
+  height: 26px;
+}
+
+.password-wrapper {
+  display: flex;
+  align-items: center;
+}
+
+.password-wrapper .form-control {
+  flex: 1;
+  width: 100%;
+  /* Adjust as needed */
+}
+
+.password-wrapper .password-toggle {
+  border-radius: 0;
+  border-left: none;
+  margin-left: -1px;
+  /* Adjusts the button to align perfectly with the input */
+  /* Set a fixed width or use a percentage based on your design needs */
+}
+
+i.fa {
+  color: inherit;
+  /* Ensures that color applied by ngStyle is not overridden */
+}
+
+.btn-excel {
+  color: #553043;
+  background: #f7f4f5;
+  border: solid 1px #a38e98;
+  width: 100%;
+  font-size: 12px;
+}
+
+.btn-excel2 {
+  color: #fff;
+  background: #553043;
+  border: solid 1px #553043;
+  width: 100%;
+  font-size: 12px;
+}
+
+.ErrorDiv {
+  font-size: 14px;
+  width: 98%;
+  padding-left: 10px;
+}
+
+.disabled {
+  opacity: 0.5;
+  pointer-events: none;
+  cursor: not-allowed;
+}
+
+.truncate-text {
+  max-width: 129px;
+  /* Set the max width for the column */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Table alignment */
+.user-popup-grid-container table {
+  width: 100%;
+}
+
+/* Dropdown styling */
+.user-popup-grid-container select {
+  font-size: 13px;
+  /* Adjust the font size to match the table */
+  padding: 4px;
+  /* Adjust padding for better spacing */
+  margin: 0;
+  /* Ensure there's no extra margin */
+  height: auto;
+  /* Let the height adjust based on the content */
+  line-height: 1.5;
+  /* Adjust line height for better readability */
+  vertical-align: middle;
+  /* Align vertically in the table cell */
+}
+
+/* Table cell alignment */
+.user-popup-grid-container td {
+  vertical-align: middle;
+  /* Ensure content inside the table is vertically aligned */
+}
+
+/* Optional - Adjust icons and button alignment */
+.user-popup-grid-container i.fa-envelope {
+  font-size: 16px;
+  /* Adjust icon size */
+  vertical-align: middle;
+  /* Align icons vertically */
+}
+
+.sticky {
+  position: sticky;
+  top: 0;
+}
+
+.table-sticky {
+  overflow: auto;
+}
+
+.modal {
+  z-index: 1050 !important;
+  /* Ensure modal is on top */
+}
+
+.modal-backdrop {
+  z-index: 1040 !important;
+  /* Ensure backdrop is just below the modal */
+}
+
+.mat-autocomplete-panel {
+  z-index: 1060 !important;
+  /* Higher than modal's z-index */
+}
+
+/* Ensure the mat-autocomplete dropdown is above the modal */
+.cdk-overlay-container {
+  z-index: 1050 !important;
+  /* This should be higher than the modal z-index */
+}
+
+.date-column {
+  /* Adjust the width as needed */
+  min-width: 90px;
+}
+
+.Coe-dropdown {
+  position: relative;
+}
+
+.Coe-dropdown-menu {
+  max-height: 200px;
+  /* Limit the height of the dropdown */
+  overflow-y: auto;
+  /* Enable scrolling if content exceeds max height */
+  display: block;
+  /* Ensure dropdown is visible */
+}
+
+.mat-form-field {
+  width: 100%;
+}
+
+.mat-checkbox {
+  margin: 0;
+}
+
+.max-width1 .multiselect-dropdown .dropdown-btn .selected-item-container .selected-item {
+  max-width: fit-content !important;
+  line-height: normal !important;
+}
+
+.max-width1 .multiselect-dropdown .dropdown-btn .dropdown-multiselect__caret:before {
+  top: 11px !important;
+}
+
+.max-width1 .multiselect-dropdown .dropdown-btn {
+  border-radius: 59px !important;
+  font-size: 13px;
+  line-height: 8px !important;
+}
+
+.max-width1 .multiselect-dropdown .dropdown-btn .dropdown-multiselect--active .dropdown-multiselect__caret {
+  line-height: 47px !important;
+  transform: rotate(180deg);
+}
+
+/* Optional styling for modal and dropdown */
+.max-width2 {
+  width: 100%;
+}
+
+.disabled-icon {
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+.user-name {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.user-password {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.input-icon {
+  position: absolute;
+  left: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #000;
+}
+
+.login-form input.form-control {
+  border-radius: 6px;
+  border: 1px solid #ced4da;
+  padding: 15px 0;
+}
+
+.login-container {
+  width: 350px;
+}
+
+button.btn-primary:disabled {
+  opacity: 0.6;
+}
+
+.recaptcha-zoom {
+  zoom: 1.14;
+}
+
+.w-10 {
+  width: 37px;
+  height: 37px;
+}
+
+.w-11 {
+  width: 22px;
+  height: 22px;
+}
+
+.pos-ab1 {
+  width: 115px;
+}
+
+.pos-ab2 {
+  position: absolute;
+  top: 0px;
+}
+
+.pos-ab3 {
+  position: absolute;
+  top: 18px;
+}
+
+.rou-ico {
+  border: solid 1px #e4e4e4;
+  padding: 10px;
+  border-radius: 10px;
+}
+
+.rou-ico:hover {
+  background: #eee;
+}
+
+.dropdown-toggle::after {
+  margin-top: 15px;
+}
+
+.cursor-pointer {
+  cursor: pointer;
+}
+
+.red-clr {
+  color: #ffb944;
+}
+
+.black-clr {
+  color: #000;
+}
+
+.carousel-control-next-icon {
+  background-color: #000;
+  border-radius: 44px;
+  background-size: 67%;
+}
+
+.carousel-control-prev-icon {
+  background-color: #000;
+  border-radius: 44px;
+  background-size: 67%;
+}
+
+.carousel-control-next,
+.carousel-control-prev {
+  width: 5%;
+}
+
+
+
+
+
+.search-section {
+  padding: 30px;
+  text-align: center;
+}
+
+.search-bar {
+  max-width: 700px;
+  margin: 0 auto;
+  border: 1px solid #ccc;
+  border-radius: 30px;
+  display: flex;
+  align-items: center;
+  padding: 10px 20px;
+}
+
+.search-bar i {
+  font-size: 15px;
+  color: #777;
+}
+
+.agency-icons {
+  margin-top: 30px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 30px;
+}
+
+.agency-item {
+  text-align: center;
+  width: 120px;
+}
+
+.agency-item i {
+  font-size: 22px;
+  margin-bottom: 10px;
+  color: #555;
+  border: solid 1px #cec6cb;
+  border-radius: 40px;
+  width: 60px;
+  height: 60px;
+  padding: 17px;
+}
+
+.agency-item i:hover {
+  background: #cec6cb;
+}
+
+.agency-item p {
+  font-size: 14px;
+  color: #333;
+}
+
+.magni-left {
+  position: absolute;
+}
+
+body {
+  background: #fafafb;
+  color: #333;
+  overflow: hidden;
+}
+
+.fs-12 {
+  font-size: 12px;
+}
+
+.fs-13 {
+  font-size: 13px;
+}
+
+.fs-14 {
+  font-size: 14px;
+}
+
+.h-90 {
+  height: 88%;
+}
+
+.pos-fix-left {
+  position: fixed;
+  width: 112px;
+  padding: 70px 10px;
+  height: 100%;
+}
+
+
+.search-bar input {
+  flex: 1;
+  border: none;
+  outline: none;
+  padding-left: 20px;
+  background: transparent;
+}
+
+/*command center*/
+.resize {
+  resize: none;
+}
+
+.test-case i {
+  color: #4f3144;
+  background: #f1eff0;
+  border-radius: 10px;
+  padding: 12px;
+  width: 43px;
+  height: 40px;
+  font-size: 17px;
+}
+
+.test-case span {
+  color: #262e2b;
+}
+
+.active-left i {
+  color: #fff;
+  background: #ffb944;
+}
+
+.active-left span {
+  color: #ffb944;
+}
+
+.active-left img {
+  color: #ffb944;
+}
+
+.tableth th {
+  background: #eee;
+}
+
+.bg-orange {
+  background: #ffb944;
+}
+
+.bg-orange:hover {
+  background: #ffb944;
+}
+
+.btn[disabled] {
+  background-color: #928e87 !important;
+  cursor: not-allowed;
+}
+
+/* Test Case Agency Workflow*/
+.dotted-line {
+  width: 2px;
+  height: 21px;
+  border-left: 2px dotted #555;
+}
+
+.dotted-line2 {
+  width: 2px;
+  height: 44px;
+  border-left: 2px dotted #555;
+}
+
+.bot-line {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-right: 10px;
+  position: relative;
+}
+
+.pos-1 {
+  position: relative;
+  top: -2px;
+  left: 15px;
+  border-left: dotted 2px #000;
+
+}
+
+.pos-2 {
+  position: relative;
+  top: -27px;
+  left: 21px;
+
+}
+
+.pos-3 {
+  position: relative;
+  top: -2px;
+  left: 15px;
+  border-left: dotted 2px #000;
+  height: 26px;
+}
+
+.w-124 {
+  width: 124px;
+  height: 67px;
+}
+
+.w-125 {
+  width: 124px;
+  height: 49px;
+}
+
+.w-15 {
+  position: relative;
+  top: -11px;
+  margin-bottom: 9px;
+  left: 5px;
+}
+
+.w-16 {
+  position: relative;
+  top: -2px;
+  margin-bottom: 28px;
+  left: 5px;
+}
+
+/*QE market place*/
+.showagent {
+  color: #797979;
+}
+
+.sear-1 {
+  position: absolute;
+  left: 10px;
+  top: 12px;
+}
+
+.ps-6 {
+  padding-left: 26px;
+}
+
+.chart-container {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.legend {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+}
+
+.legend-color {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+}
+
+.chart-wrapper {
+  position: relative;
+  width: 200px;
+  height: 200px;
+}
+
+.chart-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  font-weight: bold;
+}
+
+.chart-center span {
+  display: block;
+  font-size: 14px;
+  color: #555;
+}
+
+.chart-center h2 {
+  margin: 0;
+  font-size: 24px;
+}
+
+.bar-chart {
+  width: 320px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.bar {
+  flex: 1;
+  height: 20px;
+  background-color: #f79646;
+  margin: 0 10px;
+  border-radius: 4px;
+}
+
+.tabsagent {
+  display: flex;
+  align-items: center;
+  gap: 26px;
+
+  padding-bottom: 5px;
+  max-width: 500px;
+}
+
+.tabsagent2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #333;
+  cursor: pointer;
+  position: relative;
+}
+
+.tabsagent2 .badge-agent {
+  background-color: #e6e1e6;
+  color: #301934;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-weight: bold;
+  font-size: 13px;
+}
+
+.tabsagent2.activeagent {
+  color: orange;
+  font-weight: bold;
+}
+
+.tabsagent2.activeagent .badge-agent {
+  background-color: #ffeee6;
+  color: orange;
+}
+
+.orange-icon {
+  color: orange;
+}
+
+.tabsagent2.activeagent::after {
+  content: "";
+  position: absolute;
+  bottom: -6px;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background-color: orange;
+  border-radius: 2px;
+}
+
+.h-70 {
+  overflow: auto;
+  height: 84%;
+}
+
+
+.p-235{
+  padding-top: 208px;
+}
+.p-236{
+  padding-top: 150px;
+}
+.pos-fix{
+  position: fixed;
+  top:56px;
+}
+
+.h-98 {
+  height: 92%;
+  padding-top: 57px;
+}
+
+.h-99 {
+  height: 98%;
+  padding-top: 57px;
+}
+
+.ht-98 {
+  height: 92%;
+  padding-top: 64px;
+}
+
+.h-91 {
+  height: 43vmin;
+  overflow: auto;
+  overflow-x: hidden;
+}
+
+.ht-80 {
+  height: 80vmin;
+  overflow: auto;
+  overflow-x: hidden;
+}
+
+.h-60 {
+  height: 67vmin;
+  overflow: auto;
+  overflow-x: hidden;
+}
+
+/*card*/
+.card-header-agent {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.badges-agent {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.badge-agent {
+  display: flex;
+  align-items: center;
+  padding: 2px 8px;
+  font-size: 12px;
+  border-radius: 5px;
+  font-weight: 500;
+}
+
+.badge-agent.trending {
+  background: #fff3e0;
+  color: #fb8c00;
+  border: 1px solid #fb8c00;
+}
+
+.badge-agent.active {
+  background: #e8f5e9;
+  color: #388e3c;
+  border: 1px solid #81c784;
+}
+
+.card-body-agent {
+  margin-top: 10px;
+}
+
+.name-agent {
+  font-weight: bold;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.name-agent .star {
+  color: #fbc02d;
+  font-size: 14px;
+}
+
+.role-agent {
+  color: #1976d2;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.usage-agent {
+  font-size: 13px;
+  color: #555;
+}
+
+.tags-agent {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.tag-agent.disabled {
+  opacity: 0.5;
+}
+
+/* sidebar*/
+.filter-cont {
+  position: fixed;
+  right: 0;
+  top: 0;
+  padding: 0;
+  margin: 0;
+  height: 100%;
+  width: 320px;
+}
+
+.agent-overflow {
+  height: 100%;
+  overflow: auto;
+}
+
+.b-close {
+  background: #fbe5db;
+  color: #ff9660;
+  border-radius: 40px;
+  line-height: 0;
+}
+
+.nav-orange {
+  border: 0 !important;
+}
+
+.nav-orange.active {
+  border-bottom: solid 2px orange !important;
+  border-top: 0 !important;
+  border-left: 0 !important;
+  border-right: 0 !important;
+}
+
+.nav-orange:hover {
+  border-bottom: solid 2px orange !important;
+  border-top: 0 !important;
+  border-left: 0 !important;
+  border-right: 0 !important;
+}
+
+.pwd-h {
+  height: 31px !important;
+}
+
+.nav-tabs .nav-link.active {
+  font-weight: 700 !important;
+  /* Force bold */
+  color: #000;
+  /* optional: keep text dark */
+}
+
+.grid-action {
+  cursor: pointer;
+}
+
+.test-case-btn {
+  left: 58%;
+  top: 10px;
+  position: relative;
+  cursor: pointer;
+}
+
+.play-btn {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: -3px;
+  margin-left: 21px;
+  margin-right: 10px;
+  color: green;
+  cursor: pointer;
+}
+
+.play-btn i {
+  font-size: 14px;
+}
+
+.bot-img {
+  width: 30px;
+  height: 36px;
+}
+
+.grid-scroll-wrapper {
+  max-height: 210px;
+  /* Adjust as needed */
+  overflow-y: auto;
+  display: block;
+  /* Important for scroll to work */
+  border: 1px solid #ccc;
+  /* Optional: visual boundary */
+}
+
+.grid-child-scroll-wrapper {
+  max-height: 252px;
+  /* Adjust as needed */
+  overflow-y: auto;
+  display: block;
+  /* Important for scroll to work */
+  border: 1px solid #ccc;
+  /* Optional: visual boundary */
+  overflow-x: auto;
+}
+
+.test-case-table {
+  width: 100%;
+  height: 210px;
+  border-collapse: collapse;
+  cursor: pointer;
+}
+
+.test-case-table th,
+.test-case-table td {
+  vertical-align: top;
+  text-align: left;
+}
+
+.h-82 {
+  height: 82% !important;
+}
+
+.ht-100 {
+  height: 100% !important;
+}
+
+.h-95 {
+  height: 93% !important;
+}
+
+.info-icon {
+  color: green;
+  cursor: pointer;
+}
+
+/*sidebar*/
+.sidebar {
+  height: 100%;
+  width: auto;
+  transition: width 0.5s ease-in-out;
+}
+
+.sidebar.expanded {
+  width: 70px;
+}
+
+.sidebar.expanded .text-rotate {
+  position: absolute;
+  white-space: nowrap;
+  transform: rotate(-90deg);
+  left: -86px;
+  top: 166px;
+}
+
+.sidebar.expanded .toggleBtn {
+  transform: rotate(-90deg);
+  position: relative;
+  left: -60px;
+}
+
+.sidebar.expanded .card-body {
+  visibility: hidden;
+}
+
+.sidebar.expanded .ico-hide {
+  visibility: hidden;
+}
+
+.toggleBtn {
+  cursor: pointer;
+}
+
+.toggleAgentBtn {
+  cursor: pointer;
+}
+.toggleAgencyBtn {
+  cursor: pointer;
+}
+.toggleKgBtn {
+  cursor: pointer;
+}
+
+.sidebarAgency {
+  height: 100%;
+  width: 40%;
+  transition: width 0.5s ease-in-out;
+}
+
+.sidebarAgency.expanded {
+  width: 46px;
+}
+
+.sidebarAgency.expanded .text-rotate {
+  position: absolute;
+  white-space: nowrap;
+  transform: rotate(-90deg);
+  left: -35px;
+  top: 166px;
+}
+
+.sidebarAgency.expanded .toggleAgencyBtn {
+  transform: rotate(-90deg);
+  position: relative;
+  left: -5px;
+}
+
+.sidebarAgency.expanded .card-body {
+  visibility: hidden;
+}
+
+.sidebarAgency.expanded .ico-hide {
+  visibility: hidden;
+}
+
+.sidebarAgent {
+  height: 100%;
+  width: auto;
+  transition: width 0.5s ease-in-out;
+}
+
+.sidebarAgent.expanded {
+  width: 46px;
+}
+
+.sidebarAgent.expanded .text-rotate {
+  position: absolute;
+  white-space: nowrap;
+  transform: rotate(-90deg);
+  left: -35px;
+  top: 166px;
+}
+
+.sidebarAgent.expanded .toggleAgentBtn {
+  transform: rotate(-90deg);
+  position: relative;
+  left: -5px;
+}
+
+.sidebarAgent.expanded .card-body {
+  visibility: hidden;
+}
+
+.sidebarAgent.expanded .ico-hide {
+  visibility: hidden;
+}
+.sidebarKg {
+  height: 100%;
+  width: 37%;
+  /* transition: width 0.5s ease-in-out; */
+}
+
+.sidebarKg.expanded {
+  width: 46px;
+}
+
+.sidebarKg.expanded .text-rotate {
+  position: absolute;
+  white-space: nowrap;
+  transform: rotate(-90deg);
+  left: -75px;
+  top: 179px;
+}
+
+.sidebarKg.expanded .toggleAgencyBtn {
+  transform: rotate(-90deg);
+  position: relative;
+  left: -5px;
+}
+
+.sidebarKg.expanded .card-body {
+  visibility: hidden;
+}
+
+.sidebarKg.expanded .ico-hide {
+  visibility: hidden;
+}
+
+.route-menu {
+  cursor: pointer;
+}
+
+.loader {
+  border: 4px solid #f3f3f3;
+  /* Light grey */
+  border-top: 4px solid #3498db;
+  /* Blue */
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  animation: spin 1s linear infinite;
+  margin-left: 245px;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.large-textarea {
+  min-height: 50px;
+  /* Adjust height */
+}
+
+.table-active {
+  --bs-table-color-state: var(--bs-table-active-color);
+  --bs-table-bg-state: rgb(255 246 236);
+}
+
+.pagination {
+  gap: 0.4rem;
+}
+
+.pagination .page-item .page-link {
+  color: #555;
+  border-radius: 6px;
+  padding: 2px 8px;
+  border: 1px solid #e0e0e0;
+  font-size: 12px;
+  background-color: #fff;
+  min-width: 32px;
+  text-align: center;
+}
+
+.pagination .page-item.active .page-link {
+  background-color: #eef1f6;
+  border-color: #ccd1d9;
+  font-weight: 600;
+}
+
+.pagination .page-item.disabled .page-link {
+  opacity: 0.4;
+  pointer-events: none;
+  background-color: #f9f9f9;
+}
+
+
+.form-select-sm {
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  padding-right: 2rem;
+  padding-left: 10px;
+}
+
+.d-flex.align-items-center.gap-2 label {
+  font-size: 12px;
+  margin-right: 6px;
+}
+
+
+.form-check-input:checked {
+  background-color: #3fbd5c;
+  border-color: #3fbd5c;
+}
+
+.form-check-input:focus {
+  box-shadow: 0 0 0 0.1rem rgba(40, 167, 69, 0.25);
+}
+
+.box-shad {
+  box-shadow: none !important;
+}
+
+.accordion-button.box-shad:not(.collapsed)::after {
+  transform: rotate(0deg);
+}
+
+.accordion-button.box-shad::after {
+  transform: rotate(-90deg);
+}
+
+.accordion-button.box-shad {
+  color: inherit !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+  z-index:0;
+}
+
+.accordion-button.box-shad:not(.collapsed) {
+  color: inherit !important;
+  background-color: transparent !important;
+}
+
+.bar-track {
+  width: 100%;
+  max-width: 180px;
+  height: 12px;
+  background-color: #f5f5f5;
+  border-radius: 6px;
+  margin: 0 12px;
+  position: relative;
+}
+.avatar-agent {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  background-color: #ccc;
+  background-size: cover;
+}
+
+.avatar-agent img {
+  object-fit: cover;
+}
+
+.tag-agent {
+  font-size: 12px;
+  padding: 4px 10px;
+  background-color: #f2f2f2;
+  border-radius: 8px;
+  color: #333;
+  display: inline-block;
+}
+
+.text-orange {
+  color: #f78b00;
+}
+
+.bg-light-success {
+  background-color: #e6f4ea;
+}
+
+/* Legend circle styles */
+.legend-circle {
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.role-label {
+  font-weight: 500;
+  color: #333;
+}
+
+.active-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 5px;
+  font-size: 11px;
+  font-weight: 500;
+  color: #28a745;
+  background-color: #e6f4ea;
+  border: 1.8px solid #a3e6b1;
+  border-radius: 6px;
+}
+
+.dot-green {
+  width: 5px;
+  height: 5px;
+  background-color: #3fc35e;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+
+.tag-gray {
+  font-size: 11px;
+  padding: 2px 8px;
+  background-color: #f1f1f1;
+  border-radius: 6px;
+  color: #767474;
+}
+
+.card-agent {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 14px;
+  cursor: pointer;
+  transition: box-shadow 0.3s ease, border 0.3s ease;
+  box-shadow: none;
+  min-height: 240px;
+}
+
+.card-agent:hover {
+  box-shadow: 0 0 0 1px #000000;
+  border: none;
+}
+
+
+.badge-trending {
+  font-size: 12px;
+  color: #f78b00;
+  background-color: #fff4e5;
+  border: 1px solid #f78b00;
+  border-radius: 8px;
+  padding: 2px 10px;
+  font-weight: 500;
+}
+
+.badge-active {
+  font-size: 12px;
+  color: #28a745;
+  background-color: #e6f4ea;
+  border: 1px solid #b7e2c2;
+  border-radius: 8px;
+  padding: 2px 10px;
+  font-weight: 500;
+}
+
+.rating-tag {
+  font-weight: 550;
+}
+
+.bar-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.bar-label {
+  width: 140px;
+  /* label fixed width */
+  font-size: 14px;
+  color: #333;
+}
+
+.bar-wrapper {
+  position: relative;
+  width: 180px;
+  /* fixed container width for bars + values */
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.bar-fill {
+  height: 24px;
+  background-color: #ffa726;
+  border-radius: 6px;
+  transition: width 0.5s ease;
+  flex-shrink: 0;
+}
+
+.bar-value {
+  padding-right: 20px;
+  font-size: 14px;
+  color: #333;
+}
+
+.accordion-item {
+  min-width: 300px;
+}
+
+.collapsed-tab {
+  height: 100%;
+  min-height: 300px;
+  border: 1px solid #ddd;
+  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.05);
+}
+
+.rotate-text {
+  font-size: 12px;
+  letter-spacing: 1px;
+  text-align: center;
+}
+
+.h-80 {
+  overflow: auto;
+  height: 71%;
+}
+
+.card.h-80 {
+  display: flex;
+  flex-direction: column;
+}
+
+.card-body {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+}
+
+/*sidebar*/
+.left-p1 {
+  padding: 0 36px;
+}
+
+.sidebar-agency {
+  position: absolute;
+  top: 65px;
+  left: 13px;
+  width: 60px;
+  height: 87vh;
+  overflow-y: auto;
+  transition: width 0.3s ease;
+  box-sizing: border-box;
+  z-index: 1;
+  border-radius: 10px;
+  border: solid 1px #d2d2d2;
+}
+
+.sidebar-agency:hover {
+  width: 240px;
+}
+
+.sidebar-agency ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.sidebar-agency li {
+  display: flex;
+  align-items: center;
+  padding: 12px 15px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.sidebar-agency li a {
+  color: #4f3144;
+  font-size: 16px;
+  display: flex;
+}
+
+.sidebar-agency li .icon {
+  font-size: 16px;
+  width: 30px;
+  min-width: 30px;
+  text-align: center;
+}
+
+.sidebar-agency li .text {
+  opacity: 0;
+  margin-left: 0px;
+  transition: opacity 0.3s ease;
+  overflow: hidden;
+  width: 0;
+}
+
+.sidebar-agency:hover li .text {
+  opacity: 1;
+  width: auto;
+}
+
+.sidebar-agency li:hover {
+  background-color: #f1eef0;
+}
+
+.sidebar-agency li.active {
+  background-color: #f0f0f0;
+  /* or your highlight color */
+  border-radius: 5px;
+}
+
+/* CommendCenterDashboard */
+
+.dashboard-container{
+  margin-top: 60px;
+}
+
+.header h3 .highlight {
+  color: orange;
+}
+
+.tabs {
+  display: flex;
+  gap: 10px;
+  margin: 20px 0;
+}
+
+.tab {
+  padding: 8px 16px;
+  border: none;
+  background: #f0f0f0;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.tab.active {
+  background: #F9A84A;
+  color: white;
+}
+
+.filters {
+  display: flex;
+  gap: 10px;
+}
+
+.search-input,
+.filter-select {
+  padding: 7px 10px;
+  border: 1px solid #ccc;
+  border-radius: 10px;
+}
+
+.task-cards {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.task-card {
+  border: 1px solid #ddd;
+  padding: 16px;
+  border-radius: 8px;
+  width: 30%;
+}
+
+.task-card.warning {
+  background: #fff4e5;
+}
+
+.task-card.in-progress {
+  background: #f0f8ff;
+}
+
+.status-badge {
+  float: right;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+}
+
+.need-assistance {
+  background: #ffcccc;
+  color: #cc0000;
+}
+
+.in-progress {
+  background: #cce5ff;
+  color: #004085;
+}
+
+.confidence {
+  display: block;
+  font-weight: bold;
+  margin-top: 5px;
+}
+
+.action-required {
+  margin-top: 10px;
+}
+
+.action-button {
+  background: orange;
+  border: none;
+  color: white;
+  padding: 5px 10px;
+  margin-top: 5px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+/*chatbot*/
+.pos-bot {
+  position: fixed;
+  right: 13px;
+  bottom: 19px;
+  z-index: 10;
+}
+
+.pos-chat {
+  position: fixed;
+  top: 56px;
+  left: 0;
+  z-index: 1044;
+  width: 100%;
+  height: 100%;
+  background: #fff;
+  border: 1px solid #ddd;
+}
+
+.container-chat {
+  width: 341px;
+  border: 1px solid #ddd;
+  background: #fff;
+  border-radius: 8px;
+  padding: 16px;
+  z-index: 1030;
+  position: fixed;
+  bottom: 27px;
+  right: 12px;
+  box-shadow: 0 0 10px #cecece;
+}
+
+.hello-chat {
+  font-weight: 600;
+  color: #ef8600;
+}
+
+.subtext-chat {
+  color: #555;
+  font-size: 14px;
+}
+
+.section-header-chat {
+  font-weight: 600;
+  font-size: 14px;
+  display: flex;
+  justify-content: space-between;
+  color: #000;
+  margin-bottom: 8px;
+}
+
+.tags-chat {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 21px;
+    max-height: 200px;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+.tag-chat {
+    padding: 6px 14px;
+    background-color: #f9f0f6;
+    border: solid 1px #e1d5dd;
+    border-radius: 20px;
+    font-size: 13px;
+    cursor: pointer;
+    -webkit-user-select: none;
+    user-select: none;
+    display: inline-block;
+    white-space: nowrap;
+    max-width: 95%;
+}
+
+.queries-chat {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.query-chat {
+  border: 1px solid #f9d1a8;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 13px;
+  color: #444;
+  cursor: pointer;
+  position: relative;
+  background: #fffaf5;
+}
+
+.query-chat::after {
+  content: "↗";
+  position: absolute;
+  right: 8px;
+  top: 8px;
+  font-weight: 700;
+  color: #000;
+}
+
+.new-chat-btn-chat {
+  width: 100%;
+  background-color: #ffa242;
+  border: none;
+  border-radius: 40px;
+  padding: 6px 0;
+  font-weight: 600;
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+}
+
+.new-chat-btn-chat:hover {
+  background-color: #fca247;
+}
+
+.robot-icon-chat {
+  font-size: 18px;
+}
+
+.showall-chat {
+  color: #ef8600;
+  text-decoration: none;
+  font-size: 14px;
+}
+
+.pos-search {
+  position: absolute;
+  top: 19px;
+  left: 16px;
+}
+
+.pos-microphone {
+  position: absolute;
+  top: 19px;
+  right: 16px;
+}
+
+.pad-1 {
+  margin: 0 10%;
+}
+
+.ps-s1 {
+  padding: 13px 18px;
+}
+
+.pad-req {
+  width: 60px;
+  height: 60px;
+  text-align: center;
+  padding: 16px;
+  margin: auto;
+}
+
+.pad-req:hover {
+  background: #dcd6da;
+}
+
+.w-101 {
+
+  text-align: center;
+}
+
+.gap36 {
+  gap: 36px;
+  width: 81%;
+  overflow: auto;
+  max-height: 39vh;
+}
+
+.w-13 {
+  width: 40%;
+}
+
+.w-14 {
+  width: 60%;
+}
+
+.pos-chatbot1 {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  left: 0;
+  top: 0;
+  background: #fff;
+}
+
+.h-76 {
+  height: 87%;
+  overflow: auto;
+}
+
+.h-77 {
+  height: 370px;
+  overflow: auto;
+}
+
+.right-cont {
+  background: #e9eef6;
+  font-size: 12px;
+  padding: 10px;
+  border-radius: 10px 0 10px 10px;
+  width: 75%;
+}
+
+.left-cont {
+  font-size: 12px;
+  width: 75%;
+}
+
+.btn-showthik {
+  background: #fff;
+  border: solid 1px #efeff0;
+  color: #262e2b;
+  font-size: 12px;
+}
+
+.btn-showthik:hover {
+  background: #fff;
+  border: solid 1px #efeff0;
+  color: #262e2b;
+  font-size: 12px;
+}
+
+/*sidebar chatbot*/
+.w-51 {
+  width: 85%;
+}
+
+.sidebar-agency2 {
+  width: 60px;
+  height: 100vh;
+  overflow-y: auto;
+  transition: width 0.3s ease;
+  box-sizing: border-box;
+  z-index: 1;
+}
+
+.sidebar-agency2:hover {
+  width: 200px;
+}
+
+.sidebar-agency2 ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.sidebar-agency2 li {
+  display: flex;
+  align-items: center;
+  padding: 12px 15px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.sidebar-agency2 li a {
+  color: #4f3144;
+  font-size: 16px;
+  display: flex;
+  padding: 5px 10px;
+  margin-left: 10px;
+}
+
+.sidebar-agency2 li .icon {
+  font-size: 16px;
+  width: 30px;
+  min-width: 30px;
+  text-align: center;
+}
+
+.sidebar-agency2 li .text {
+  opacity: 0;
+  margin-left: 0px;
+  transition: opacity 0.3s ease;
+  overflow: hidden;
+  width: 0;
+
+}
+
+.sidebar-agency2:hover li .text {
+  opacity: 1;
+  width: auto;
+}
+
+.sidebar-agency2 li a:hover {
+  background-color: #f1eef0;
+  padding: 5px 10px;
+  border-radius: 9px;
+}
+
+/*sidebar chatbot end*/
+/*chatbot End*/
+
+.test-space {
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+
+
+/* Custom ToolTip */
+.custom-tooltip {
+  background: #222;
+  color: #fff;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 13px;
+  pointer-events: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  transition: opacity 0.2s;
+  opacity: 0.95;
+  position: fixed;
+  max-width: 50%;
+  white-space: normal;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  z-index: 1000;
+}
+
+.custom-tooltip::after {
+  content: "";
+  position: absolute;
+  left: 5px;
+  top: 100%;
+  margin-top: 0;
+  border-width: 6px;
+  border-style: solid;
+  border-color: #222 transparent transparent transparent;
+}
+
+@media screen and (max-width: 1100px) and (min-width: 320px){
+  .bg-black{
+    display: none;
+  }
+}
+
+/* Custom ToolTip */
+
+.progress-circle {
+  --size: 30px;
+  --thickness: 10px;
+  --value: 0;
+  --color: #29b14b;
+
+  width: var(--size);
+  height: var(--size);
+  border-radius: 50%;
+
+  background: conic-gradient(
+    var(--color) calc(var(--value) * 3.6deg),
+    var(--bs-gray-200) 0deg
+  );
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.progress-circle-inner {
+  width: calc(var(--size) - var(--thickness));
+  height: calc(var(--size) - var(--thickness));
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.streamed-response pre {
+  background: #111827 !important;
+  color: #f9fafb !important;
+  padding: 10px 20px !important;
+  border-radius: 8px !important;
+}

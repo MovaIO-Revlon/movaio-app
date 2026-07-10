@@ -1,0 +1,2894 @@
+<div class="d-flex h-100">
+  <div class="row m-0 h-100 w-100">
+    <div class="col-md-12">
+      <div class="h-99">
+        <div class="d-flex border-bottom pt-3">
+          <div class="tabsagent d-flex">
+            <div class="tabsagent2" *ngFor="let item of agentCountsList; index as i"
+              [ngClass]="{ activeagent: item.active }" (click)="setActiveCountTab(i)">
+              <span>{{ item.label }}</span>
+              <span class="badge-agent">{{ item.count }}</span>
+            </div>
+          </div>
+        </div>
+        <div class="d-flex mt-2 h-100">
+
+          <div class="col-md-3 sidebarAgent">
+            <!---->
+            <div class="card h-95">
+              <div class="card-header bg-white d-flex">
+                <div class="fw-semibold text-rotate"> Agent Statistics</div>
+                <i class="fa-solid fa-chevron-down ms-auto pt-1 toggleAgentBtn" (click)="toggleSidePanel('left')"></i>
+              </div>
+              <div class="card-body h-91">
+                <div class="d-block">
+                  <!---->
+                  <div class="accordion" id="agentStatsAccordion">
+
+                 
+                    <!-- Accordion Item: By Role -->
+                    <div class="accordion-item border rounded-2 mb-2">
+                      <h2 class="accordion-header">
+                        <button class="accordion-button bg-transparent box-shad p-2 fs-14 fw-semibold" type="button"
+                          data-bs-toggle="collapse" data-bs-target="#collapseRoleStats" aria-expanded="true"
+                          aria-controls="collapseRoleStats">
+                          By Role
+                        </button>
+                      </h2>
+                      <div id="collapseRoleStats" class="accordion-collapse collapse show">
+                        <div class="accordion-body scrollable-accordion-body">
+                          <div class="chart-container pb-3 mb-3">
+                            <div class="chart-wrapper">
+                              <canvas #donutCanvas id="donutChart" style="width:100%; height:100%;"></canvas>
+                              <div class="chart-center">
+                                <h2 class="fw-bold">{{ totalItems }}</h2>
+                                <span class="text-muted">Agents</span>
+                              </div>
+                            </div>
+                            <div class="legend mt-3">
+                                <div class="legend-item d-flex align-items-center mb-1"
+    *ngFor="let item of roleLegendData"
+    (click)="toggleRoleFilter(item.label)"
+    [class.active-filter]="getRoleIdByLabel(item.label) === activeFilters.role"
+    style="cursor: pointer;">
+                                <span class="legend-circle me-2" [ngStyle]="{ 'background-color': item.color }"></span>
+                                <span class="fs-14 text-dark">{{ item.label }} ({{ item.count }})</span>
+                              </div>
+                            </div>
+
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Accordion Item: By Agent Type -->
+                    <div class="accordion-item border rounded-2 mb-2">
+                      <h2 class="accordion-header">
+                        <button class="accordion-button bg-transparent box-shad p-2 fs-14 fw-semibold" type="button"
+                          data-bs-toggle="collapse" data-bs-target="#collapseAgentTypes" aria-expanded="true"
+                          aria-controls="collapseAgentTypes">
+                          By Agent Type
+                        </button>
+                      </h2>
+                      <div id="collapseAgentTypes" class="accordion-collapse collapse show">
+                        <div class="accordion-body scrollable-accordion-body">
+                          <div class="chart-container pb-3 mb-3">
+                            <div class="chart-wrapper">
+                              <canvas #agentTypeCanvas id="agentTypeChart" style="width:100%; height:100%;"></canvas>
+                              <div class="chart-center">
+                                <h2 class="fw-bold">{{ totalItems }}</h2>
+                                <span class="text-muted">Agents</span>
+                              </div>
+                            </div>
+                            <div class="legend mt-3">
+                               <div class="legend-item d-flex align-items-center mb-1"
+    *ngFor="let item of agentTypeData"
+    (click)="toggleAgentTypeFilter(item.label)"
+    [class.active-filter]="getAgentTypeIdByLabel(item.label) === activeFilters.agentType"
+    style="cursor: pointer;">
+                                <span class="legend-circle me-2" [ngStyle]="{ 'background-color': item.color }"></span>
+                                <span class="fs-14 text-dark">{{ item.label }} ({{ item.count }})</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+   <!-- Accordion Item: By Agencies -->
+<div class="accordion-item border rounded-2 mb-2">
+  <h2 class="accordion-header">
+    <button class="accordion-button bg-transparent box-shad p-2 fs-14 fw-semibold" type="button"
+      data-bs-toggle="collapse" data-bs-target="#collapseAgencyStats" aria-expanded="true"
+      aria-controls="collapseAgencyStats">
+      By Agency
+    </button>
+  </h2>
+  <div id="collapseAgencyStats" class="accordion-collapse collapse show">
+    <div class="accordion-body scrollable-accordion-body">
+      <div class="chart-container pb-3 mb-3">
+        <div class="chart-wrapper">
+          <canvas #agencyCanvas id="agencyChart" style="width:100%; height:100%;"></canvas>
+          <div class="chart-center">
+            <h2 class="fw-bold">{{ mappedAgencyAgentsCount }}</h2>
+            <span class="text-muted">Agents</span>
+          </div>
+        </div>
+        <div class="legend mt-3">
+          <div class="legend-item d-flex align-items-center mb-1"
+            *ngFor="let item of agencyData"
+            (click)="toggleAgencyFilter(item.label)"
+            [class.active-filter]="activeFilters.agency === item.label"
+            style="cursor: pointer;">
+            <span class="legend-circle me-2" [ngStyle]="{ 'background-color': item.color }"></span>
+            <span class="fs-14 text-dark">{{ item.label }} ({{ item.count }})</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+                    <!-- Accordion Item: By AI Capabilities -->
+                    <div class="accordion-item border rounded-2 mb-2">
+                      <h2 class="accordion-header">
+                        <button class="accordion-button bg-transparent box-shad p-2 fs-14 fw-semibold" type="button"
+                          data-bs-toggle="collapse" data-bs-target="#collapseAICapabilities" aria-expanded="true"
+                          aria-controls="collapseAICapabilities">
+                          By AI Capabilities
+                        </button>
+                      </h2>
+                      <div id="collapseAICapabilities" class="accordion-collapse collapse show">
+                        <div class="accordion-body scrollable-accordion-body">
+                          <div class="bar-chart">
+                             <div *ngFor="let cap of aiCapabilityData" class="bar-item" 
+       (click)="toggleAICapabilityFilter(cap.label)"
+       [class.active-filter]="activeFilters.aiCapability === cap.label"
+       style="cursor: pointer;">
+                              <div class="bar-label">{{ cap.label }}</div>
+                              <div class="bar-wrapper">
+                                <div class="bar-fill" [style.width]="cap.width"></div>
+                                <div class="bar-value">{{ cap.value }}</div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!---->
+                </div>
+              </div>
+            </div>
+            <!---->
+          </div>
+
+
+          <div class="col-md ps-2" style="width: 60%;">
+            <!---->
+            <div class="card h-95">
+              <div class="card-header bg-white d-flex">
+                <div class="fw-semibold me-auto"> Agents </div>
+                <div class="position-relative me-2 w-50"> <i class="fa-solid fa-magnifying-glass sear-1 fs-12"></i>
+                  <input type="text" class="form-control ps-6 fs-12" placeholder="Search" [(ngModel)]="searchTerm"
+                    (input)="applySearch()">
+                </div>
+                <button class="bg-white border rounded-2 ps-2 pe-2" data-bs-toggle="modal" data-bs-target="#filt"><i
+                    class="fa-solid fa-sliders"></i> Filters</button>
+                <button (click)="openOnboardModalPopup()" type="button"
+                  class="btn ms-3 fs-12 text-white bg-orange border rounded-2 ps-3 pe-3" [disabled]="!isPrivilegeEdit"><i class="fa-solid fa-user"></i>
+                  Onboard Agent </button>
+                  <button (click)="openCreateAgentPopup()" class="btn ms-3 fs-12 text-white bg-orange border rounded-2 ps-3 pe-3" [disabled]="!isPrivilegeEdit">
+                  <i class="fa-solid fa-plus"></i> Create New Agent
+                </button>
+                <i class="fa-solid fa-chevron-right ms-2 pt-1 cursor-pointer" (click)="toggleSidePanel('right')"></i>
+              </div>
+              <div class="card-body pt-2 h-91">
+                <!---->
+                <div class="row ">
+				<!-- No Data Message -->
+                  <div *ngIf="!isload && paginatedAgents.length === 0" class="col-12">
+                    <div class="text-center py-4">
+                      <p class="text-muted fs-14 fw-semibold">Agent Management has no data available</p>
+                    </div>
+                  </div>
+ 
+                  <div class="col-md-4 pe-0 mb-2" *ngFor="let agent of paginatedAgents">
+                    <div class="card-agent" (click)="openEditModal(agent)">
+                      <div class="d-flex align-items-start justify-content-between">
+                        <!-- Avatar and Name -->
+                        <div class="d-flex">
+                          <div class="avatar-agent me-2">
+                            <img [src]="agent?.avatar || 'assets/img/agent_profile_icon.svg'" width="50" height="40" alt="avatar" loading="lazy" />
+                          </div>
+                          <div>
+                            <div class="fw-semibold fs-14 align" [ngClass]="isSideCollapsed ? 'align-collapsed' : 'align-expanded'" [appTooltip]="agent.name">{{ agent.name }}</div>
+                            <div class="fs-12">{{ agent.role_name }}</div>
+                          </div>
+                        </div>
+
+                        <!-- 🔥 and Active badge together -->
+                        <div class="d-flex align-items-center gap-1 status-tag">
+                          <div *ngIf="agent.trending === true" class="fs-14 text-orange">🔥</div>
+                          <div *ngIf="agent.status === 'active'">
+                            <span class="dot-green"></span>
+                          </div>
+
+                          <!-- Inactive agents get the delete icon -->
+                          <div *ngIf="agent.status !== 'active'" class="delete-ac" title="Delete" [class.disabled]="!isPrivilegeDelete || agent.Approval_Status === 'Pending Approval'"
+                            
+                            (click)="$event.stopPropagation(); confirmDelete(agent)">
+                            🗑️
+                          </div>
+
+                        </div>
+                      </div>
+
+                      <div class="mt-3 d-flex gap-2 text-orange fs-12 border-bottom pb-2">
+                        <div class="desc-wrap">{{ agent.description}} </div> <i
+                          class="fa-solid fa-circle-info route-menu" [appTooltip]="agent.description"></i>
+                      </div>
+
+                      <div class="mt-2 d-flex flex-wrap gap-1 gap-tag fs-12 w-100">
+                        <div class="d-flex align-items-center"
+                          [ngClass]="{
+                          'justify-content-between w-100': !getAgentTypeImage(agent.agent_type_name) && !agent.agent_type_name}">
+                          <ng-container *ngIf="getAgentTypeImage(agent.agent_type_name) as imgSrc">
+                            <img *ngIf="imgSrc" [src]="imgSrc" alt="{{ agent.agent_type_name }}" width="16" height="16"
+                              class="me-1" />
+                          </ng-container>
+                          <span *ngIf="agent.agent_type_name">{{ agent.agent_type_name }}</span>
+
+                          <div class="tag-orange ms-auto"
+                            *ngIf="agent.agent_owner === 'external' && (!getAgentTypeImage(agent.agent_type_name) && !agent.agent_type_name)">
+                            Base Agent
+                          </div>
+                        </div>
+
+                        <!-- Normal flow for Base Agent when type name or image exists -->
+                        <div class="tag-orange"
+                          *ngIf="agent.agent_owner === 'external' && (getAgentTypeImage(agent.agent_type_name) || agent.agent_type_name)">
+                          Base Agent
+                        </div>
+                      </div>
+
+                      <!-- Used times | Star rating -->
+                      <div class="mt-2 text-muted fs-12 d-flex align-items-center gap-1 text-orange"
+                        style="padding-top:5px;padding-bottom:5px;">
+                        <div>Used {{ agent.run_count}} times</div>
+                        <div class="mx-1">|</div>
+                        <div>
+                          <ng-container *ngIf="agent.rating > 0; else hollowStar">
+                            <i class="fa-solid fa-star text-warning"></i> {{ agent.rating }}
+                          </ng-container>
+                          <ng-template #hollowStar>
+                            <i class="fa-regular fa-star text-warning"></i>
+                          </ng-template>
+                        </div>
+                      </div>
+
+                      <!-- Tags -->
+
+                      <div class="mt-2 d-flex flex-wrap gap-2 align-items-center">
+                        <ng-container *ngIf="getVisibleTags(agent).length > 0">
+                          <div *ngFor="let tag of getVisibleTags(agent)" class="tag-gray">
+                            {{ tag }}
+                          </div>
+
+                          <div *ngIf="getHiddenTagCount(agent) > 0" class="tag-gray">
+                            +{{ getHiddenTagCount(agent) }}
+                          </div>
+                        </ng-container>
+                      </div>
+
+                <div class="mt-2 fs-13 d-flex align-items-center gap-1 pt-2">
+                    <i class="fa fa-calendar me-2" aria-hidden="true"></i>
+                <span>{{ getAgentDate(agent) }}</span>
+                  </div>
+
+
+                    </div>
+                  </div>
+                  <!---->
+                </div>
+              </div>
+              <!-- Pagination Bar -->
+              <div class="p-3 d-flex justify-content-between align-items-center mt-3 px-2 fs-12">
+                <div>
+                  Showing {{ startItem }} to {{ endItem }} of {{ totalItems }} agents
+                </div>
+
+                <div class="d-flex align-items-center gap-3">
+
+                  <!-- Results per page -->
+                  <div class="d-flex align-items-center gap-2">
+                    <label class="mb-0">Results per page</label>
+                    <select class="form-select form-select-sm w-auto" (change)="changePageSize($event.target)">
+                      <option *ngFor="let size of pageSizeOptions" [value]="size" [selected]="size === itemsPerPage">{{
+                        size }}</option>
+                    </select>
+                  </div>
+
+                  <!-- Item range -->
+                  <div>{{ startItem }} – {{ endItem }} of {{ totalItems }}</div>
+
+                  <!-- Pagination buttons -->
+                  <nav>
+                    <ul class="pagination pagination-sm mb-0">
+                      <li class="page-item" [class.disabled]="currentPage === 1" (click)="goToPage(1)">
+                        <a class="page-link"><i class="fa fa-angle-double-left"></i></a>
+                      </li>
+                      <li class="page-item" [class.disabled]="currentPage === 1" (click)="goToPage(currentPage - 1)">
+                        <a class="page-link"><i class="fa fa-angle-left"></i></a>
+                      </li>
+                      <li class="page-item active"><a class="page-link">{{ currentPage }}</a></li>
+                      <li class="page-item" *ngIf="currentPage < totalPages" (click)="goToPage(currentPage + 1)">
+                        <a class="page-link">{{ currentPage + 1 }}</a>
+                      </li>
+                      <li class="page-item" [class.disabled]="currentPage === totalPages"
+                        (click)="goToPage(currentPage + 1)">
+                        <a class="page-link"><i class="fa fa-angle-right"></i></a>
+                      </li>
+                      <li class="page-item" [class.disabled]="currentPage === totalPages"
+                        (click)="goToPage(totalPages)">
+                        <a class="page-link"><i class="fa fa-angle-double-right"></i></a>
+                      </li>
+                    </ul>
+                  </nav>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- Modal -->
+<div class="modal fade" data-bs-backdrop="static" data-bs-focus="false" data-bs-keyboard="false" id="onboardagent" #onboardagent tabindex="-1"
+  aria-labelledby="agentModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-xl" style="padding-left:63px">
+    <div class="modal-content" style="width: 97%;">
+      <div class="modal-header">
+        <h1 class="modal-title fw-semibold fs-14" id="agentModalLabel">{{ isEditMode ? 'Edit Agent' : 'Onboard Agent' }}
+        </h1>
+        <button type="button" class="btn-close" (click)="closeOnboardModal()" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-0">
+        <div class="wizard-container">
+          <!-- Step Indicator -->
+          <div class="border-bottom p-3">
+            <div class="step-indicator">
+              <div class="step" [ngClass]="{ 'active': isStepActive(1), 'completed': isStepCompleted(1) }" id="step-1">
+                <div class="step-number">1</div>
+                <div [ngClass]="isStepActive(1) ? 'text-active-step' : 'text-color-wiz'">Basic Details</div>
+              </div>
+              <div class="step" [ngClass]="{ 'active': isStepActive(2), 'completed': isStepCompleted(2) }" id="step-2">
+                <div class="step-number">2</div>
+                <div [ngClass]="isStepActive(2) ? 'text-active-step' : 'text-color-wiz'">Schedule Activity</div>
+              </div>
+              <div class="step" *ngIf="isTaskAgent() || (isExternalAgent && isExternalNewAgent)"
+                [ngClass]="{ 'active': isStepActive(3), 'completed': isStepCompleted(3) }" id="step-3">
+                <div class="step-number">3</div>
+                <div [ngClass]="isStepActive(3) ? 'text-active-step' : 'text-color-wiz'">Actions</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Form Sections -->
+          <form [formGroup]="agentForm" autocomplete="off">
+            <!-- Step 1: Basic Details -->
+            <div class="form-section" [ngClass]="{ 'active': isStepActive(1) }" id="form-step-1">
+              <!-- Edit Mode Header -->
+              <div *ngIf="isEditMode" class="d-flex justify-content-between align-items-start p-4"
+                style="padding-bottom:5px !important">
+                <div class="d-flex align-items-center">
+                  <div class="col-md-1 avatar-agent me-2">
+                    <img [src]="agentForm.get('avatar')?.value || 'assets/img/Agent_Profile_Icon.svg'" alt="Avatar"
+                      width="50" height="40" class="rounded" />
+                  </div>
+                  <div>
+                    <div class="fw-semibold fs-6">
+                      <input *ngIf="isEditingName" type="text" class="form-control form-control-sm"
+                        formControlName="name" (blur)="toggleNameEdit()" autofocus />
+                      <span *ngIf="!isEditingName">
+                        {{ agentForm.get('name')?.value || '-' }}
+                        <i class="fa-solid fa-pen fs-10 ms-2" (click)="toggleNameEdit()" style="cursor: pointer;"></i>
+                      </span>
+                      <div *ngIf="agentForm.get('name')?.dirty || formSubmitted">
+                        <div *ngIf="agentForm.get('name')?.hasError('required')" class="text-danger fs-13">
+                          Name is required.
+                        </div>
+                        <div *ngIf="isAgentNameDuplicate && agentForm.get('name')?.valid" class="text-danger fs-13">
+                          This agent name is already in use.
+                        </div>
+                      </div>
+                    </div>
+                    <div class="text-primary fs-14" data-bs-toggle="dropdown" style="cursor: pointer;">
+                      {{ getRoleName(agentForm.get('role_id')?.value) || '-' }}
+                    </div>
+                  </div>
+                </div>
+                <div class="d-flex ms-auto align-items-start">
+                  <div class="approval-div" *ngIf="isExternalNewAgent && this.approvalState">
+                    <div class="fw-semibold" [ngStyle]="{'color': getApprovalStatusColor(approvalState.status)}">
+                      {{ approvalState.status_msg }}
+                    </div>
+                    <div>by {{ approvalState.approverEmail || '-' }}</div>
+                  </div>
+                  <div class="text-end pe-3 border-end">
+                    <div class="fw-semibold text-dark">
+                      <ng-container *ngIf="agentForm.get('rating')?.value > 0; else hollowStar">
+                        <i class="fa-solid fa-star text-warning"></i> {{ agentForm.get('rating')?.value }}
+                      </ng-container>
+                      <ng-template #hollowStar>
+                        <span class="text-warning">☆</span>
+                      </ng-template>
+                    </div>
+
+                    <div class="text-muted fs-12">Used {{ agentForm.get('run_count')?.value || 0 }} times</div>
+                  </div>
+                  <div class="d-flex flex-column align-items-start gap-1 ps-3">
+                    <div *ngIf="agentForm.get('trending')?.value === true" class="badge-trending">
+                      🔥 Trending
+                    </div>
+                    <div *ngIf="agentForm.get('status')?.value === 'active'" class="badge-active">
+                      ● Active
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Basic Details Fields (Shown in both modes) -->
+              <div class="row border-bottom p-3 m-0">
+                <div class="col-md-1 avatar-agent me-2" *ngIf="!isEditMode"><img src="assets/img/Agent_Profile_Icon.svg"
+                    alt="agent_img" /></div>
+                <div class="col-md" [class.d-none]="isEditMode && !isEditingName">
+                  <div class="ps-2">
+                    <label class="form-label fs-14 fw-semibold">Agent Name <i class="text-danger">*</i></label>
+                    <input type="text" class="form-control fs-12" formControlName="name"
+                      placeholder="Type Agent Name" />
+                    <div
+                      *ngIf="agentForm.get('name')?.invalid && (agentForm.get('name')?.touched || agentForm.get('name')?.dirty)"
+                      class="text-danger fs-13">
+                      Agent Name is required.
+                    </div>
+                    <div *ngIf="isAgentNameDuplicate && agentForm.get('name')?.valid" class="text-danger fs-13">
+                      This agent name is already in use.
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md ps-1">
+                  <div class="ps-2">
+                    <label class="form-label fs-14 fw-semibold">Agent Provider <i class="text-danger">*</i></label>
+                    <select class="form-select fs-12" formControlName="agent_owner" [disabled]="isEditMode">
+                      <option value="" disabled>Select Provider</option>
+                      <option value="movate">Movate</option>
+                      <option value="external">Base Agent</option>
+                    </select>
+                    <div
+                      *ngIf="agentForm.get('agent_owner')?.invalid && (agentForm.get('agent_owner')?.touched || agentForm.get('agent_owner')?.dirty)"
+                      class="text-danger fs-13">
+                      Agent Provider is required.
+                    </div>
+                  </div>
+                </div>
+                <!-- <div class="col-md ps-1" *ngIf="isExternalAgent">
+                  <div class="ps-2">
+                    <label class="form-label fs-14 fw-semibold">Agent Provider Type<i class="text-danger">*</i></label>
+                    <select class="form-select fs-12" formControlName="agent_provider_type" [disabled]="isEditMode">
+                      <option value="" disabled>Select Agent Provider Type</option>
+                      <option value="new">New</option>
+                      <option value="existing">Existing</option>
+                    </select>
+                    <div
+                      *ngIf="agentForm.get('agent_provider_type')?.invalid && (agentForm.get('agent_provider_type')?.touched || agentForm.get('agent_provider_type')?.dirty)"
+                      class="text-danger fs-13">
+                      Agent Provider Type is required.
+                    </div>
+                  </div>
+                </div> -->
+                <div class="col-md">
+                  <div class="ps-2">
+                    <label class="form-label fs-14 fw-semibold">Agent Type <i class="text-danger">*</i></label>
+                    <select class="form-select fs-12" formControlName="agent_type_id">
+                      <option value="" disabled>Select Type</option>
+                      <option *ngFor="let type of agentTypes" [value]="type.value">
+                        {{ type.label }}
+                      </option>
+                    </select>
+                    <div
+                      *ngIf="agentForm.get('agent_type_id')?.invalid && (agentForm.get('agent_type_id')?.touched || agentForm.get('agent_type_id')?.dirty)"
+                      class="text-danger fs-13">
+                      Agent Type is required.
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md">
+                  <div class="ps-2">
+                    <label class="form-label fs-14 fw-semibold">Role <i class="text-danger">*</i></label>
+                    <select class="form-select fs-12" formControlName="role_id">
+                      <option value="" disabled>Select Role</option>
+                      <option *ngFor="let role of rolesList" [value]="role.value">{{ role.label }}</option>
+                    </select>
+                    <div
+                      *ngIf="agentForm.get('role_id')?.invalid && (agentForm.get('role_id')?.touched || agentForm.get('role_id')?.dirty)"
+                      class="text-danger fs-13">
+                      Role is required.
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="row m-0 p-2">
+                <div class="col-md border-end">
+            <div class="d-flex align-items-center mb-3" *ngIf="isAgentIdVisible()">
+  <!-- Refresh button (always visible in edit mode) -->
+ <button *ngIf="isEditMode && isExternalAgent && !isExternalNewAgent"
+        type="button"
+        class="btn btn-sm btn-sensitive d-flex align-items-center me-2"
+        (click)="Onrefresh()" 
+        [disabled]="isRefreshing || !isPrivilegeRefresh ">
+
+  <!-- Show spinner only while refreshing -->
+  <span *ngIf="isRefreshing" 
+        class="spinner-border spinner-border-sm text-light"
+        role="status" 
+        aria-hidden="true">
+  </span>
+
+  <!-- Show refresh icon when not refreshing -->
+  <img *ngIf="!isRefreshing"
+       src="assets/img/refresh.png"
+       alt="refresh"
+       style="width:20px; height:20px;" />
+</button>
+
+  <!-- Show/Hide Sensitive button (only for Admins) -->
+  <button *ngIf="isEditMode && isPrivilegeEdit && isExternalAgent && !isExternalNewAgent"
+          type="button"
+          class="btn btn-sm btn-sensitive d-flex align-items-center"
+          (click)="showSensitive = !showSensitive">
+    <img [src]="showSensitive ? 'assets/img/Hide.png' : 'assets/img/View.png'" 
+         alt="toggle sensitive" 
+         class="me-2" style="width:16px; height:11px;" />
+    {{ showSensitive ? 'Hide Agent Details' : 'Show Agent Details' }}
+  </button>
+</div>
+        <div class="mt-2 rounded p-2"
+                    *ngIf="(!isEditMode && isExternalAgent && !isExternalNewAgent) || (isEditMode && showSensitive && isExternalAgent)">
+
+    <!-- Agent URL -->
+    <div class="mb-2" *ngIf="isAgentIdVisible()" autocomplete="off">
+      <label class="form-label fs-14 fw-semibold">Agent URL<i class="text-danger">*</i></label>
+      <div class="d-flex">
+        <input type="text" class="form-control fs-12" placeholder="Enter Agent URL"
+               formControlName="agent_api_url" />
+      </div>
+      <div *ngIf="agentForm.get('agent_api_url')?.invalid && (agentForm.get('agent_api_url')?.touched || agentForm.get('agent_api_url')?.dirty)"
+           class="text-danger fs-13">
+        Agent URL is required.
+      </div>
+    </div>
+
+    <!-- API Key -->
+    <div class="mb-2" *ngIf="isAgentIdVisible()" autocomplete="off">
+      <label class="form-label fs-14 fw-semibold">API Key <i class="text-danger">*</i></label>
+      <div class="d-flex">
+        <input type="password" class="form-control fs-12" placeholder="Enter API Key"
+               formControlName="agent_api_key" />
+      </div>
+      <div *ngIf="agentForm.get('agent_api_key')?.invalid && (agentForm.get('agent_api_key')?.touched || agentForm.get('agent_api_key')?.dirty)"
+           class="text-danger fs-13">
+        API Key is required.
+      </div>
+    </div>
+
+    <!-- User ID -->
+    <div class="mb-2" *ngIf="isAgentIdVisible()" autocomplete="off">
+      <label class="form-label fs-14 fw-semibold">User ID <i class="text-danger">*</i></label>
+      <div class="d-flex">
+        <input type="text" class="form-control fs-12" placeholder="Enter User ID"
+               formControlName="user_id" />
+      </div>
+      <div *ngIf="agentForm.get('user_id')?.invalid && (agentForm.get('user_id')?.touched || agentForm.get('user_id')?.dirty)"
+           class="text-danger fs-13">
+        User ID is required.
+      </div>
+    </div>
+
+    <!-- Agent ID -->
+    <div class="mb-2" *ngIf="isAgentIdVisible()" autocomplete="off"
+         [class.d-none]="isEditMode && !isEditingName">
+      <label class="form-label fs-14 fw-semibold">Agent ID <i class="text-danger">*</i></label>
+      <div class="d-flex">
+        <input type="text" class="form-control fs-12" placeholder="Enter Agent ID"
+               formControlName="agent_id" />
+      </div>
+      <div *ngIf="agentForm.get('agent_id')?.invalid && (agentForm.get('agent_id')?.touched || agentForm.get('agent_id')?.dirty)"
+           class="text-danger fs-13">
+        Agent ID is required.
+      </div>
+    </div>
+
+    <!-- Session ID -->
+    <div class="mb-2" *ngIf="isAgentIdVisible()" autocomplete="off">
+      <label class="form-label fs-14 fw-semibold">Session ID <i class="text-danger">*</i></label>
+      <div class="d-flex">
+        <input type="text" class="form-control fs-12" placeholder="Enter Session ID"
+               formControlName="agent_session_id" />
+      </div>
+      <div *ngIf="agentForm.get('agent_session_id')?.invalid && (agentForm.get('agent_session_id')?.touched || agentForm.get('agent_session_id')?.dirty)"
+           class="text-danger fs-13">
+        Session ID is required.
+      </div>
+    </div>
+
+    <!-- API Agent ID -->
+    <div class="mb-2" *ngIf="isEditMode && isAgentIdVisible()" autocomplete="off">
+      <label class="form-label fs-14 fw-semibold">Agent ID</label>
+      <div class="d-flex">
+        <input type="text" class="form-control fs-12" placeholder="Enter Agent ID"
+               formControlName="api_agent_id" />
+      </div>
+    </div>
+
+     <!-- Start Session URL (Voice Agent) -->
+    <div class="mb-2" *ngIf="isAgentIdVisible() && isVoiceAgent" autocomplete="off">
+      <label class="form-label fs-14 fw-semibold">Start Session URL <i class="text-danger">*</i></label>
+      <div class="d-flex">
+        <input type="text" class="form-control fs-12" placeholder="Enter Start Session URL"
+               formControlName="session_start_url" />
+      </div>
+       <div *ngIf="agentForm.get('session_start_url')?.invalid && (agentForm.get('session_start_url')?.touched || agentForm.get('session_start_url')?.dirty)"
+           class="text-danger fs-13">
+        Start Session URL is required.
+      </div>
+    </div>
+
+    <!-- End Session URL (Voice Agent) -->
+    <div class="mb-2" *ngIf="isAgentIdVisible() && isVoiceAgent" autocomplete="off">
+      <label class="form-label fs-14 fw-semibold">End Session URL <i class="text-danger">*</i></label>
+      <div class="d-flex">
+        <input type="text" class="form-control fs-12" placeholder="Enter End Session URL"
+               formControlName="session_end_url" />
+      </div>
+      <div *ngIf="agentForm.get('session_end_url')?.invalid && (agentForm.get('session_end_url')?.touched || agentForm.get('session_end_url')?.dirty)"
+           class="text-danger fs-13">
+        End Session URL is required.
+      </div>
+    </div>
+
+  </div>
+
+                   <div class="mb-2" *ngIf="agentForm.get('agent_type_id')?.value === 'MASTER'">
+                    <label class="form-label fs-14 fw-semibold">Avatar
+                      <div *ngIf="avatarUploading" class="spinner-border spinner-border-sm text-primary ms-2"
+                        role="status">
+                        <span class="visually-hidden">Loading...</span>
+                      </div>
+                    </label>
+                    <input class="form-control fs-14" type="file" (change)="onImageChange($event)"
+                      [disabled]="avatarUploading" accept="image/*" />
+                    <small *ngIf="fileError" class="text-danger">{{ fileError }}</small>
+                  </div> 
+                  <div class="mb-2 d-flex justify-content-between align-items-center" *ngIf="isExternalNewAgent">
+                    <div class="d-flex align-items-center gap-2">
+                      <label class="form-label fs-14 fw-semibold mb-0 me-2">Version</label>
+                      <input type="text" class="form-control form-control-sm fs-12 w-auto" [disabled]="true" formControlName="version" placeholder="e.g. 1.0" />
+                      <button class="btn btn-sm btn-sensitive fs-12" (click)="openVersionHistory()" *ngIf="isEditMode">
+                        Version History
+                      </button>
+                    </div>
+                      <button class="btn btn-sm btn-sensitive" (click)="openPromptBuilder()" [disabled]="!isPrivilegeEdit || (!selectedAgent?.agent_id && isEditMode)">
+                      Generate With AI
+                    </button>
+                  </div>
+                  <div class="mb-2" *ngIf="!isExternalAgent || isEditMode || isExternalNewAgent">
+                    <label class="form-label fs-14 fw-semibold">Description <i class="text-danger">*</i></label>
+                    <textarea class="form-control fs-12" rows="3" formControlName="description"></textarea>
+                    <div
+                      *ngIf="agentForm.get('description')?.invalid && (agentForm.get('description')?.touched || agentForm.get('description')?.dirty)"
+                      class="text-danger fs-13">
+                      Description is required.
+                    </div>
+                  </div>
+                  <!-- Agent Role -->
+                  <div class="mb-2" *ngIf="!isExternalAgent || isEditMode || isExternalNewAgent">
+                    <label class="form-label fs-14 fw-semibold">Agent Role <i class="text-danger">*</i></label>
+                    <textarea class="form-control fs-12" rows="3" formControlName="agent_role"></textarea>
+                    <div
+                      *ngIf="agentForm.get('agent_role')?.invalid && (agentForm.get('agent_role')?.touched || agentForm.get('agent_role')?.dirty)"
+                      class="text-danger fs-13">
+                      Agent Role is required.
+                    </div>
+                  </div>
+
+                  <!-- Agent Goal -->
+                  <div class="mb-2" *ngIf="!isExternalAgent || isEditMode || isExternalNewAgent">
+                    <label class="form-label fs-14 fw-semibold">Agent Goal <i class="text-danger">*</i></label>
+                    <textarea class="form-control fs-12" rows="3" formControlName="agent_goal"></textarea>
+                    <div
+                      *ngIf="agentForm.get('agent_goal')?.invalid && (agentForm.get('agent_goal')?.touched || agentForm.get('agent_goal')?.dirty)"
+                      class="text-danger fs-13">
+                      Agent Goal is required.
+                    </div>
+                  </div>
+
+                  <div class="mb-2" *ngIf="!isExternalAgent || isEditMode || isExternalNewAgent">
+                    <label class="form-label fs-14 fw-semibold">Agent Prompt <i class="text-danger">*</i></label>
+                    <textarea class="form-control fs-12" rows="3" formControlName="agent_prompt"></textarea>
+                    <div
+                      *ngIf="agentForm.get('agent_prompt')?.invalid && (agentForm.get('agent_prompt')?.touched || agentForm.get('agent_prompt')?.dirty)"
+                      class="text-danger fs-13">
+                      Agent Prompt is required.
+                    </div>
+                  </div>
+                  <div class="mb-2" *ngIf="!(isExternalAgent) || isExternalNewAgent">
+                    <label class="form-label fs-14 fw-semibold">Reference Output</label>
+                    <textarea class="form-control fs-12" rows="3" formControlName="ref_output"></textarea>
+                  </div>
+                </div>
+                <div class="col-md-5" *ngIf="!isExternalAgent || isEditMode || isExternalNewAgent">
+                  <div class="mb-2" *ngIf="!isExternalNewAgent">
+                    <label class="form-label fs-14 fw-semibold">MCP Connectors</label>
+                    <div class="d-flex">
+                      <select class="form-select me-3 fs-12" formControlName="mcp_connector_value"
+                        [disabled]="!agentForm.get('mcp_connector_enabled')?.value || isExternalAgent">
+                        <option value="" disabled>Select MCP Connectors</option>
+                        <option *ngFor="let mcp of mcpConnectors" [value]="mcp.value">{{ mcp.label }}</option>
+                      </select>
+                      <div class="form-check form-switch mt-1">
+                        <input class="form-check-input" type="checkbox" formControlName="mcp_connector_enabled"
+                          [disabled]="isExternalAgent" />
+                      </div>
+                    </div>
+                  </div>
+                  <div class="mb-2 d-flex align-items-center justify-content-between" *ngIf="isExternalNewAgent">
+                    <label class=" fs-14 fw-semibold">Tools</label>
+                      <div class="form-check form-switch mt-1">
+                        <input class="form-check-input" type="checkbox" formControlName="mcp_connector_checkbox" (change)="openConfigureToolsModal($event,'add')" />
+                      </div>
+                  </div>
+                  <!-- Display Tools Configuration Details -->
+                  <div class="mb-3 p-3 border rounded-2 bg-light" *ngIf="configuredToolDetails">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                      <div>
+                        <div class="fs-12 text-muted mb-1">Configured Tool</div>
+                        <div class="fs-14 fw-semibold text-dark">{{ configuredToolDetails.name }}</div>
+                      </div>
+                      <a href="javascript:void(0)" class="text-primary fs-12 fw-semibold" (click)="openConfigureToolsModal($event, 'edit')">
+                        <i class="fa-solid fa-pen-to-square me-1"></i>Configure
+                      </a>
+                    </div>
+                  </div>
+                  <div class="mb-2" *ngIf="!isExternalNewAgent">
+                    <label class="form-label fs-14 fw-semibold">Knowledge Store</label>
+                    <div class="d-flex">
+                      <select class="form-select me-3 fs-12" formControlName="knowledge_store_id"
+                        [disabled]="!agentForm.get('knowledge_store_enabled')?.value || isExternalAgent">
+                        <option value="" disabled>Select Knowledge Store</option>
+						 <option *ngFor="let ks of selectedKnowledgeStore" [value]="ks.value">
+                          {{ ks.label }}
+                        </option>
+						
+                      </select>
+                      <div class="form-check form-switch mt-1">
+                        <input class="form-check-input" type="checkbox" formControlName="knowledge_store_enabled"
+                          [disabled]="isExternalAgent" />
+                      </div>
+                    </div>
+                  </div>
+                  <div class="mb-2 d-flex align-items-center justify-content-between" *ngIf="isExternalNewAgent ">
+                    <label class="fs-14 fw-semibold">Knowledge Store</label>
+                    <div class="form-check form-switch mt-1">
+                      <input class="form-check-input" type="checkbox" formControlName="knowledge_store_checkbox" (change)="openConfigureKGModal($event,'add')"/>
+                    </div>
+                  </div>
+                  <!-- Display Knowledge Graph Configuration Details -->
+                  <div class="mb-3 p-3 border rounded-2 bg-light" *ngIf="configuredKGDetails">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                      <div>
+                        <div class="fs-12 text-muted mb-1">Knowledge Base</div>
+                        <div class="fs-14 fw-semibold text-dark">{{ configuredKGDetails.name }}</div>
+                      </div>
+                      <a href="javascript:void(0)" class="text-primary fs-12 fw-semibold" (click)="openConfigureKGModal($event,'edit')">
+                        <i class="fa-solid fa-pen-to-square me-1"></i>Configure
+                      </a>
+                    </div>
+                    <div class="d-flex gap-3 mt-2">
+                      <div>
+                        <small class="text-muted d-block">Chunks</small>
+                        <span class="badge bg-primary">{{ configuredKGDetails.chunks }}</span>
+                      </div>
+                      <div>
+                        <small class="text-muted d-block">Type</small>
+                        <span class="badge bg-secondary">{{ configuredKGDetails.type }}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="mb-2 d-flex align-items-center justify-content-between" *ngIf="isExternalNewAgent ">
+                    <label class="fs-14 fw-semibold">Data Query</label>
+                    <div class="form-check form-switch mt-1">
+                      <input class="form-check-input" type="checkbox" formControlName="data_store_checkbox" (change)="openConfigureDataQueryModal($event,'add')"/>
+                    </div>
+                  </div>
+                  <!-- Display Data Query Configuration Details -->
+                  <div class="mb-3 p-3 border rounded-2 bg-light" *ngIf="configuredDataQueryDetails">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                      <div>
+                        <div class="fs-12 text-muted mb-1">Data Query Configuration</div>
+                        <span class="fs-14 fw-semibold text-dark">{{ configuredDataQueryDetails.model || '' }}</span>
+                      </div>
+                      <a href="javascript:void(0)" class="text-primary fs-12 fw-semibold" (click)="openConfigureDataQueryModal($event,'edit')">
+                        <i class="fa-solid fa-pen-to-square me-1"></i>Configure
+                      </a>
+                    </div>
+                    <div class="d-flex gap-3 mt-2">
+                      <div>
+                        <small class="text-muted d-block">Max Retries</small>
+                        <span class="badge bg-primary">{{ configuredDataQueryDetails.maxTries }}</span>
+                      </div>
+                      <div>
+                        <small class="text-muted d-block">Time Limit (s)</small>
+                        <span class="badge bg-secondary">{{ configuredDataQueryDetails.timeLimit }}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="mb-2 d-flex align-items-center justify-content-between" *ngIf="isExternalNewAgent ">
+                    <label class="fs-14 fw-semibold">Memory</label>
+                    <div class="form-check form-switch mt-1">
+                      <input class="form-check-input" type="checkbox" formControlName="memory_checkbox" (change)="openMemoryConfigurationModal($event,'add')"/>
+                    </div>
+                  </div>
+                  <!-- Display Memory Configuration Details -->
+                  <div class="mb-3 p-3 border rounded-2 bg-light" *ngIf="configuredMemoryDetails">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                      <div>
+                        <div class="fs-12 text-muted mb-1">Memory Provider</div>
+                        <div class="fs-14 fw-semibold text-dark">{{ configuredMemoryDetails.provider }}</div>
+                      </div>
+                      <a href="javascript:void(0)" class="text-primary fs-12 fw-semibold" (click)="openMemoryConfigurationModal($event,'edit')">
+                        <i class="fa-solid fa-pen-to-square me-1"></i>Configure
+                      </a>
+                    </div>
+                  </div>
+                  <div class="mb-2 d-flex align-items-center justify-content-between" *ngIf="isExternalNewAgent ">
+                    <label class="fs-14 fw-semibold">Context</label>
+                    <div class="form-check form-switch mt-1">
+                      <input class="form-check-input" type="checkbox" formControlName="context_checkbox" (click)="openContextConfigurationModal($event,'add')"/>
+                    </div>
+                  </div>
+                  <!-- Display Context Configuration Details -->
+                  <div class="mb-3 p-3 border rounded-2 bg-light" *ngIf="configuredContextDetails">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                      <div>
+                        <div class="fs-12 text-muted mb-1">Context Configuration</div>
+                        <div class="fs-14 fw-semibold text-dark">{{ configuredContextDetails.name || 'Configured' }}</div>
+                      </div>
+                      <a href="javascript:void(0)" class="text-primary fs-12 fw-semibold" (click)="openContextConfigurationModal($event,'edit')">
+                        <i class="fa-solid fa-pen-to-square me-1"></i>Configure
+                      </a>
+                    </div>
+                  </div>
+                  <div class="mb-2" *ngIf="!isExternalNewAgent">
+                    <label class="form-label fs-14 fw-semibold">AI Model <i class="text-danger">*</i></label>
+                    <div class="d-flex">
+                      <input type="text" class="form-control me-3 fs-12" placeholder="Type AI Model"
+                        formControlName="model"
+                        [disabled]="!agentForm.get('model_enabled')?.value || isExternalAgent" />
+                      <div class="form-check form-switch mt-1">
+                        <input class="form-check-input" type="checkbox" formControlName="model_enabled"
+                          [disabled]="isExternalAgent" />
+                      </div>
+                    </div>
+                    <div
+                      *ngIf="agentForm.get('model')?.invalid && (agentForm.get('model')?.touched || agentForm.get('model')?.dirty)"
+                      class="text-danger fs-13">
+                      AI Model is required.
+                    </div>
+                  </div>
+                  <div class="mb-2" *ngIf="isExternalNewAgent">
+                    <label class="form-label fs-14 fw-semibold">AI Model <i class="text-danger">*</i></label>
+                    <div class="d-flex">
+                      <select class="form-select me-3 fs-12" formControlName="model">
+                        <option value="" disabled>Select AI Model</option>
+                        <option *ngFor="let model of providerModelsFromLyzr" [value]="model.model">{{ model.model }}</option>
+                      </select>
+                    </div>
+                    <div
+                      *ngIf="agentForm.get('model')?.invalid && (agentForm.get('model')?.touched || agentForm.get('model')?.dirty)"
+                      class="text-danger fs-13">
+                      AI Model is required.
+                    </div>
+                  </div>
+                 <div class="mb-2" *ngIf="!isExternalNewAgent">
+                  <label class="form-label fs-14 fw-semibold">AI Foundation</label>
+                  <div class="d-flex align-items-center">
+                    <div class="dropdown mb-2" style="width: 86%;">
+                      <button class="form-select me-3 form-control fs-12" type="button" style = "text-align: left;"
+                        id="aiFoundationDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                        {{ getSelectedAIFoundationsLabel() || 'Select AI Foundations' }}
+                      </button>
+                      <ul class="dropdown-menu ps-4" aria-labelledby="aiFoundationDropdown">
+                        <li *ngFor="let foundation of ai_foundation">
+                          <div class="form-check px-3">
+                            <input class="form-check-input" type="checkbox" [value]="foundation.value"
+                              [checked]="isAIFoundationSelected(foundation.value)" (change)="toggleAIFoundation(foundation.value, $event)" />
+                            <label class="form-check-label fs-14">{{ foundation.label }}</label>
+                          </div>
+                        </li>
+                      </ul>
+                    </div>
+                    <!-- Toggle Switch (if needed for enabling/disabling AI Foundation) -->
+                    <div class="form-check form-switch mt-1 ms-2 mb-3" style="padding-left: 3.5rem;">
+                  <input class="form-check-input" type="checkbox" formControlName="ai_foundation_enabled"
+                    [disabled]="isExternalAgent" />
+                  <label class="form-check-label fs-14"></label>
+                  </div>
+                    </div>
+
+                    <div class="mb-2" *ngIf="isEditMode && isExternalAgent">
+                      <label class="form-label fs-14 fw-semibold">Reference Output</label>
+                      <textarea class="form-control fs-12" rows="3" formControlName="ref_output"></textarea>
+                    </div>
+                    <div class="mb-2" *ngIf="isEditMode && isExternalAgent">
+                      <label class="form-label fs-14 fw-semibold">Example</label>
+                      <textarea class="form-control fs-12" rows="3" formControlName="example"></textarea>
+                    </div>
+
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Step 2: Schedule Activity -->
+            <div class="form-section" id="form-step-2" [ngClass]="{ 'active': isStepActive(2) }">
+              <div class="container-wiz">
+                <div class="schedule-container">
+                  <div class="schedule-form">
+                    <h2 class="fs-14 fw-semibold">Set when and how often the agent should run</h2>
+                    <div>
+                      <label class="pb-3 pt-4">Frequency <i class="text-danger"
+                          *ngIf="agentForm.get('scheduleFrequency')?.value && agentForm.get('scheduleFrequency')?.touched">*</i></label><br>
+                      <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" id="daily" value="daily"
+                          formControlName="scheduleFrequency" [disabled]="hasDailySchedule"
+                          (change)="onFrequencyChange('daily')" />
+                        <label class="form-check-label" for="daily"
+                          [ngClass]="{'text-muted': hasDailySchedule}">Daily</label>
+                      </div>
+                      <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" id="weekly" value="weekly"
+                          formControlName="scheduleFrequency" [disabled]="hasWeeklySchedule"
+                          (change)="onFrequencyChange('weekly')" />
+                        <label class="form-check-label" for="weekly"
+                          [ngClass]="{'text-muted': hasWeeklySchedule}">Weekly</label>
+                      </div>
+                      <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" id="monthly" value="monthly"
+                          formControlName="scheduleFrequency" [disabled]="hasMonthlySchedule"
+                          (change)="onFrequencyChange('monthly')" />
+                        <label class="form-check-label" for="monthly"
+                          [ngClass]="{'text-muted': hasMonthlySchedule}">Monthly</label>
+                      </div>
+                      <div
+                        *ngIf="agentForm.get('scheduleFrequency')?.invalid && agentForm.get('scheduleFrequency')?.touched"
+                        class="text-danger fs-12 mt-1">
+                        Frequency is required.
+                      </div>
+                    </div>
+                    <div>
+                      <label class="pt-2">Time <i class="text-danger"
+                          *ngIf="agentForm.get('scheduleFrequency')?.value && agentForm.get('schedulerTime')?.touched">*</i></label><br>
+                      <input #timeInput class="form-control fs-12" type="time" formControlName="schedulerTime" />
+                      <div *ngIf="agentForm.get('schedulerTime')?.invalid && agentForm.get('schedulerTime')?.touched"
+                        class="text-danger fs-12 mt-1">
+                        Time is required when frequency is selected.
+                      </div>
+                      <div #dummyFocus style="position: absolute; opacity: 0;" tabindex="0"></div>
+                    </div>
+                    <div *ngIf="showWeeklyTime">
+                      <label class="pt-2">Weekly Schedule <i class="text-danger"
+                          *ngIf="agentForm.get('selectedDays')?.touched">*</i></label>
+                      <div class="dropdown">
+                        <button class="btn btn-outline-secondary dropdown-toggle form-control fs-12" type="button"
+                          id="weeklyDaysDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                          {{ getSelectedDaysLabel() }}
+                        </button>
+                        <ul class="dropdown-menu ps-4" aria-labelledby="weeklyDaysDropdown">
+                          <li *ngFor="let day of days">
+                            <div class="form-check px-3">
+                              <input class="form-check-input" type="checkbox" [value]="day.value"
+                                [checked]="selectedDays.includes(day.value)" (change)="toggleDay(day.value, $event)" />
+                              <label class="form-check-label fs-14">{{ day.label }}</label>
+                            </div>
+                          </li>
+                        </ul>
+                      </div>
+                      <div *ngIf="agentForm.get('selectedDays')?.invalid && agentForm.get('selectedDays')?.touched"
+                        class="text-danger fs-12 mt-1">
+                        Select at least one day for weekly schedule.
+                      </div>
+                    </div>
+                    <div *ngIf="showMonthlyTime">
+                      <label class="pt-2">Monthly Schedule <i class="text-danger"
+                          *ngIf="agentForm.get('selectedDates')?.touched">*</i></label>
+                      <input #dateInput class="form-control fs-12" type="date" (change)="addDate($event)"
+                        [min]="minDate.toISOString().split('T')[0]" />
+                      <div class="mt-2">
+                        <div class="badge me-2 mb-2" *ngFor="let date of selectedDates">
+                          {{ formatDate(date) }}
+                          <button type="button" class="btn-close btn-close-white ms-1" (click)="removeDate(date)"
+                            aria-label="Remove"></button>
+                        </div>
+                      </div>
+                      <div *ngIf="agentForm.get('selectedDates')?.invalid && agentForm.get('selectedDates')?.touched"
+                        class="text-danger fs-12 mt-1">
+                        Select at least one date for monthly schedule.
+                      </div>
+                    </div>
+                    <button type="button" class="action-button btn btn-primary bg-orange border-0 mt-4"
+                      (click)="addSchedule()" [disabled]="!isScheduleFormValid()">Add Schedule</button>
+                  </div>
+                  <div class="added-schedules">
+                    <h3 class="fs-14 fw-semibold" style="padding-right:70px;">Added Schedules</h3>
+                    <div *ngFor="let schedule of schedules; let i = index" class="d-flex mb-2 mt-4">
+                      <div class="but-addsch me-2">{{ formatSchedule(schedule) }}</div>
+                      <i class="fa-solid fa-pencil pad-t-wiz" (click)="editSchedule(i)"></i>
+                      <i class="fa-regular fa-trash-can pad-t-wiz" (click)="removeSchedule(i)"></i>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+                      <!-- Step 3: Actions (Task Agent only) or approval (for external new agents only) -->
+ <div class="form-section" id="form-step-3" *ngIf="isTaskAgent() || isExternalNewAgent" [ngClass]="{ 'active': isStepActive(3) }">
+  <div class="container-wiz" *ngIf="isTaskAgent();">
+    <h3 class="fs-15 fw-semibold" >
+      List down the actions and assign progress weights (total must equal 100%)
+    </h3>
+
+    <div class="row g-3 fs-15 mt-2" [formGroup]="newActionForm">
+      <div class="col-md">
+        <label class="form-label fw-semibold">Action</label>
+        <input type="text" class="form-control fs-14" placeholder="Enter Action" formControlName="name" />
+        <div *ngIf="newActionForm.get('name')?.touched && newActionForm.get('name')?.errors?.['required']"
+          class="text-danger fs-12 mt-1">
+          Action name is required.
+        </div>
+      </div>
+
+      <div class="col-md">
+        <label class="form-label fw-semibold">Progress(%)</label>
+        <input type="number" class="form-control fs-14" placeholder="%" formControlName="percentage"
+          (input)="onNewPercentageInput($event)" />
+        
+        <div *ngIf="newActionForm.get('percentage')?.touched && newActionForm.get('percentage')?.errors?.['required']"
+          class="text-danger fs-12 mt-1">
+          Percentage is required.
+        </div>
+        <div *ngIf="newActionForm.get('percentage')?.touched && newActionForm.get('percentage')?.errors?.['min']"
+          class="text-danger fs-12 mt-1">
+          Percentage must be at least 0.
+        </div>
+        <div *ngIf="newActionForm.get('percentage')?.touched && newActionForm.get('percentage')?.errors?.['max']"
+          class="text-danger fs-12 mt-1">
+          Percentage cannot exceed 100.
+        </div>
+        
+        <!-- Simplified validation message -->
+        <div *ngIf="newActionForm.get('percentage')?.touched && !isCurrentActionProgressValid && newActionForm.get('percentage')?.value !== ''"
+          class="text-danger fs-12 mt-1">
+          {{ progressValidationMessage }}
+        </div>
+      </div>
+
+      <div class="d-flex align-items-center gap-3">
+<button
+  type="button"
+  class="action-button btn btn-primary bg-orange"
+  [disabled]="
+    !newActionForm.valid ||
+    !isCurrentActionProgressValid ||
+    (newActionForm.pristine && !isEditing) ||
+    (hasActionWith100Percent && !isEditing && newActionForm.get('percentage')?.value !== 100) ||
+    (totalPercentage === 100 && !isEditing)"
+  (click)="addAction()">
+  {{ isEditing ? 'Update Action' : 'Add Action' }}
+</button>
+        <div class="pt-2">Completion Status: {{ totalPercentage }}%</div>
+      </div>
+    </div>
+
+    <!-- Added Actions List -->
+    <div class="row g-3 mt-2" formArrayName="actions">
+      <div *ngFor="let action of actions.controls; let i = index" [formGroupName]="i" class="col-12 mt-1">
+        <div class="d-flex align-items-center">
+          <div class="action-card flex-grow-1 p-2 rounded d-flex justify-content-between align-items-center">
+            <div class="fw-semibold">{{ action.value.name }}</div>
+            <div class="fw-semibold">{{ action.value.percentage }}%</div>
+          </div>
+          <div class="ms-2 d-flex">
+            <i class="fa-solid fa-pencil pad-t-wiz" (click)="editAction(i)"></i>
+            <i class="fa-regular fa-trash-can pad-t-wiz" (click)="removeAction(i)"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Total Validation Message -->
+    <div *ngIf="totalValidationMessage" class="mt-3 text-danger fs-14">
+      {{ totalValidationMessage }}
+    </div>
+  </div>
+  <div class="container-wiz" *ngIf="isExternalNewAgent">
+    <h3 class="fs-15 fw-semibold" >
+      Approver Details
+    </h3>
+    <p class="fs-13 mt-2">Agent details will be sent to the approver for review and approval.</p>
+    <div class="row g-3 fs-15 mt-2">
+      <div class="col-md">
+        <label class="form-label fw-semibold">Approver Email</label>
+        <select class="form-select" formControlName="approverEmail">
+          <option value="" disabled>Select Approver Email</option>
+          <option *ngFor="let email of approverEmails" [value]="email">{{ email }}</option>
+        </select>
+        <div *ngIf="agentForm.get('approverEmail')?.touched && agentForm.get('approverEmail')?.errors?.['required']"
+          class="text-danger fs-12 mt-1">
+          Approver email is required.
+        </div>
+        <div *ngIf="agentForm.get('approverEmail')?.touched && agentForm.get('approverEmail')?.errors?.['email']"
+          class="text-danger fs-12 mt-1">
+          Please enter a valid email address.
+        </div>
+      </div>
+    </div>  
+  </div>
+</div>
+          <div *ngIf="currentStep === totalSteps && isExternalNewAgent && isEditMode" style="margin-left:2.5em;" class="mt-3 d-flex align-items-center gap-2 fs-18">
+            <input type="checkbox" formControlName="saveHistory" id="saveHistory" class="form-check-input" style="margin-top:0 !important;" />
+            <label for="saveHistory" class="form-check-label" style="font-size: 14px !important;">Save Version History</label>
+          </div>
+
+               <div class="button-container border-top p-2">
+              <button type="button" class="go-back-button fs-15" id="go-back-btn" [disabled]="currentStep === 1"
+                (click)="goBack()">Go Back</button>
+              <!-- Disabled if NO action in the list has a percentage of 100 -->
+              <button type="submit" class="action-button btn btn-primary bg-orange border-0 fs-12" id="next-btn"
+                (click)="goNext()" [disabled]="
+    (currentStep === 1 && !isStep1Valid()) ||
+    (isTaskAgent() && currentStep === totalSteps && !isTotalPercentageValid) ||
+    (isExternalNewAgent && currentStep === totalSteps && !agentForm.get('approverEmail')?.valid) ||
+    (isEditMode && (isAgentNameDuplicate || avatarUploading || fileError)) ||
+    (currentStep === 2 && isScheduleFormValid()) || 
+    (!isPrivilegeEdit)">
+                {{ currentStep < totalSteps ? 'Next' : (totalSteps===2 && schedules.length===0 ? (isEditMode
+                  ? 'Skip and Update' : 'Skip and Onboard' ) : (isEditMode ? 'Update' : 'Onboard' )) }} </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- Create New Agent Modal -->
+<div class="modal fade" data-bs-backdrop="static" data-bs-focus="false" data-bs-keyboard="false" id="createAgentModal" #createAgentModal tabindex="-1"
+  aria-labelledby="agentModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-xl" style="padding-left:63px">
+    <div class="modal-content" style="width: 97%;">
+      <div class="modal-header">
+        <h1 class="modal-title fw-semibold fs-14" id="agentModalLabel">{{ isEditMode ? 'Edit Agent' : 'Create New Agent' }}
+        </h1>
+        <button type="button" class="btn-close" (click)="closeCreateAgentModal()" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-0">
+        <div class="wizard-container">
+          <!-- Step Indicator -->
+          <div class="border-bottom p-3">
+            <div class="step-indicator">
+              <div class="step" [ngClass]="{ 'active': currentCreateAgentStep === 1, 'completed': currentCreateAgentStep > 1 }" id="step-1">
+                <div class="step-number">1</div>
+                <div [ngClass]="currentCreateAgentStep === 1 ? 'text-active-step' : 'text-color-wiz'">Basic Details</div>
+              </div>
+              <div class="step" [ngClass]="{ 'active': currentCreateAgentStep === 2, 'completed': currentCreateAgentStep > 2 }" id="step-2">
+                <div class="step-number">2</div>
+                <div [ngClass]="currentCreateAgentStep === 2 ? 'text-active-step' : 'text-color-wiz'">Schedule Activity</div>
+              </div>
+              <div class="step" [ngClass]="{ 'active': currentCreateAgentStep === 3, 'completed': currentCreateAgentStep > 3 }" id="step-3">
+                <div class="step-number">3</div>
+                <div [ngClass]="currentCreateAgentStep === 3 ? 'text-active-step' : 'text-color-wiz'">Actions</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Form Sections -->
+          <form [formGroup]="createAgentForm" autocomplete="off">
+            <!-- Step 1: Basic Details -->
+            <div class="form-section" [ngClass]="{ 'active': (this.currentCreateAgentStep === 1) }" id="form-step-1">
+              <!-- Edit Mode Header -->
+              <div *ngIf="isEditMode" class="d-flex justify-content-between align-items-start p-4"
+                style="padding-bottom:5px !important">
+                <div class="d-flex align-items-center">
+                  <div class="col-md-1 avatar-agent me-2">
+                    <img [src]="createAgentForm.get('avatar')?.value || 'assets/img/Agent_Profile_Icon.svg'" alt="Avatar"
+                      width="50" height="40" class="rounded" />
+                  </div>
+                  <div>
+                    <div class="fw-semibold fs-6">
+                      <input *ngIf="isEditingName" type="text" class="form-control form-control-sm"
+                        formControlName="name" (blur)="toggleNameEdit()" autofocus />
+                      <span *ngIf="!isEditingName">
+                        {{ createAgentForm.get('name')?.value || '-' }}
+                        <i class="fa-solid fa-pen fs-10 ms-2" (click)="toggleNameEdit()" style="cursor: pointer;"></i>
+                      </span>
+                      <div *ngIf="createAgentForm.get('name')?.dirty || formSubmitted">
+                        <div *ngIf="createAgentForm.get('name')?.hasError('required')" class="text-danger fs-13">
+                          Name is required.
+                        </div>
+                        <div *ngIf="isAgentNameDuplicateCreateAgent && createAgentForm.get('name')?.valid" class="text-danger fs-13">
+                          This agent name is already in use.
+                        </div>
+                      </div>
+                    </div>
+                    <div class="text-primary fs-14" data-bs-toggle="dropdown" style="cursor: pointer;">
+                      {{ getRoleName(createAgentForm.get('role_id')?.value) || '-' }}
+                    </div>
+                  </div>
+                </div>
+                <div class="d-flex ms-auto align-items-start">
+                  <div class="approval-div" *ngIf="this.approvalState">
+                    <div class="fw-semibold" [ngStyle]="{'color': getApprovalStatusColor(approvalState?.status)}">
+                      {{ approvalState?.status_msg }}
+                    </div>
+                    <div>by {{ approvalState.approverEmail || '-' }}</div>
+                  </div>
+                  <div class="text-end pe-3 border-end">
+                    <div class="fw-semibold text-dark">
+                      <ng-container *ngIf="createAgentForm.get('rating')?.value > 0; else hollowStar">
+                        <i class="fa-solid fa-star text-warning"></i> {{ createAgentForm.get('rating')?.value }}
+                      </ng-container>
+                      <ng-template #hollowStar>
+                        <span class="text-warning">☆</span>
+                      </ng-template>
+                    </div>
+
+                    <div class="text-muted fs-12">Used {{ createAgentForm.get('run_count')?.value || 0 }} times</div>
+                  </div>
+                  <div class="d-flex flex-column align-items-start gap-1 ps-3">
+                    <div *ngIf="createAgentForm.get('trending')?.value === true" class="badge-trending">
+                      🔥 Trending
+                    </div>
+                    <div *ngIf="createAgentForm.get('status')?.value === 'active'" class="badge-active">
+                      ● Active
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Basic Details Fields (Shown in both modes) -->
+              <div class="row border-bottom p-3 m-0">
+                <div class="col-md-1 avatar-agent me-2" *ngIf="!isEditMode"><img src="assets/img/Agent_Profile_Icon.svg"
+                    alt="agent_img" /></div>
+                <div class="col-md" [class.d-none]="isEditMode && !isEditingName">
+                  <div class="ps-2">
+                    <label class="form-label fs-14 fw-semibold">Agent Name <i class="text-danger">*</i></label>
+                    <input type="text" class="form-control fs-12" formControlName="name"
+                      placeholder="Type Agent Name" />
+                    <div
+                      *ngIf="createAgentForm.get('name')?.invalid && (createAgentForm.get('name')?.touched || createAgentForm.get('name')?.dirty)"
+                      class="text-danger fs-13">
+                      Agent Name is required.
+                    </div>
+                    <div *ngIf="isAgentNameDuplicateCreateAgent && createAgentForm.get('name')?.valid" class="text-danger fs-13">
+                      This agent name is already in use.
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md ps-1">
+                  <div class="ps-2">
+                    <label class="form-label fs-14 fw-semibold">Agent Provider <i class="text-danger">*</i></label>
+                    <select class="form-select fs-12" formControlName="agent_owner" >
+                      <option value="">Select Provider</option>
+                      <option value="movate">Movate</option>
+                      <option value="external">Base Agent</option>
+                    </select>
+                    <div
+                      *ngIf="createAgentForm.get('agent_owner')?.invalid && (createAgentForm.get('agent_owner')?.touched || createAgentForm.get('agent_owner')?.dirty)"
+                      class="text-danger fs-13">
+                      Agent Provider is required.
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md ps-1" >
+                  <div class="ps-2">
+                    <label class="form-label fs-14 fw-semibold">Agent Provider Type<i class="text-danger">*</i></label>
+                    <select class="form-select fs-12" formControlName="agent_provider_type" >
+                      <option value="" >Select Agent Provider Type</option>
+                      <option value="new">New</option>
+                      <option value="existing">Existing</option>
+                    </select>
+                    <div
+                      *ngIf="createAgentForm.get('agent_provider_type')?.invalid && (createAgentForm.get('agent_provider_type')?.touched || createAgentForm.get('agent_provider_type')?.dirty)"
+                      class="text-danger fs-13">
+                      Agent Provider Type is required.
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md">
+                  <div class="ps-2">
+                    <label class="form-label fs-14 fw-semibold">Agent Type <i class="text-danger">*</i></label>
+                    <select class="form-select fs-12" formControlName="agent_type_id">
+                      <option value="" disabled>Select Type</option>
+                      <option *ngFor="let type of agentTypes" [value]="type.value">
+                        {{ type.label }}
+                      </option>
+                    </select>
+                    <div
+                      *ngIf="createAgentForm.get('agent_type_id')?.invalid && (createAgentForm.get('agent_type_id')?.touched || createAgentForm.get('agent_type_id')?.dirty)"
+                      class="text-danger fs-13">
+                      Agent Type is required.
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md">
+                  <div class="ps-2">
+                    <label class="form-label fs-14 fw-semibold">Role <i class="text-danger">*</i></label>
+                    <select class="form-select fs-12" formControlName="role_id">
+                      <option value="" disabled>Select Role</option>
+                      <option *ngFor="let role of rolesList" [value]="role.value">{{ role.label }}</option>
+                    </select>
+                    <div
+                      *ngIf="createAgentForm.get('role_id')?.invalid && (createAgentForm.get('role_id')?.touched || createAgentForm.get('role_id')?.dirty)"
+                      class="text-danger fs-13">
+                      Role is required.
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="row m-0 p-2">
+                <!-- Left Input Menu Page 1 -->
+                <div class="col-md border-end">
+                   <div class="mb-2" *ngIf="createAgentForm.get('agent_type_id')?.value === 'MASTER'">
+                    <label class="form-label fs-14 fw-semibold">Avatar
+                      <div *ngIf="avatarUploading" class="spinner-border spinner-border-sm text-primary ms-2"
+                        role="status">
+                        <span class="visually-hidden">Loading...</span>
+                      </div>
+                    </label>
+                    <input class="form-control fs-14" type="file" (change)="onImageChange($event)"
+                      [disabled]="avatarUploading" accept="image/*" />
+                    <small *ngIf="fileError" class="text-danger">{{ fileError }}</small>
+                  </div> 
+                  <!-- Version , Version History and Generate With AI button. -->
+                  <div class="mb-2 d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center gap-2">
+                      <label class="form-label fs-14 fw-semibold mb-0 me-2">Version</label>
+                      <input type="text" class="form-control form-control-sm fs-12 w-auto" [disabled]="true" formControlName="version" placeholder="e.g. 1.0" />
+                      <button class="btn btn-sm btn-sensitive fs-12" (click)="openVersionHistory()" *ngIf="isEditMode">
+                        Version History
+                      </button>
+                    </div>
+                      <button class="btn btn-sm btn-sensitive" (click)="openPromptBuilder()" [disabled]="!isPrivilegeEdit || (!selectedAgent?.agent_id && isEditMode)">
+                      Generate With AI
+                    </button>
+                  </div>
+
+                  <!-- Description -->
+                  <div class="mb-2" >
+                    <label class="form-label fs-14 fw-semibold">Description <i class="text-danger">*</i></label>
+                    <textarea class="form-control fs-12" rows="3" formControlName="description"></textarea>
+                    <div
+                      *ngIf="createAgentForm.get('description')?.invalid && (createAgentForm.get('description')?.touched || createAgentForm.get('description')?.dirty)"
+                      class="text-danger fs-13">
+                      Description is required.
+                    </div>
+                  </div>
+
+                  <!-- Agent Role -->
+                  <div class="mb-2" >
+                    <label class="form-label fs-14 fw-semibold">Agent Role <i class="text-danger">*</i></label>
+                    <textarea class="form-control fs-12" rows="3" formControlName="agent_role"></textarea>
+                    <div
+                      *ngIf="createAgentForm.get('agent_role')?.invalid && (createAgentForm.get('agent_role')?.touched || createAgentForm.get('agent_role')?.dirty)"
+                      class="text-danger fs-13">
+                      Agent Role is required.
+                    </div>
+                  </div>
+
+                  <!-- Agent Goal -->
+                  <div class="mb-2" >
+                    <label class="form-label fs-14 fw-semibold">Agent Goal <i class="text-danger">*</i></label>
+                    <textarea class="form-control fs-12" rows="3" formControlName="agent_goal"></textarea>
+                    <div
+                      *ngIf="createAgentForm.get('agent_goal')?.invalid && (createAgentForm.get('agent_goal')?.touched || createAgentForm.get('agent_goal')?.dirty)"
+                      class="text-danger fs-13">
+                      Agent Goal is required.
+                    </div>
+                  </div>
+                  
+                  <!-- Agent Prompt -->
+                  <div class="mb-2" >
+                    <label class="form-label fs-14 fw-semibold">Agent Prompt <i class="text-danger">*</i></label>
+                    <textarea class="form-control fs-12" rows="3" formControlName="agent_prompt"></textarea>
+                    <div
+                      *ngIf="createAgentForm.get('agent_prompt')?.invalid && (createAgentForm.get('agent_prompt')?.touched || createAgentForm.get('agent_prompt')?.dirty)"
+                      class="text-danger fs-13">
+                      Agent Prompt is required.
+                    </div>
+                  </div>
+
+                  <!-- Reference Output -->
+                  <div class="mb-2" >
+                    <label class="form-label fs-14 fw-semibold">Reference Output</label>
+                    <textarea class="form-control fs-12" rows="3" formControlName="ref_output"></textarea>
+                  </div>
+                </div>
+
+                <!-- Right Menu Page 1 -->
+                <div class="col-md-5" >
+                  <!-- Tools Config button -->
+                  <div class="mb-2 d-flex align-items-center justify-content-between" >
+                    <label class=" fs-14 fw-semibold">Tools</label>
+                      <div class="form-check form-switch mt-1">
+                        <input class="form-check-input" type="checkbox" formControlName="mcp_connector_checkbox" (change)="openConfigureToolsModal($event,'add')" />
+                      </div>
+                  </div>
+                  <!-- Display Tools Configuration Details -->
+                  <div class="mb-3 p-3 border rounded-2 bg-light" *ngIf="configuredToolDetails">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                      <div>
+                        <div class="fs-12 text-muted mb-1">Configured Tool</div>
+                        <div class="fs-14 fw-semibold text-dark">{{ configuredToolDetails.name }}</div>
+                      </div>
+                      <a href="javascript:void(0)" class="text-primary fs-12 fw-semibold" (click)="openConfigureToolsModal($event, 'edit')">
+                        <i class="fa-solid fa-pen-to-square me-1"></i>Configure
+                      </a>
+                    </div>
+                  </div>
+
+                  <!-- KG Store Button -->
+                  <div class="mb-2 d-flex align-items-center justify-content-between">
+                    <label class="fs-14 fw-semibold">Knowledge Store</label>
+                    <div class="form-check form-switch mt-1">
+                      <input class="form-check-input" type="checkbox" formControlName="knowledge_store_checkbox" (change)="openConfigureKGModal($event,'add')"/>
+                    </div>
+                  </div>
+                  <!-- Display Knowledge Graph Configuration Details -->
+                  <div class="mb-3 p-3 border rounded-2 bg-light" *ngIf="configuredKGDetails">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                      <div>
+                        <div class="fs-12 text-muted mb-1">Knowledge Base</div>
+                        <div class="fs-14 fw-semibold text-dark">{{ configuredKGDetails.name }}</div>
+                      </div>
+                      <a href="javascript:void(0)" class="text-primary fs-12 fw-semibold" (click)="openConfigureKGModal($event,'edit')">
+                        <i class="fa-solid fa-pen-to-square me-1"></i>Configure
+                      </a>
+                    </div>
+                    <div class="d-flex gap-3 mt-2">
+                      <div>
+                        <small class="text-muted d-block">Chunks</small>
+                        <span class="badge bg-primary">{{ configuredKGDetails.chunks }}</span>
+                      </div>
+                      <div>
+                        <small class="text-muted d-block">Type</small>
+                        <span class="badge bg-secondary">{{ configuredKGDetails.type }}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Data Query Button -->
+                  <div class="mb-2 d-flex align-items-center justify-content-between" >
+                    <label class="fs-14 fw-semibold">Data Query</label>
+                    <div class="form-check form-switch mt-1">
+                      <input class="form-check-input" type="checkbox" formControlName="data_store_checkbox" (change)="openConfigureDataQueryModal($event,'add')"/>
+                    </div>
+                  </div>
+                  <!-- Display Data Query Configuration Details -->
+                  <div class="mb-3 p-3 border rounded-2 bg-light" *ngIf="configuredDataQueryDetails">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                      <div>
+                        <div class="fs-12 text-muted mb-1">Data Query Configuration</div>
+                        <span class="fs-14 fw-semibold text-dark">{{ configuredDataQueryDetails.model || '' }}</span>
+                      </div>
+                      <a href="javascript:void(0)" class="text-primary fs-12 fw-semibold" (click)="openConfigureDataQueryModal($event,'edit')">
+                        <i class="fa-solid fa-pen-to-square me-1"></i>Configure
+                      </a>
+                    </div>
+                    <div class="d-flex gap-3 mt-2">
+                      <div>
+                        <small class="text-muted d-block">Max Retries</small>
+                        <span class="badge bg-primary">{{ configuredDataQueryDetails.maxTries }}</span>
+                      </div>
+                      <div>
+                        <small class="text-muted d-block">Time Limit (s)</small>
+                        <span class="badge bg-secondary">{{ configuredDataQueryDetails.timeLimit }}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Memory Config Button -->
+                  <div class="mb-2 d-flex align-items-center justify-content-between">
+                    <label class="fs-14 fw-semibold">Memory</label>
+                    <div class="form-check form-switch mt-1">
+                      <input class="form-check-input" type="checkbox" formControlName="memory_checkbox" (change)="openMemoryConfigurationModal($event,'add')"/>
+                    </div>
+                  </div>
+                  <!-- Display Memory Configuration Details -->
+                  <div class="mb-3 p-3 border rounded-2 bg-light" *ngIf="configuredMemoryDetails">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                      <div>
+                        <div class="fs-12 text-muted mb-1">Memory Provider</div>
+                        <div class="fs-14 fw-semibold text-dark">{{ configuredMemoryDetails.provider }}</div>
+                      </div>
+                      <a href="javascript:void(0)" class="text-primary fs-12 fw-semibold" (click)="openMemoryConfigurationModal($event,'edit')">
+                        <i class="fa-solid fa-pen-to-square me-1"></i>Configure
+                      </a>
+                    </div>
+                  </div>
+
+                  <!-- Context Config Button -->
+                  <div class="mb-2 d-flex align-items-center justify-content-between" >
+                    <label class="fs-14 fw-semibold">Context</label>
+                    <div class="form-check form-switch mt-1">
+                      <input class="form-check-input" type="checkbox" formControlName="context_checkbox" (click)="openContextConfigurationModal($event,'add')"/>
+                    </div>
+                  </div>
+                  <!-- Display Context Configuration Details -->
+                  <div class="mb-3 p-3 border rounded-2 bg-light" *ngIf="configuredContextDetails">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                      <div>
+                        <div class="fs-12 text-muted mb-1">Context Configuration</div>
+                        <div class="fs-14 fw-semibold text-dark">{{ configuredContextDetails.name || 'Configured' }}</div>
+                      </div>
+                      <a href="javascript:void(0)" class="text-primary fs-12 fw-semibold" (click)="openContextConfigurationModal($event,'edit')">
+                        <i class="fa-solid fa-pen-to-square me-1"></i>Configure
+                      </a>
+                    </div>
+                  </div>
+
+                  <!-- AI Model Dropdown -->
+                  <div class="mb-2" >
+                    <label class="form-label fs-14 fw-semibold">AI Model <i class="text-danger">*</i></label>
+                    <div class="d-flex">
+                      <select class="form-select me-3 fs-12" formControlName="model">
+                        <option value="" disabled>Select AI Model</option>
+                        <option *ngFor="let model of providerModelsFromLyzr" [value]="model.model">{{ model.model }}</option>
+                      </select>
+                    </div>
+                    <div
+                      *ngIf="createAgentForm.get('model')?.invalid && (createAgentForm.get('model')?.touched || createAgentForm.get('model')?.dirty)"
+                      class="text-danger fs-13">
+                      AI Model is required.
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+
+            <!-- Step 2: Schedule Activity -->
+            <div class="form-section" id="form-step-2" [ngClass]="{ 'active': (this.currentCreateAgentStep === 2) }">
+              <div class="container-wiz">
+                <div class="schedule-container">
+                  <div class="schedule-form">
+                    <h2 class="fs-14 fw-semibold">Set when and how often the agent should run</h2>
+                    <div>
+                      <label class="pb-3 pt-4">Frequency <i class="text-danger" *ngIf="createAgentForm.get('scheduleFrequency')?.value && createAgentForm.get('scheduleFrequency')?.touched">*</i></label><br>
+                      <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" id="daily_create" value="daily"
+                          formControlName="scheduleFrequency" [disabled]="hasDailySchedule" (change)="onFrequencyChangeCreateNew('daily')" />
+                        <label class="form-check-label" for="daily_create" [ngClass]="{'text-muted': hasDailySchedule}">Daily</label>
+                      </div>
+                      <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" id="weekly_create" value="weekly"
+                          formControlName="scheduleFrequency" [disabled]="hasWeeklySchedule" (change)="onFrequencyChangeCreateNew('weekly')" />
+                        <label class="form-check-label" for="weekly_create" [ngClass]="{'text-muted': hasWeeklySchedule}">Weekly</label>
+                      </div>
+                      <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" id="monthly_create" value="monthly"
+                          formControlName="scheduleFrequency" [disabled]="hasMonthlySchedule" (change)="onFrequencyChangeCreateNew('monthly')" />
+                        <label class="form-check-label" for="monthly_create" [ngClass]="{'text-muted': hasMonthlySchedule}">Monthly</label>
+                      </div>
+                      <div *ngIf="createAgentForm.get('scheduleFrequency')?.invalid && createAgentForm.get('scheduleFrequency')?.touched" class="text-danger fs-12 mt-1">Frequency is required.</div>
+                    </div>
+                    <div>
+                      <label class="pt-2">Time <i class="text-danger" *ngIf="createAgentForm.get('scheduleFrequency')?.value && createAgentForm.get('schedulerTime')?.touched">*</i></label><br>
+                      <input #timeInputCreate class="form-control fs-12" type="time" formControlName="schedulerTime" />
+                      <div *ngIf="createAgentForm.get('schedulerTime')?.invalid && createAgentForm.get('schedulerTime')?.touched" class="text-danger fs-12 mt-1">Time is required when frequency is selected.</div>
+                      <div #dummyFocusCreate style="position: absolute; opacity: 0;" tabindex="0"></div>
+                    </div>
+                    <div *ngIf="showWeeklyTime">
+                      <label class="pt-2">Weekly Schedule <i class="text-danger" *ngIf="createAgentForm.get('selectedDays')?.touched">*</i></label>
+                      <div class="dropdown">
+                        <button class="btn btn-outline-secondary dropdown-toggle form-control fs-12" type="button" id="weeklyDaysDropdownCreate" data-bs-toggle="dropdown" aria-expanded="false">
+                          {{ getSelectedDaysLabel() }}
+                        </button>
+                        <ul class="dropdown-menu ps-4" aria-labelledby="weeklyDaysDropdownCreate">
+                          <li *ngFor="let day of days">
+                            <div class="form-check px-3">
+                              <input class="form-check-input" type="checkbox" [value]="day.value" [checked]="selectedDays.includes(day.value)" (change)="toggleDayCreateNew(day.value, $event)" />
+                              <label class="form-check-label fs-14">{{ day.label }}</label>
+                            </div>
+                          </li>
+                        </ul>
+                      </div>
+                      <div *ngIf="createAgentForm.get('selectedDays')?.invalid && createAgentForm.get('selectedDays')?.touched" class="text-danger fs-12 mt-1">Select at least one day for weekly schedule.</div>
+                    </div>
+                    <div *ngIf="showMonthlyTime">
+                      <label class="pt-2">Monthly Schedule <i class="text-danger" *ngIf="createAgentForm.get('selectedDates')?.touched">*</i></label>
+                      <input #dateInputCreate class="form-control fs-12" type="date" (change)="addDateCreateNew($event)" [min]="minDate.toISOString().split('T')[0]" />
+                      <div class="mt-2">
+                        <div class="badge me-2 mb-2" *ngFor="let date of selectedDates">
+                          {{ formatDate(date) }}
+                          <button type="button" class="btn-close btn-close-white ms-1" (click)="removeDateCreateNew(date)" aria-label="Remove"></button>
+                        </div>
+                      </div>
+                      <div *ngIf="createAgentForm.get('selectedDates')?.invalid && createAgentForm.get('selectedDates')?.touched" class="text-danger fs-12 mt-1">Select at least one date for monthly schedule.</div>
+                    </div>
+                    <button type="button" class="action-button btn btn-primary bg-orange border-0 mt-4" (click)="addScheduleCreateNew()" [disabled]="!isScheduleFormValidCreateNew()">Add Schedule</button>
+                  </div>
+                  <div class="added-schedules">
+                    <h3 class="fs-14 fw-semibold" style="padding-right:70px;">Added Schedules</h3>
+                    <div *ngFor="let schedule of schedules; let i = index" class="d-flex mb-2 mt-4">
+                      <div class="but-addsch me-2">{{ formatScheduleCreateNew(schedule) }}</div>
+                      <i class="fa-solid fa-pencil pad-t-wiz" (click)="editScheduleCreateNew(i)"></i>
+                      <i class="fa-regular fa-trash-can pad-t-wiz" (click)="removeScheduleCreateNew(i)"></i>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Step 3: Actions (Task Agent only) or approval (for external new agents only) -->
+            <div class="form-section" id="form-step-3" [ngClass]="{ 'active': (this.currentCreateAgentStep === 3) }">
+              <div class="container-wiz" *ngIf="createAgentForm.get('agent_type_id')?.value?.toLowerCase() === 'type_master'">
+                <h3 class="fs-15 fw-semibold" >
+                  List down the actions and assign progress weights (total must equal 100%)
+                </h3>
+
+                <div class="row g-3 fs-15 mt-2" [formGroup]="newActionForm">
+                  <div class="col-md">
+                    <label class="form-label fw-semibold">Action</label>
+                    <input type="text" class="form-control fs-14" placeholder="Enter Action" formControlName="name" />
+                    <div *ngIf="newActionForm.get('name')?.touched && newActionForm.get('name')?.errors?.['required']"
+                      class="text-danger fs-12 mt-1">
+                      Action name is required.
+                    </div>
+                  </div>
+
+                  <div class="col-md">
+                    <label class="form-label fw-semibold">Progress(%)</label>
+                    <input type="number" class="form-control fs-14" placeholder="%" formControlName="percentage"
+                      (input)="onNewPercentageInput($event)" />
+                    
+                    <div *ngIf="newActionForm.get('percentage')?.touched && newActionForm.get('percentage')?.errors?.['required']"
+                      class="text-danger fs-12 mt-1">
+                      Percentage is required.
+                    </div>
+                    <div *ngIf="newActionForm.get('percentage')?.touched && newActionForm.get('percentage')?.errors?.['min']"
+                      class="text-danger fs-12 mt-1">
+                      Percentage must be at least 0.
+                    </div>
+                    <div *ngIf="newActionForm.get('percentage')?.touched && newActionForm.get('percentage')?.errors?.['max']"
+                      class="text-danger fs-12 mt-1">
+                      Percentage cannot exceed 100.
+                    </div>
+                    
+                    <!-- Simplified validation message -->
+                    <div *ngIf="newActionForm.get('percentage')?.touched && !isCurrentActionProgressValid && newActionForm.get('percentage')?.value !== ''"
+                      class="text-danger fs-12 mt-1">
+                      {{ progressValidationMessage }}
+                    </div>
+                  </div>
+
+                  <div class="d-flex align-items-center gap-3">
+                    <button
+                      type="button"
+                      class="action-button btn btn-primary bg-orange"
+                      [disabled]="
+                        !newActionForm.valid ||
+                        !isCurrentActionProgressValid ||
+                        (newActionForm.pristine && !isEditing) ||
+                        (hasActionWith100Percent && !isEditing && newActionForm.get('percentage')?.value !== 100) ||
+                        (totalPercentage === 100 && !isEditing)"
+                      (click)="addAction()">
+                      {{ isEditing ? 'Update Action' : 'Add Action' }}
+                    </button>
+                    <div class="pt-2">Completion Status: {{ totalPercentage }}%</div>
+                  </div>
+                </div>
+
+                <!-- Added Actions List -->
+                <div class="row g-3 mt-2" formArrayName="actions">
+                  <div *ngFor="let action of actions.controls; let i = index" [formGroupName]="i" class="col-12 mt-1">
+                    <div class="d-flex align-items-center">
+                      <div class="action-card flex-grow-1 p-2 rounded d-flex justify-content-between align-items-center">
+                        <div class="fw-semibold">{{ action.value.name }}</div>
+                        <div class="fw-semibold">{{ action.value.percentage }}%</div>
+                      </div>
+                      <div class="ms-2 d-flex">
+                        <i class="fa-solid fa-pencil pad-t-wiz" (click)="editAction(i)"></i>
+                        <i class="fa-regular fa-trash-can pad-t-wiz" (click)="removeAction(i)"></i>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Total Validation Message -->
+                <div *ngIf="totalValidationMessage" class="mt-3 text-danger fs-14">
+                  {{ totalValidationMessage }}
+                </div>
+              </div>
+              <div class="container-wiz">
+                <h3 class="fs-15 fw-semibold" >
+                  Approver Details
+                </h3>
+                <p class="fs-13 mt-2">Agent details will be sent to the approver for review and approval.</p>
+                <div class="row g-3 fs-15 mt-2">
+                  <div class="col-md">
+                    <label class="form-label fw-semibold">Approver Email</label>
+                    <select class="form-select" formControlName="approverEmail">
+                      <option value="" disabled>Select Approver Email</option>
+                      <option *ngFor="let email of approverEmails" [value]="email">{{ email }}</option>
+                    </select>
+                    <div *ngIf="createAgentForm.get('approverEmail')?.touched && createAgentForm.get('approverEmail')?.errors?.['required']"
+                      class="text-danger fs-12 mt-1">
+                      Approver email is required.
+                    </div>
+                    <div *ngIf="createAgentForm.get('approverEmail')?.touched && createAgentForm.get('approverEmail')?.errors?.['email']"
+                      class="text-danger fs-12 mt-1">
+                      Please enter a valid email address.
+                    </div>
+                  </div>
+                </div>  
+              </div>
+            </div>
+            <div *ngIf="currentCreateAgentStep === 2 && isEditMode" style="margin-left:2.5em;" class="mt-3 d-flex align-items-center gap-2 fs-18">
+              <input type="checkbox" formControlName="saveHistory" id="saveHistory" class="form-check-input" style="margin-top:0 !important;" />
+              <label for="saveHistory" class="form-check-label" style="font-size: 14px !important;">Save Version History</label>
+            </div>
+
+            <div class="button-container border-top p-2">
+              <button type="button" class="go-back-button fs-15 " id="go-back-btn" style="cursor:pointer;"
+                (click)="goBackCreateAgent()">{{currentCreateAgentStep === 1 ? 'Cancel' : 'Go Back'}}</button>
+              <!-- Disabled if NO action in the list has a percentage of 100 -->
+              <button type="submit" class="action-button btn btn-primary bg-orange border-0 fs-12" id="next-btn"
+                (click)="goNextCreateAgent()" [disabled]="!isCreateAgentStepValid(currentCreateAgentStep) || !isPrivilegeEdit || (!selectedAgent?.agent_id && isEditMode)">
+                {{ (currentCreateAgentStep === 1 || currentCreateAgentStep === 2)  ? 'Next' : (isEditMode ? 'Update' : 'Create' )}} 
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
+
+
+<!-- Edit Agent Modal -->
+<div #editAgentModal class="modal fade" data-bs-backdrop="static" data-bs-keyboard="false" id="editAgentModal"
+  tabindex="-1" aria-labelledby="editAgentLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+
+      <!-- Updated Header -->
+      <div class="modal-header">
+        <h1 class="modal-title fw-semibold fs-14" id="editAgentLabel">Edit Agent</h1>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+
+      <form [formGroup]="agentForm">
+        <div class="modal-body pt-4">
+          <div class="d-flex justify-content-between align-items-start mb-3 border-bottom" style="padding-bottom:12px;">
+            <div class="d-flex align-items-center">
+              <div class="col-md-1 avatar-agent me-2"><img src="assets/img/Agent_Profile_Icon.svg" alt="agent_profile"/></div>
+
+              <div>
+                <div class="fw-semibold fs-6">
+                  <!-- Show input if editing -->
+                  <input *ngIf="isEditingName" type="text" class="form-control form-control-sm" formControlName="name"
+                    (blur)="toggleNameEdit()" autofocus />
+
+
+                  <!-- Show text + pen icon if not editing -->
+                  <span *ngIf="!isEditingName">
+                    {{ agentForm.get('name')?.value || '-' }}
+                    <i class="fa-solid fa-pen fs-10 ms-2" (click)="toggleNameEdit()" style="cursor: pointer;"></i>
+                  </span>
+                  <div *ngIf="agentForm.get('name')?.dirty || formSubmitted">
+                    <div *ngIf="agentForm.get('name')?.hasError('required')" class="text-danger fs-13">
+                      Name is required.
+                    </div>
+                    <div *ngIf="isAgentNameDuplicateCreateAgent && agentForm.get('name')?.valid" class="text-danger fs-13">This
+                      agent name is already in use.</div>
+                  </div>
+                </div>
+
+                <div class="text-primary fs-14" data-bs-toggle="dropdown" style="cursor: pointer;">
+                  {{ getRoleName(agentForm.get('role_id')?.value) || '-' }}
+                </div>
+
+              </div>
+            </div>
+            <div class="d-flex ms-auto align-items-start">
+
+              <!-- RATING SECTION (with border-end) -->
+              <div class="text-end pe-3 border-end">
+                <div class="fw-semibold text-dark">
+                  <span class="text-warning">⭐</span> {{ agentForm.get('rating')?.value || 'N/A' }}
+                </div>
+                <div class="text-muted fs-12">Used {{ agentForm.get('run_count')?.value || 0 }} times</div>
+              </div>
+
+              <!-- BADGES SECTION -->
+              <div class="d-flex flex-column align-items-start gap-1 ps-3">
+                <div *ngIf="agentForm.get('trending')?.value === true" class="badge-trending">
+                  🔥 Trending
+                </div>
+                <div *ngIf="agentForm.get('status')?.value === 'active'" class="badge-active">
+                  ● Active
+                </div>
+              </div>
+
+
+            </div>
+          </div>
+
+          <div class="row pb-3 mt-3">
+            <div class="col-md border-end">
+              <div class="mb-2">
+                <label class="form-label fs-14 fw-semibold">Agent Provider</label>
+                <select class="form-select fs-12" formControlName="agent_owner">
+                  <option value="" disabled>Select Provider</option>
+                  <option value="movate">Movate</option>
+                  <option value="external">Base Agent</option>
+                </select>
+              </div>
+
+              <div class="row mt-3">
+                <div class="col-md-6 mb-2">
+                  <label class="form-label fs-14 fw-semibold">Role<i class="text-danger">*</i></label>
+                  <select class="form-select fs-12" formControlName="role_id">
+                    <option value="" disabled>Select Role</option>
+                    <option *ngFor="let role of rolesList" [value]="role.value">{{ role.label }}</option>
+                  </select>
+                  <div
+                    *ngIf="agentForm.get('role_id')?.invalid && (agentForm.get('role_id')?.touched || agentForm.get('role_id')?.dirty)"
+                    class="text-danger fs-13">Role is required. </div>
+                </div>
+
+                <div class="col-md-6 mb-2">
+                  <label class="form-label fs-14 fw-semibold">Agent Type<i class="text-danger">*</i></label>
+                  <select class="form-select fs-12" formControlName="agent_type_id">
+                    <option value="" disabled>Select Type</option>
+                    <option *ngFor="let type of agentTypes" [value]="type.value">
+                      {{ type.label }}
+                    </option>
+                  </select>
+                  <div
+                    *ngIf="agentForm.get('agent_type_id')?.invalid && (agentForm.get('agent_type_id')?.touched || agentForm.get('agent_type_id')?.dirty)"
+                    class="text-danger fs-13">Agent Type is required. </div>
+                </div>
+              </div>
+
+              <div class="row mt-3">
+                <div class="col-md-6 mb-2" *ngIf="isExternalAgent" autocomplete="off">
+                  <label class="form-label fs-14 fw-semibold">Agent URL<i class="text-danger">*</i></label>
+                  <div class="d-flex">
+                    <input type="text" class="form-control me-3 fs-12" placeholder="Enter Agent URL"
+                      formControlName="agent_api_url" />
+                  </div>
+                  <div
+                    *ngIf="agentForm.get('agent_api_url')?.invalid && (agentForm.get('agent_api_url')?.touched || agentForm.get('agent_api_url')?.dirty)"
+                    class="text-danger fs-13">Agent URL is required. </div>
+                </div>
+
+                <div class="col-md-6 mb-2" *ngIf="isExternalAgent" autocomplete="off">
+                  <label class="form-label fs-14 fw-semibold">Agent API Key<i class="text-danger">*</i></label>
+                  <div class="d-flex">
+                    <input type="password" class="form-control me-3 fs-12" placeholder="Enter Agent API Key"
+                      formControlName="agent_api_key" />
+                  </div>
+                  <div
+                    *ngIf="agentForm.get('agent_api_key')?.invalid && (agentForm.get('agent_api_key')?.touched || agentForm.get('agent_api_key')?.dirty)"
+                    class="text-danger fs-13">Agent API Key is required. </div>
+                </div>
+              </div>
+
+              <div class="row mt-3" *ngIf="isExternalAgent && isVoiceAgent">
+                <div class="col-md-6 mb-2" autocomplete="off">
+                  <label class="form-label fs-14 fw-semibold">User ID<i class="text-danger">*</i></label>
+                  <div class="d-flex">
+                    <input type="text" class="form-control me-3 fs-12" placeholder="Enter User ID"
+                      formControlName="user_id" />
+                  </div>
+                  <div
+                    *ngIf="agentForm.get('user_id')?.invalid && (agentForm.get('user_id')?.touched || agentForm.get('user_id')?.dirty)"
+                    class="text-danger fs-13">User ID is required. </div>
+                </div>
+
+                <div class="col-md-6 mb-2" autocomplete="off">
+                  <label class="form-label fs-14 fw-semibold">Agent ID</label>
+                  <div class="d-flex">
+                    <input type="text" class="form-control me-3 fs-12" placeholder="Enter Agent ID"
+                      formControlName="api_agent_id" />
+                  </div>
+                </div>
+              </div>
+              
+              <div class="col-md-12 mb-2" *ngIf="isExternalAgent" autocomplete="off">
+                <label class="form-label fs-14 fw-semibold">Session ID<i class="text-danger">*</i></label>
+                <div class="d-flex">
+                  <input type="text" class="form-control me-3 fs-12" placeholder="Enter Session ID"
+                    formControlName="agent_session_id" />
+                </div>
+                <div
+                  *ngIf="agentForm.get('agent_session_id')?.invalid && (agentForm.get('agent_session_id')?.touched || agentForm.get('agent_session_id')?.dirty)"
+                  class="text-danger fs-13">Session ID is required. </div>
+              </div>
+
+              <div class="col-md-12 mb-2" *ngIf="agentForm.get('agent_type_id')?.value === 'MASTER'">
+
+                <label class="form-label fs-14 fw-semibold">Avatar
+                  <div *ngIf="avatarUploading" class="spinner-border spinner-border-sm text-primary ms-2" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                  </div>
+                </label>
+                <input class="form-control fs-14" type="file" (change)="onImageChange($event)"
+                  [disabled]="avatarUploading" accept="image/*" />
+                <small *ngIf="fileError" class="text-danger">{{ fileError }}</small>
+
+              </div>
+
+
+              <div class="mb-2">
+                <label class="form-label fs-14 fw-semibold">Description<i class="text-danger">*</i></label>
+                <textarea class="form-control fs-12" rows="3" formControlName="description"></textarea>
+                <div
+                  *ngIf="agentForm.get('description')?.invalid && (agentForm.get('description')?.touched || agentForm.get('description')?.dirty)"
+                  class="text-danger fs-13">Description is required. </div>
+              </div>
+
+              <div class="mb-2" *ngIf="agentForm.get('agent_type_id')?.value === 'TYPE_MASTER'">
+                <label class="form-label fs-14 fw-semibold">Action Required</label>
+
+                <div formArrayName="actions" [formGroup]="agentForm">
+                  <div class="d-flex flex-column mb-2" *ngFor="let action of actions.controls; let i = index"
+                    [formGroupName]="i">
+                    <div class="d-flex align-items-center mb-1">
+                      <!-- Action field -->
+                      <div class="flex-grow-1 me-2">
+                        <input type="text" class="form-control fs-12" placeholder="Action Required"
+                          formControlName="name" />
+                        <!-- Validation for Name -->
+                        <div *ngIf="action.get('name')?.touched && action.get('name')?.hasError('required')"
+                          class="text-danger fs-12"> Action Name is required</div>
+                      </div>
+
+                      <!-- Percentage field -->
+                      <div class="flex-grow-1 me-2">
+                        <input type="number" class="form-control fs-12" placeholder="%" formControlName="percentage" />
+                        <!-- Validation for Percentage -->
+                        <div *ngIf="action.get('percentage')?.touched && action.get('percentage')?.hasError('required')"
+                          class="text-danger fs-12">Percentage is required</div>
+                      </div>
+
+                      <!-- Add button -->
+                      <button type="button" class="btn-icon me-1" (click)="actions.push(createAction())"
+                        *ngIf="i === actions.length - 1">+</button>
+                      <!-- Remove button -->
+                      <button type="button" class="btn-icon" (click)="actions.removeAt(i)"
+                        *ngIf="actions.length > 1">-</button>
+                    </div>
+                    <!-- Custom "bothRequired" validation (row-level error) -->
+                    <div *ngIf="action.errors?.['bothRequired']" class="text-danger fs-12">
+                      Both Name and Percentage are required if one is filled.
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="mb-2">
+                <label class="form-label fs-14 fw-semibold">Agent Prompt<i class="text-danger">*</i></label>
+                <textarea class="form-control fs-12" rows="3" formControlName="agent_prompt"></textarea>
+                <div
+                  *ngIf="agentForm.get('agent_prompt')?.invalid && (agentForm.get('agent_prompt')?.touched || agentForm.get('agent_prompt')?.dirty)"
+                  class="text-danger fs-7">Agent Prompt is required. </div>
+              </div>
+
+              <div class="mb-2" *ngIf="!isExternalAgent">
+                <label class="form-label fs-14 fw-semibold">Reference Output</label>
+                <textarea class="form-control fs-12" rows="3" formControlName="ref_output"></textarea>
+              </div>
+            </div>
+
+            <div class="col-md-5">
+
+              <div class="mb-2">
+                <label for="scheduleFrequency" class="form-label fs-14 fw-semibold">Frequency<i class="text-danger"
+                    *ngIf="agentForm.get('scheduleFrequency')?.value">*</i></label>
+                <select class="form-select fs-12" formControlName="scheduleFrequency" id="scheduleFrequency">
+                  <option value="" disabled>Select Frequency</option>
+                  <option value="daily">Daily</option>
+                  <option value="weekly">Weekly</option>
+                  <option value="monthly">Monthly</option>
+                </select>
+              </div>
+
+              <!-- Daily -->
+              <div class="mb-2" *ngIf="showDailyTime">
+                <label class="form-label fs-14 fw-semibold">Time<i class="text-danger"
+                    *ngIf="agentForm.get('scheduleFrequency')?.value">*</i></label>
+                <input class="form-control fs-12" type="time" formControlName="schedulerTime">
+                <div class="text-danger fs-12 mt-1"
+                  *ngIf="agentForm.get('schedulerTime')?.hasError('required') && agentForm.get('schedulerTime')?.touched">
+                  Time is required when frequency is selected.
+                </div>
+              </div>
+
+              <div *ngIf="showWeeklyTime">
+                <label class="form-label pt-2 fs-14 fw-semibold">Weekly Schedule<i class="text-danger"
+                    *ngIf="agentForm.get('scheduleFrequency')?.value">*</i></label>
+                <div class="weekly-grid mb-2">
+                  <div *ngFor="let day of days" class="form-check">
+                    <label class="form-check-label fs-14" [for]="'day-' + day.value">{{ day.label }}</label>
+                  </div>
+                </div>
+                <div class="text-danger fs-12 mt-1"
+                  *ngIf="agentForm.get('selectedDays')?.hasError('required') && agentForm.get('selectedDays')?.touched">
+                  Select at least one day for weekly schedule.
+                </div>
+                <input class="form-control fs-12" type="time" formControlName="schedulerTime">
+                <div class="text-danger fs-12 mt-1"
+                  *ngIf="agentForm.get('schedulerTime')?.hasError('required') && agentForm.get('schedulerTime')?.touched">
+                  Time is required when frequency is selected.
+                </div>
+              </div>
+
+              <!-- Monthly -->
+              <div class="col-md-12 pt-2" *ngIf="showMonthlyTime">
+                <label class="form-label fs-14 fw-semibold">Monthly Schedule<i class="text-danger"
+                    *ngIf="agentForm.get('scheduleFrequency')?.value">*</i></label>
+                <div class="mt-2">
+                  <div *ngFor="let date of agentForm.get('selectedDates')?.value" class="badge me-2 mb-2">
+                    {{ date | date:'mediumDate' }}
+                    <button type="button" class="btn-close btn-close-white ms-1" (click)="removeDate(date)"
+                      aria-label="Remove"></button>
+                  </div>
+                </div>
+                <div class="text-danger fs-12 mt-1"
+                  *ngIf="agentForm.get('selectedDates')?.hasError('required') && agentForm.get('selectedDates')?.touched">
+                  Select at least one date for monthly schedule.
+                </div>
+                <input class="form-control fs-12 mt-2" type="time" formControlName="schedulerTime">
+                <div class="text-danger fs-12 mt-1"
+                  *ngIf="agentForm.get('schedulerTime')?.hasError('required') && agentForm.get('schedulerTime')?.touched">
+                  Time is required when frequency is selected.
+                </div>
+              </div>
+
+              <div class="mb-2 pt-2">
+                <label class="form-label fs-14 fw-semibold">MCP Connectors</label>
+                <div class="d-flex">
+                  <select class="form-select me-3 fs-12" formControlName="mcp_connector_value"
+                    [disabled]="!agentForm.get('mcp_connector_enabled')?.value">
+                    <option value="" disabled>Select MCP Connectors</option>
+                    <option *ngFor="let mcp of mcpConnectors" [value]="mcp.value">{{ mcp.label }}</option>
+                  </select>
+                  <div class="form-check form-switch mt-1">
+                    <input class="form-check-input" type="checkbox" formControlName="mcp_connector_enabled" />
+                  </div>
+                </div>
+              </div>
+
+              <div class="mb-2">
+                <label class="form-label fs-14 fw-semibold">Knowledge Store</label>
+                <div class="d-flex">
+                  <select class="form-select me-3 fs-12" formControlName="knowledge_store_value"
+                    [disabled]="!agentForm.get('knowledge_store_enabled')?.value">
+                    <option value="" disabled>Select Knowledge Store</option>
+                    <option value="Knowledge Base">Knowledge Base</option>
+                  </select>
+                  <div class="form-check form-switch mt-1">
+                    <input class="form-check-input" type="checkbox" formControlName="knowledge_store_enabled" />
+                  </div>
+                </div>
+              </div>
+
+              <div class="mb-2">
+                <label class="form-label fs-14 fw-semibold">AI Model<i class="text-danger">*</i></label>
+                <div class="d-flex">
+                  <input type="text" class="form-control me-3 fs-12" placeholder="Type AI Model" formControlName="model"
+                    [disabled]="!agentForm.get('model_enabled')?.value" />
+
+                  <div class="form-check form-switch mt-1">
+                    <input class="form-check-input" type="checkbox" formControlName="model_enabled" />
+                  </div>
+                </div>
+                <div
+                  *ngIf="agentForm.get('model')?.invalid && (agentForm.get('model')?.touched || agentForm.get('model')?.dirty)"
+                  class="text-danger fs-13">AI Model is required. </div>
+              </div>
+
+              <div class="mb-2">
+                <label class="form-label fs-14 fw-semibold">AI Foundation</label>
+                <div class="d-flex mb-2">
+                  <select class="form-select me-3 fs-12" formControlName="foundation_resp_ai_value"
+                    [disabled]="!agentForm.get('foundation_resp_ai_toggle')?.value">
+                    <option value="" disabled>Select AI Foundation</option>
+                    <option value="Responsible AI">Responsible AI</option>
+                  </select>
+                  <div class="form-check form-switch mt-1">
+                    <input class="form-check-input" type="checkbox" formControlName="foundation_resp_ai_toggle" />
+                  </div>
+                </div>
+
+                <div class="d-flex mb-2">
+                  <select class="form-select me-3 fs-12" formControlName="foundation_ethic_ai_value"
+                    [disabled]="!agentForm.get('foundation_ethic_ai_toggle')?.value">
+                    <option value="" disabled>Select AI Foundation</option>
+                    <option value="Ethical AI">Ethical AI</option>
+                  </select>
+                  <div class="form-check form-switch mt-1">
+                    <input class="form-check-input" type="checkbox" formControlName="foundation_ethic_ai_toggle" />
+                  </div>
+                </div>
+
+                <div class="d-flex mb-2">
+                  <select class="form-select me-3 fs-12" formControlName="foundation_guardrails_ai_value"
+                    [disabled]="!agentForm.get('foundation_guardrails_ai_toggle')?.value">
+                    <option value="" disabled>Select AI Foundation</option>
+                    <option value="AI Guardrails">AI Guardrails</option>
+                  </select>
+                  <div class="form-check form-switch mt-1">
+                    <input class="form-check-input" type="checkbox" formControlName="foundation_guardrails_ai_toggle" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Footer -->
+        <div class="modal-footer">
+          <button type="button" class="btn bg-white border fs-12" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary bg-orange border-0 fs-12" (click)="submitEditAgent()"
+            [disabled]="agentForm.invalid || isAgentNameDuplicate ||avatarUploading|| fileError">Update</button>
+        </div>
+      </form>
+
+    </div>
+  </div>
+</div>
+
+<!-- Modal -->
+<div #filt class="modal fade" id="filt" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1"
+  aria-labelledby="exampleModalLabel" aria-hidden="true">
+  <div class="modal-dialog filter-cont">
+    <div class="modal-content h-100">
+      <div class="modal-header border-0">
+        <h1 class="modal-title fs-5 fw-semibold" id="exampleModalLabel"> Filters </h1>
+        <button type="button" class="btn-close b-close" data-bs-dismiss="modal" aria-label="Close">
+          <i class="fa-solid fa-xmark "></i>
+        </button>
+      </div>
+      <div class="modal-body agent-overflow fs-14 fw-semibold" [formGroup]="filterForm">
+
+        <div class="mb-3">
+          <label class="form-label">Agent</label>
+          <select class="form-select fs-14" formControlName="agent_id">
+            <option value="">All Agents</option>
+            <option *ngFor="let agent of currentTabAgents" [value]="agent.agent_id">{{ agent.name }}</option>
+          </select>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Role</label>
+          <select class="form-select fs-14" formControlName="role_id">
+            <option value="">All Roles</option>
+            <option *ngFor="let role of getFilteredRoles()" [value]="role.value">{{ role.label }}</option>
+          </select>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Agent Type</label>
+          <select class="form-select fs-14" formControlName="agent_type_id">
+            <option value="">All Agent Type</option>
+            <option *ngFor="let type of getFilteredAgentTypes()" [value]="type.value">{{ type.label }}</option>
+          </select>
+        </div>
+
+
+
+        <div class="mb-3">
+          <label class="form-label">MCP Connectors</label>
+          <select class="form-select fs-14" formControlName="mcp_connector_id">
+            <option value="">All MCP Connectors</option>
+            <option *ngFor="let mcp of getFilteredMcpConnectors()" [value]="mcp.value">{{ mcp.label }}</option>
+          </select>
+        </div>
+
+        <div class="mb-3">
+        <label class="form-label">Knowledge Store</label>
+        <select class="form-select fs-14" formControlName="knowledge_store_id">
+          <option value="">All Knowledge Stores</option>
+          <option *ngFor="let ks of getFilteredKnowledgeStores()" [value]="ks.value">
+            {{ ks.label }}
+          </option>
+        </select>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">AI Model</label>
+          <select class="form-select fs-14" formControlName="model">
+            <option value="">All AI Models</option>
+            <option *ngFor="let model of getFilteredModels()" [value]="model.value">{{ model.label }}</option>
+          </select>
+        </div>
+
+        <div class="mb-3">
+        <label class="form-label">AI Foundation</label>
+        <select class="form-select fs-14" formControlName="foundation">
+          <option value="">All AI Foundations</option>
+          <option *ngFor="let foundation of getFilteredFoundations()" [ngValue]="foundation.value">
+            {{ foundation.label }}
+          </option>
+        </select>
+        </div>
+
+
+
+      </div>
+      <div class="modal-footer border-0">
+        <button type="button" class="btn bg-white border fs-12" data-bs-dismiss="modal" (click)="clearFilters()">Clear
+          Filters</button>
+        <button type="button" class="btn btn-primary bg-orange border-0 fs-12" (click)="applyFilters()">Apply
+          Filters</button>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- Success Toast -->
+<div id="successToast" class="toast align-items-center text-white bg-success border-0 position-fixed top-0 end-0 m-4"
+  role="alert" aria-live="assertive" aria-atomic="true" data-bs-delay="4000" style="z-index: 1060;"
+  data-bs-autohide="true">
+  <div class="d-flex">
+    <div class="toast-body">
+      {{ toastMessage }}
+    </div>
+    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"
+      aria-label="Close"></button>
+  </div>
+</div>
+<!-- Error Toast -->
+<div id="errorToast" class="toast align-items-center text-white bg-danger border-0 position-fixed top-0 end-0 m-4"
+  role="alert" aria-live="assertive" aria-atomic="true" data-bs-delay="4000" style="z-index: 1060;"
+  data-bs-autohide="true">
+  <div class="d-flex">
+    <div class="toast-body">
+      {{ toastMessage }}
+    </div>
+    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"
+      aria-label="Close"></button>
+  </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteConfirmModal1" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Confirm Delete</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body" [formGroup]="deleteAgentForm">
+        <span>Are you sure you want to delete agent "{{agentToDelete?.name}}"?</span>
+
+        <div class="col-md fs-14 mt-3" *ngIf="( agentToDelete?.Approval_Status!=='Rejected')" >
+            <label class="form-label fw-semibold">Approver Email</label>
+            <select class="form-select" formControlName="approverEmail">
+              <option value="" disabled>Select Approver Email</option>
+              <option *ngFor="let email of approverEmails" [value]="email">{{ email }}</option>
+            </select>
+            <div *ngIf="deleteAgentForm.get('approverEmail')?.touched && deleteAgentForm.get('approverEmail')?.errors?.['required']"
+              class="text-danger fs-12 mt-1">
+              Approver email is required.
+            </div>
+            <div *ngIf="deleteAgentForm.get('approverEmail')?.touched && deleteAgentForm.get('approverEmail')?.errors?.['email']"
+              class="text-danger fs-12 mt-1">
+              Please enter a valid email address.
+            </div>
+        </div> 
+        <div class="col-md fs-14 mt-3" *ngIf="agentToDelete?.Approval_Status!=='Rejected'">
+            <label class="form-label fw-semibold">Reason for Deletion</label>
+            <textarea class="form-control" formControlName="reason" rows="3" placeholder="Provide reason for deletion..."></textarea>
+            <div *ngIf="deleteAgentForm.get('reason')?.touched && deleteAgentForm.get('reason')?.errors?.['required']"
+              class="text-danger fs-12 mt-1">
+              Reason for deletion is required.
+            </div>
+          </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" (click)="clearDeleteModal()">Cancel</button>
+        <!-- <button type="button" class="btn bg-orange" *ngIf="agentToDelete?.agent_owner!='external' || agentToDelete?.agent_provider_type!='new' || agentToDelete?.Approval_Status==='Rejected'" (click)="deleteAgent()">Delete</button> -->
+        <button type="button" class="btn bg-orange" [disabled]="!deleteAgentForm.valid" *ngIf="agentToDelete?.Approval_Status!=='Rejected'" (click)="deleteAgentWithApproval()">Delete</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- Configure Knowledge Graph Modal -->
+<div class="modal fade" data-bs-backdrop="static" data-bs-keyboard="false" id="configureKGModal" tabindex="-1" aria-labelledby="configureKGLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" [ngClass]="{'modal-lg': kgConfigForm.get('kgType')?.value === 'Agentic RAG'}">
+    <div class="modal-content">
+      <div class="modal-header bg-white border-bottom">
+        <h5 class="modal-title fw-semibold fs-14" id="configureKGLabel">Configure Knowledge Graph</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" (click)="resetKGConfigForm()"></button>
+      </div>
+      <div class="modal-body p-4" style="height:auto; max-height:75vh; overflow:auto">
+        <form [formGroup]="kgConfigForm">
+          <!-- RAG vs Agentic RAG Selection -->
+          <div class="mb-4">
+            <label class="form-label fs-14 fw-semibold mb-3">Knowledge Graph Type <span class="text-danger">*</span></label>
+            <div class="d-flex ml-2" style="gap:2rem;">
+              <div class="form-check">
+                <input  type="radio" name="kgType" id="ragOption" value="RAG" 
+                  formControlName="kgType" />
+                <label class="form-check-label fs-13" for="ragOption">
+                  RAG
+                </label>
+              </div>
+              <div class="form-check">
+                <input class="form-check-input" type="radio" name="kgType" id="agenticRagOption" value="Agentic RAG" 
+                  formControlName="kgType" />
+                <label class="form-check-label fs-13" for="agenticRagOption">
+                  Agentic RAG
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Standard RAG Configuration (shown when RAG is selected) -->
+          <ng-container *ngIf="kgConfigForm.get('kgType')?.value === 'RAG'">
+            <!-- Knowledge Base Selection -->
+            <div class="mb-4">
+              <label class="form-label fs-14 fw-semibold mb-2">Knowledge Base <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <select class="form-select fs-12 me-2" formControlName="knowledgeBaseId">
+                  <option value="" disabled selected>Select...</option>
+                  <option *ngFor="let kb of kgsFromLyzr" [value]="kb._id">{{ kb.name }}</option>
+                </select>
+                <button class="btn btn-outline-secondary fs-12" type="button" (click)="refreshKnowledgeStores()">
+                  <i class="fa-solid fa-arrows-rotate"></i>
+                </button>
+              </div>
+              <a href="javascript:void(0)" class="text-primary fs-12 mt-2 d-inline-block" (click)="openCreateKnowledgeBase()">
+                Create New
+                <i class="fa-solid fa-arrow-up-right ms-1"></i>
+              </a>
+            </div>
+
+            <!-- Number of Chunks -->
+            <div class="mb-4">
+              <label class="form-label fs-14 fw-semibold mb-2">Number of Chunks <span class="text-danger">*</span></label>
+              <input type="number" class="form-control fs-12" formControlName="numberOfChunks" 
+                placeholder="5" min="1" />
+            </div>
+
+            <!-- Retrieval Type -->
+            <div class="mb-4">
+              <label class="form-label fs-14 fw-semibold mb-2">Retrieval Type <span class="text-danger">*</span></label>
+              <select class="form-select fs-12" formControlName="retrievalType">
+                <option value="" disabled selected>Select...</option>
+                <option value="Basic">Basic</option>
+                <option value="Advanced">Advanced</option>
+                <option value="Hybrid">Hybrid</option>
+              </select>
+            </div>
+
+            <!-- Score Threshold Slider -->
+            <div class="mb-4">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <label class="form-label fs-14 fw-semibold mb-0">Score Threshold</label>
+                <span class="badge bg-light text-dark fs-12">{{ kgConfigForm.get('scoreThreshold')?.value?.toFixed(2) || '0.00' }}</span>
+              </div>
+              <input type="range" class="form-range" min="0" max="1" step="0.01" 
+                formControlName="scoreThreshold" />
+              <small class="text-muted fs-11 d-block mt-1">Minimum confidence score for retrieval</small>
+            </div>
+          </ng-container>
+
+          <!-- Agentic RAG Configuration (shown when Agentic RAG is selected) -->
+          <ng-container *ngIf="kgConfigForm.get('kgType')?.value === 'Agentic RAG'">
+            <form [formGroup]="newAgenticRAGForm" class="border rounded-2 p-3 bg-light mb-4">
+              <h6 class="fs-14 fw-semibold mb-3">Add Knowledge Base</h6>
+
+              <!-- Knowledge Base Selection -->
+              <div class="mb-3">
+                <label class="form-label fs-13 fw-semibold mb-2">Knowledge Base <span class="text-danger">*</span></label>
+                <div class="input-group">
+                  <select class="form-select fs-12 me-2" formControlName="knowledgeBaseId">
+                    <option value="" disabled selected>Select...</option>
+                    <option *ngFor="let kb of kgsFromLyzr" [value]="kb._id">{{ kb.name }}</option>
+                  </select>
+                  <button class="btn btn-outline-secondary fs-12" type="button" (click)="refreshKnowledgeStores()">
+                    <i class="fa-solid fa-arrows-rotate"></i>
+                  </button>
+                </div>
+                <div *ngIf="newAgenticRAGForm.get('knowledgeBaseId')?.invalid && (newAgenticRAGForm.get('knowledgeBaseId')?.touched || newAgenticRAGForm.get('knowledgeBaseId')?.dirty)"
+                  class="text-danger fs-12 mt-1">
+                  Knowledge Base is required.
+                </div>
+              </div>
+
+              <!-- Number of Chunks -->
+              <div class="mb-3">
+                <label class="form-label fs-13 fw-semibold mb-2">Number of Chunks <span class="text-danger">*</span></label>
+                <input type="number" class="form-control fs-12" formControlName="numberOfChunks" 
+                  placeholder="5" min="1" />
+                <div *ngIf="newAgenticRAGForm.get('numberOfChunks')?.invalid && (newAgenticRAGForm.get('numberOfChunks')?.touched || newAgenticRAGForm.get('numberOfChunks')?.dirty)"
+                  class="text-danger fs-12 mt-1">
+                  Number of chunks is required and must be at least 1.
+                </div>
+              </div>
+
+              <!-- Retrieval Type -->
+              <div class="mb-3">
+                <label class="form-label fs-13 fw-semibold mb-2">Retrieval Type <span class="text-danger">*</span></label>
+                <select class="form-select fs-12" formControlName="retrievalType">
+                  <option value="" disabled selected>Select...</option>
+                  <option value="Basic">Basic</option>
+                  <option value="Advanced">Advanced</option>
+                  <option value="Hybrid">Hybrid</option>
+                </select>
+                <div *ngIf="newAgenticRAGForm.get('retrievalType')?.invalid && (newAgenticRAGForm.get('retrievalType')?.touched || newAgenticRAGForm.get('retrievalType')?.dirty)"
+                  class="text-danger fs-12 mt-1">
+                  Retrieval Type is required.
+                </div>
+              </div>
+
+              <!-- Score Threshold Slider -->
+              <div class="mb-3">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <label class="form-label fs-13 fw-semibold mb-0">Score Threshold</label>
+                  <span class="badge bg-light text-dark fs-12">{{ newAgenticRAGForm.get('scoreThreshold')?.value?.toFixed(2) || '0.00' }}</span>
+                </div>
+                <input type="range" class="form-range" min="0" max="1" step="0.01" 
+                  formControlName="scoreThreshold" />
+                <small class="text-muted fs-11 d-block mt-1">Minimum confidence score for retrieval</small>
+              </div>
+
+              <!-- Add RAG Button -->
+              <button type="button" class="btn btn-sm btn-primary bg-orange border-0 fs-12 w-100 mt-3"
+                (click)="addAgenticRAG()"
+                [disabled]="newAgenticRAGForm.invalid">
+                <i class="fa-solid fa-plus me-2"></i> Add RAG
+              </button>
+            </form>
+
+            <!-- List of Added RAGs -->
+            <div class="mb-4" *ngIf="configuredAgenticRAGs.length > 0">
+              <h6 class="fs-14 fw-semibold mb-3">Added Knowledge Bases ({{ configuredAgenticRAGs.length }})</h6>
+              <div class="row g-3">
+                <div *ngFor="let rag of configuredAgenticRAGs" class="col-12">
+                  <div class="card border rounded-2 p-3" style="background-color: #f9f9f9;">
+                    <div class="d-flex justify-content-between align-items-start">
+                      <div class="flex-grow-1">
+                        <div class="fw-semibold fs-13 mb-2">{{ rag.name }}</div>
+                        <div class="row g-2 fs-12">
+                          <div class="col-6">
+                            <span class="text-muted">Chunks:</span> <strong>{{ rag.numberOfChunks }}</strong>
+                          </div>
+                          <div class="col-6">
+                            <span class="text-muted">Type:</span> <strong>{{ rag.retrievalType }}</strong>
+                          </div>
+                          <div class="col-6">
+                            <span class="text-muted">Threshold:</span> <strong>{{ rag.scoreThreshold.toFixed(2) }}</strong>
+                          </div>
+                        </div>
+                      </div>
+                      <button type="button" class="btn btn-sm btn-danger border-0 fs-12 ms-2"
+                        (click)="removeAgenticRAG(rag.id)">
+                        <i class="fa-solid fa-trash"></i>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div *ngIf="configuredAgenticRAGs.length === 0" class="alert alert-info fs-12 mb-0">
+              <i class="fa-solid fa-info-circle me-2"></i> Add at least one Knowledge Base to configure Agentic RAG
+            </div>
+          </ng-container>
+        </form>
+      </div>
+      <div class="modal-footer border-top bg-light">
+        <button type="button" class="btn btn-sm bg-white border fs-12" data-bs-dismiss="modal" (click)="resetKGConfigForm()">
+          Cancel
+        </button>
+        <button type="button" class="btn btn-sm btn-primary bg-orange border-0 fs-12" 
+          *ngIf="kgConfigForm.get('kgType')?.value === 'RAG'"
+          (click)="saveKGConfiguration()">
+          Save
+        </button>
+        <button type="button" class="btn btn-sm btn-primary bg-orange border-0 fs-12" 
+          *ngIf="kgConfigForm.get('kgType')?.value === 'Agentic RAG'"
+          (click)="saveAgenticRAGConfiguration()"
+          [disabled]="configuredAgenticRAGs.length === 0">
+          Save Configuration
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Configure Tools Modal -->
+<div class="modal fade" id="configureToolsModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="configureToolsLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header bg-white border-bottom">
+        <div>
+          <h5 class="modal-title fw-semibold fs-14" id="configureToolsLabel">Add tool</h5>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" (click)="resetToolsConfigForm()"></button>
+      </div>
+      <div class="modal-body p-4">
+        <form [formGroup]="toolsConfigForm">
+          <!-- Tool Selection -->
+          <div class="mb-4">
+            <label class="form-label fs-14 fw-semibold mb-2">Configure Tool <span class="text-danger">*</span></label>
+            <div class="input-group">
+              <select class="form-select fs-12" formControlName="toolId">
+                <option value="" disabled selected>Select tool</option>
+                <option *ngFor="let tool of toolsFromLyzr" [value]="tool.tool_id">{{ tool.tool_name }}</option>
+              </select>
+              <button class="btn btn-outline-secondary fs-12" type="button" (click)="refreshTools()">
+                <i class="fa-solid fa-arrows-rotate"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Tool Configuration Settings -->
+          <div class="mb-4" *ngIf="toolsConfigForm.get('toolId')?.value">
+          </div>
+
+          <!-- Configure More Tools Link -->
+          <div class="mb-3">
+            <a href="javascript:void(0)" class="text-primary fs-12" (click)="openConfigureMoreTools()">
+              Configure more tools
+              <i class="fa-solid fa-arrow-up-right ms-1"></i>
+            </a>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer border-top bg-light">
+        <button type="button" class="btn btn-sm bg-white border fs-12" data-bs-dismiss="modal" (click)="resetToolsConfigForm()">
+          Cancel
+        </button>
+        <button type="button" class="btn btn-sm btn-primary bg-dark border-0 fs-12" 
+          (click)="connectTool()" [disabled]="!toolsConfigForm.get('toolId')?.value">
+          Connect
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Configure Data Query Modal -->
+<div class="modal fade" id="configureDataQueryModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="configureDataQueryLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header bg-white border-bottom">
+        <div>
+          <h5 class="modal-title fw-semibold fs-14" id="configureDataQueryLabel">Configure Data Query</h5>
+          <p class="text-muted fs-12 mb-0 mt-1">Answers questions instantly by querying and reading data from your data source</p>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" (click)="resetDataQueryConfigForm()"></button>
+      </div>
+      <div class="modal-body p-4">
+        <form [formGroup]="dataQueryConfigForm">
+          <!-- Semantic Data Model Selection -->
+          <div class="mb-4">
+            <label class="form-label fs-14 fw-semibold mb-2">
+              Semantic Data Model
+              <span class="text-danger">*</span>
+            </label>
+            <div class="input-group">
+              <select class="form-select fs-12" formControlName="semanticDataModelId">
+                <option value="" disabled selected>No agents to select</option>
+                <option *ngFor="let agent of semanticDataModels" [value]="agent._id">{{ agent.collection_name }}</option>
+              </select>
+              <button class="btn btn-outline-secondary fs-12" type="button" (click)="refreshSemanticModels()">
+                <i class="fa-solid fa-arrows-rotate"></i>
+              </button>
+            </div>
+            <a href="javascript:void(0)" class="text-primary fs-12 mt-2 d-inline-block" (click)="openCreateSemanticModel()">
+              Create New
+              <i class="fa-solid fa-arrow-up-right ms-1"></i>
+            </a>
+          </div>
+
+          <!-- Maximum Number of Tries -->
+          <div class="row mb-4">
+            <div class="col-md-6">
+              <label class="form-label fs-14 fw-semibold mb-2">
+                Maximum number of tries
+                <i class="fa-solid fa-circle-info text-muted ms-1" [title]="'Number of attempts to query the data source'"></i>
+              </label>
+              <input type="number" class="form-control fs-12" formControlName="maxTries" 
+                placeholder="3" min="1" max="10" />
+            </div>
+            <!-- Generation Time Limit -->
+            <div class="col-md-6">
+              <label class="form-label fs-14 fw-semibold mb-2">
+                Generation time limit (seconds)
+                <i class="fa-solid fa-circle-info text-muted ms-1" [title]="'Maximum time allowed for query execution'"></i>
+              </label>
+              <input type="number" class="form-control fs-12" formControlName="generationTimeLimit" 
+                placeholder="60" min="1" />
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer border-top bg-light">
+        <button type="button" class="btn btn-sm bg-white border fs-12" data-bs-dismiss="modal" (click)="resetDataQueryConfigForm()">
+          Cancel
+        </button>
+        <button type="button" class="btn btn-sm btn-primary bg-dark border-0 fs-12" 
+          (click)="saveDataQueryConfiguration()">
+          Save
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Configure Memory Modal -->
+<div class="modal fade" id="configureMemoryModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="configureMemoryLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header bg-white border-bottom">
+        <h5 class="modal-title fw-semibold fs-14" id="configureMemoryLabel">Configure Memory</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" (click)="resetMemoryConfigForm()"></button>
+      </div>
+      <div class="modal-body p-4">
+        <form [formGroup]="memoryConfigForm">
+          <!-- Memory Provider Selection -->
+          <div class="mb-4">
+            <label class="form-label fs-14 fw-semibold mb-2">
+              Memory Provider <span class="text-danger">*</span>
+            </label>
+            <div class="d-flex align-items-center gap-2">
+              <select class="form-select fs-12 flex-grow-1" formControlName="memoryProvider">
+                <option value="" disabled selected>Select Memory Provider</option>
+                <option *ngFor="let provider of providerMemoryFromLyzr" [value]="provider._id">{{ provider.provider_id }}</option>
+              </select>
+            </div>
+            <a href="javascript:void(0)" class="text-primary fs-12 mt-2 d-inline-block">
+              Advanced
+              <i class="fa-solid fa-arrow-up-right ms-1"></i>
+            </a>
+          </div>
+          <!-- Extraction Instructions -->
+          <div class="mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <label class="form-label fs-14 fw-semibold mb-0">Extraction Instructions</label>
+              <span class="text-muted fs-11">
+                {{ (memoryConfigForm.get('extractionInstructions')?.value?.length || 0) }}/2000
+              </span>
+            </div>
+            <textarea 
+              class="form-control fs-12" 
+              rows="5" 
+              formControlName="extractionInstructions"
+              placeholder="e.g. Focus on extracting medication names, dosages, and schedules. Ignore casual greetings and small talk."
+              maxlength="2000">
+            </textarea>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer border-top bg-light">
+        <button type="button" class="btn btn-sm bg-white border fs-12" data-bs-dismiss="modal" (click)="resetMemoryConfigForm()">
+          Cancel
+        </button>
+        <button type="button" class="btn btn-sm btn-primary bg-orange border-0 fs-12" 
+          (click)="saveMemoryConfiguration()" [disabled]="memoryConfigForm.invalid">
+          Save
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Configure Context Modal -->
+<div class="modal fade" id="configureContextModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="configureContextLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header bg-white border-bottom">
+        <div class="w-100">
+          <div class="d-flex justify-content-between align-items-start mb-2">
+            <h5 class="modal-title fw-semibold fs-14" id="configureContextLabel">Context Configuration</h5>
+            <a href="javascript:void(0)" class="text-primary fs-12 fw-semibold text-decoration-none" (click)="openManageContexts()">
+              Manage Contexts
+              <i class="fa-solid fa-arrow-up-right ms-1"></i>
+            </a>
+          </div>
+          <p class="text-muted fs-12 mb-0">Select a context to provide additional information to your agent.</p>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" (click)="resetContextConfigForm()"></button>
+      </div>
+      <div class="modal-body p-4">
+        <form [formGroup]="contextConfigForm">
+          <!-- Context Selection -->
+          <div class="mb-4">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+              <label class="form-label fs-14 fw-semibold mb-0">Select Context</label>
+            </div>
+            <div class="input-group">
+              <select class="form-select fs-12" formControlName="context_id">
+                <option value="" disabled selected>Select a context</option>
+                <option *ngFor="let context of contextsFromLyzr" [value]="context._id">{{ context.name }}</option>
+              </select>
+              <button class="btn btn-outline-secondary fs-12" type="button" (click)="refreshContexts()">
+                <i class="fa-solid fa-arrows-rotate"></i>
+              </button>
+            </div>
+            
+            <small class="text-muted fs-12 d-block mt-2" *ngIf="!contextsFromLyzr || contextsFromLyzr.length === 0">
+              No contexts available. 
+              <a href="javascript:void(0)" class="text-primary" (click)="openManageContexts()">Create one</a>
+            </small>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer border-top bg-light">
+        <button type="button" class="btn btn-sm bg-white border fs-12" data-bs-dismiss="modal" (click)="resetContextConfigForm()">
+          Cancel
+        </button>
+        <button type="button" class="btn btn-sm btn-primary bg-orange border-0 fs-12" 
+          (click)="saveContextConfiguration()" [disabled]="!contextConfigForm.get('context_id')?.value">
+          Save Configuration
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Prompt Builder Modal (Chatbot Window) -->
+<div class="modal fade" id="promptBuilderModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="promptBuilderLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered prompt-builder-modal">
+    <div class="modal-content prompt-builder-content">
+      <div class="modal-header prompt-builder-header">
+        <h4 class="modal-title fw-semibold fs-14" id="promptBuilderLabel">Prompt Builder</h4>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body prompt-builder-body" [formGroup]="promptBuilderForm">
+        <!-- Chat Messages Container -->
+        <div class="prompt-messages-container">
+          <!-- AI Initial Message -->
+          <div class="prompt-message ai-message">
+            <div class="message-content">
+              <p class="mb-0">What kind of agent would you like to build? I can help you write the agent goal, role and instructions!</p>
+            </div>
+          </div>
+
+          <!-- Context/Status Message -->
+          <div class="prompt-context-message" *ngIf="promptBuilderContext">
+            <div class="context-box">
+              <p class="context-label mb-1">{{ promptBuilderContext }}</p>
+            </div>
+          </div>
+
+          <!-- User Messages (Dynamic) -->
+          <div *ngFor="let msg of promptBuilderMessages" [ngClass]="msg.type === 'user' ? 'prompt-message user-message' : 'prompt-message ai-message'">
+            <div class="message-content">
+              <p class="mb-0">{{ msg.content }}</p>
+            </div>
+            <button *ngIf="msg.type === 'ai' && msg.json_response" class="btn btn-sm btn-outline-secondary use-this-prompt-btn mt-2" (click)="useThisPrompt(msg.json_response)" [disabled]="isPromptLoading">
+              Use this prompt
+            </button>
+          </div>
+          <!-- Thinking message shown while prompt is being generated -->
+          <div *ngIf="isPromptLoading" class="prompt-message ai-message thinking-message">
+            <div class="message-content">
+              <p class="mb-0"><i class="fa-solid fa-spinner fa-spin me-2"></i>Thinking...</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Input Section -->
+        <div class="prompt-input-section">
+          <div class="input-group">
+            <input 
+              type="text" 
+              class="form-control prompt-input" 
+              placeholder="Type your query here..."
+              formControlName="userQuery"
+              (keyup.enter)="sendPromptQuery()"
+              autocomplete="off" />
+            <button 
+              class="btn btn-primary prompt-send-btn" 
+              type="button" 
+              (click)="sendPromptQuery()"
+              [disabled]="!promptBuilderForm.get('userQuery')?.value || isPromptLoading">
+              <i class="fa-solid fa-paper-plane"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- Version History Modal -->
+<div class="modal fade" id="versionHistoryModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="versionHistoryLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h1 class="modal-title fs-14 fw-semibold" id="versionHistoryLabel">Version History</h1>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="table-responsive fs-12">
+          <table class="table table-hover ">
+            <thead class="table-light fw-semibold">
+              <tr>
+                <th>Version</th>
+                <th>Created At</th>
+                <th>Created By</th>
+                <th>Execution Count</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let version of versionHistory">
+                <td class="fw-semibold">{{ version.version }}</td>
+                <td>{{ extractDate(version.updated_ts) | date : 'MMM dd, yyyy HH:mm:ss' }}</td>
+                <td>{{ version.updated_by }}</td>
+                <td>{{ version.execution_count }}</td>
+                <!-- <td>
+                  <span class="badge" [ngClass]="{
+                    'bg-success': version.status === 'active',
+                    'bg-secondary': version.status === 'inactive',
+                    'bg-warning': version.status === 'pending'
+                  }">
+                    {{ version.status }}
+                  </span>
+                </td> -->
+                <td>
+                  <button class="btn btn-sm btn-sensitive fs-12" (click)="loadVersionDetails(version)" title="Select Version">
+                    Select
+                  </button>
+                  <!-- <button class="btn btn-sm btn-primary me-2" [disabled]="!isPrivilegeEdit" 
+                    (click)="loadVersionDetails(version)" title="View Details">
+                    <i class="fa-solid fa-eye"></i>
+                  </button> -->
+                  <!-- <button class="btn btn-sm btn-danger" [disabled]="!isPrivilegeDelete || version.status === 'active'" 
+                    (click)="deleteVersion(version)" title="Delete">
+                    <i class="fa-solid fa-trash"></i>
+                  </button> -->
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-sm btn-primary bg-orange border-0 fs-12" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+

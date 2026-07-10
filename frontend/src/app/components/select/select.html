@@ -1,0 +1,44 @@
+<popover
+  [(isOpen)]="isOpen"
+  [attr.popover-width]="parentWidth() ? 'parent' : 'auto'"
+  [disabled]="disabled()"
+>
+  <div
+    trigger
+    class="label"
+    [class]="classes()?.label"
+    [class.select-placeholder]="!selectedLabel()"
+    [attr.aria-expanded]="isOpen()"
+    [class.disabled]="disabled()"
+  >
+    <span>{{ selectedLabel() || placeholder() }}</span>
+    <span class="icon">
+      <i class="fa-solid fa-chevron-down"></i>
+    </span>
+  </div>
+  <div content class="dropdown" [class]="classes()?.dropdown">
+    @if (allowSearch()) {
+      <input
+        type="text"
+        [(ngModel)]="search"
+        class="search"
+        [class]="classes()?.search"
+        placeholder="Search..."
+      />
+    }
+    <div class="options" [class]="classes()?.options">
+      @for (item of filtered(); track $index) {
+        <div
+          (click)="this.handleSelect(item)"
+          class="option"
+          [class]="classes()?.option"
+        >
+          {{ item.label }}
+        </div>
+      }
+      @if (!filtered().length) {
+        <div class="option text-center">No options found</div>
+      }
+    </div>
+  </div>
+</popover>

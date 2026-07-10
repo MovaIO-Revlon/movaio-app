@@ -1,0 +1,300 @@
+{
+  "Testcase hotspots": {
+    "agent_execution": {
+      "Testcase hotspots": {
+        "date_range_applied": "2000-01-01 to 2026-04-07",
+        "summary": "Test case hotspots from 2000-01-01 to 2026-04-07 (full date range applied, 100 records from kyc_testcase_data index). Grouped by category, ranked by total failure_count.",
+        "top_hotspots": [
+          {
+            "failure_rate_percentage": 1.7,
+            "hotspot_area": "UI",
+            "key_insights": "UI category has most test cases and highest aggregated failure count, indicating more UI-related usability and visual regression checks are tested and sometimes fail.",
+            "matching_test_cases": [
+              {
+                "execution_count": 30,
+                "failure_count": 3,
+                "priority": "Medium",
+                "status": "Passed",
+                "test_case_id": "TC_011",
+                "title": "Verify responsive design mobile view"
+              }
+            ],
+            "rank": 1,
+            "test_case_count": 20,
+            "total_failure_count": 11
+          }
+        ]
+      }
+    }
+  },
+  "Testcase Impacted": {
+    "agent_execution": {
+      "Testcase Impacted": {
+        "date_range_applied": "2000-01-01 to 2026-04-07",
+        "filter_applied": "full set",
+        "impacted_test_cases": [
+          {
+            "epic": "Making KYC Simple and Friendly",
+            "execution_count": 19,
+            "failure_count": 4,
+            "feature": "Non-Functional Requirements",
+            "key_insights": "Highest failure count among all test cases in the period. Failed test on print CSS for form functionality; stability and reliability risks present.",
+            "last_executed": "2026-02-20T00:00:00",
+            "priority": "Low",
+            "rank": 1,
+            "status": "Failed",
+            "test_case_id": "TC_091",
+            "title": "Print form functionality check",
+            "use_case": "Responsive Design"
+          }
+        ],
+        "summary": "Impacted test cases from 2000-01-01 to 2026-04-07 for index 'kyc_testcase_data'. All test cases were filtered using the 'created' and 'last_executed' fields to fall within this date range. Full set used as no specific impacted feature/epic/use_case was given."
+      }
+    }
+  },
+  "Testcase prioritization": {
+    "agent_execution": {
+      "Testcase prioritization": {
+        "date_range_applied": "2000-01-01 to 2026-04-07",
+        "filter_applied": "full set",
+        "prioritized_test_cases": [
+          {
+            "business_criticality_score": 70,
+            "epic": "Making KYC Simple and Friendly",
+            "execution_count": 53,
+            "failure_count": 4,
+            "failure_rate_percentage": 7.5,
+            "feature": "Comprehensive Form Validation",
+            "impact_explanation": "Targets core Form Submission path in 'Comprehensive Form Validation' feature, critical to user completion flow.",
+            "impact_relevance_score": 100,
+            "overall_priority_score": 72,
+            "prioritization_reason": "Highest failure count in the dataset.",
+            "priority": "Medium",
+            "rank": 1,
+            "risk_score": 64,
+            "status": "Failed",
+            "test_case_id": "TC_050",
+            "title": "Form submission network timeout",
+            "use_case": "Form Submission"
+          }
+        ],
+        "summary": "Test case prioritization for all features/epics/use_cases from 2000-01-01 to 2026-04-07 in index 'kyc_testcase_data'. Ranked by failure_count, execution_count, and priority."
+      }
+    }
+  },
+  "Potential automation": {
+    "agent_execution": {
+      "Potential automation": {
+        "automation_use_cases": [
+          {
+            "application": "KYC Plus",
+            "automation_feasibility": {
+              "overall_automation_score": 100,
+              "repeatability_score": 100,
+              "stability_score": 100,
+              "technical_feasibility_score": 100
+            },
+            "automation_title": "Automate end-to-end US and India KYC full flow",
+            "category": "E2E",
+            "description": "This E2E test covers all critical KYC user flows across both US and India; ideal for stable and repeatable regression automation due to high execution and zero recent failures.",
+            "epic": "Making KYC Simple and Friendly",
+            "estimated_automation_effort": "Low",
+            "execution_profile": {
+              "execution_count": 68,
+              "failure_count": 0,
+              "failure_rate_percentage": 0,
+              "last_executed": "2026-02-27T00:00:00"
+            },
+            "feature": "Comprehensive Form Validation",
+            "potential_impact": "Covers all business critical paths, enables fast full KYC regression on every release",
+            "priority": "High",
+            "rank": 1,
+            "roi_estimate": "High ROI",
+            "status": "Passed",
+            "test_case_id": "TC_100",
+            "title": "Overall regression full US + India flow",
+            "use_case": "Form Submission"
+          }
+        ],
+        "date_range_applied": "2000-01-01 to 2026-04-07",
+        "summary": "Potential automation use cases from 2000-01-01 to 2026-04-07 for index 'kyc_testcase_data'; filter applied to all test cases in this date range.",
+        "test_case_filter_applied": "full set"
+      }
+    }
+  },
+  "duplicate test cases": {
+    "agent_execution": {
+      "duplicate test cases": {
+        "optimization_findings": [
+          {
+            "affected_test_cases": [
+              {
+                "application": "Identity & Access Management",
+                "execution_count": 0,
+                "feature": "",
+                "last_executed": "2026-01-15",
+                "priority": "High",
+                "status": "Closed",
+                "test_case_id": "TKT-1129",
+                "title": "Password expired - cannot login to email",
+                "use_case": ""
+              }
+            ],
+            "analysis_details": {
+              "key_differences": [],
+              "obsolete_indicators": [],
+              "overlapping_areas": [
+                "Title",
+                "Description",
+                "Category",
+                "Status"
+              ],
+              "similarity_type": "exact_match"
+            },
+            "confidence_score": 100,
+            "finding_category": "exact_duplicate",
+            "finding_id": "duplicate_01",
+            "optimization_recommendation": {
+              "action_priority": "high",
+              "expected_optimization_benefit": "Reduces redundant identity reset coverage for password expiry in email login.",
+              "justification": "Identical test titles and nearly identical descriptions covering the same workflow, differing only in field details and status. Recommend merge and update for consistency.",
+              "recommended_action": "merge"
+            }
+          }
+        ],
+        "summary": {
+          "exact_duplicate_groups": 2,
+          "optimization_candidates": 5,
+          "potentially_obsolete_tests": 0,
+          "semantic_similarity_groups": 3,
+          "total_records_analyzed": 105
+        }
+      },
+      "errors": [],
+      "overview": {
+        "date_range": "2000-01-01 – 2026-05-25",
+        "generated_at": "2026-05-26T06:53:33",
+        "timezone": "Asia/Kolkata",
+        "title": "Full Incident Overview"
+      }
+    }
+  },
+  "evaluate test case quality": {
+    "agent_execution": {
+      "errors": [],
+      "evaluate test case quality": {
+        "evaluations_table_data": [
+          {
+            "identified_issues": [
+              "Missing explicit test steps",
+              "Expected results not stated",
+              "Feature/epic/use_case fields missing"
+            ],
+            "overall_quality_score": 69,
+            "quality_badge": "Needs Improvement",
+            "suggested_improvements": [
+              "Add sequential test steps clarifying the process of loss identification and recovery",
+              "Define expected outcomes for each key action"
+            ],
+            "test_case_id": "TKT-1001",
+            "title": "Complete loss of network v***@**.com connectivity in Building A - 3rd Floor",
+            "ui_indicators": {
+              "completeness_indicator": "Partial",
+              "coverage_indicator": "Basic",
+              "readability_indicator": "Partial",
+              "traceability_indicator": "Fail"
+            }
+          }
+        ],
+        "summary_charts_data": {
+          "average_quality_score": 67,
+          "quality_tier_distribution": {
+            "acceptable": 7,
+            "excellent": 0,
+            "needs_improvement": 74,
+            "poor": 24
+          },
+          "top_identified_gaps": [
+            "Missing test steps and expected results",
+            "Unclear or incomplete descriptions in most entries",
+            "Traceability fields missing: feature, use_case, epic",
+            "Coverage indicator is Basic/Inadequate for most cases due to lack of validation detail",
+            "Business logic and validation intent not explicit"
+          ],
+          "total_test_cases_evaluated": 105
+        }
+      },
+      "overview": {
+        "date_range": "2000-01-01 – 2026-05-25",
+        "generated_at": "2026-05-27T05:43:29",
+        "timezone": "Asia/Kolkata",
+        "title": "Full Incident Overview"
+      }
+    }
+  },
+  "Potential regression testsuite": {
+    "agent_execution": {
+      "Potential regression testsuite": {
+        "coverage_distribution": {
+          "by_application": {
+            "KYC Plus": 100
+          },
+          "by_feature": {
+            "Comprehensive Form Validation": 19,
+            "Document Verification": 5,
+            "India Regional Compliance": 13,
+            "Non-Functional Requirements": 8,
+            "Personal Information Collection": 15,
+            "Secure User Authentication": 15,
+            "Smart Document Processing": 11,
+            "US Regional Compliance": 13
+          },
+          "risk_levels": {
+            "high": 24,
+            "low": 28,
+            "medium": 48
+          },
+          "total_tests_selected": 100
+        },
+        "date_range_applied": "2000-01-01 to 2026-04-07",
+        "regression_strategy": {
+          "exclusions": [
+            "Deprecated/Obsolete statuses (none present)",
+            "Blocked or removed flows (none present)"
+          ],
+          "selection_criteria": [
+            "High priority first",
+            "Business-critical user flows from features/epics",
+            "High execution frequency (top quartiles prioritized)",
+            "Stability threshold: <= 20% recent failure rate"
+          ]
+        },
+        "regression_suite": [
+          {
+            "application": "KYC Plus",
+            "business_criticality_score": 100,
+            "epic": "Making KYC Simple and Friendly",
+            "execution_history": {
+              "execution_count": 68,
+              "failure_count": 0,
+              "failure_rate_percentage": 0,
+              "last_executed": "2026-02-27T00:00:00"
+            },
+            "feature": "Comprehensive Form Validation",
+            "justification": "High priority, maximum execution count, covers all critical regression flows, no failures in history, core end-to-end coverage.",
+            "priority": "High",
+            "rank": 1,
+            "recommended_execution_frequency": "Daily",
+            "regression_candidate_score": 82,
+            "status": "Passed",
+            "technical_risk_score": 55,
+            "test_case_id": "TC_100",
+            "title": "Overall regression full US + India flow",
+            "use_case": "Form Submission"
+          }
+        ],
+        "summary": "Potential regression suite built from kyc_testcase_data between 2000-01-01 and 2026-04-07. High and medium priority, core and frequently executed test cases included, targeting <= 20% recent failure rate. Obsolete/Deprecated/Removed statuses not present."
+      }
+    }
+  }
+}

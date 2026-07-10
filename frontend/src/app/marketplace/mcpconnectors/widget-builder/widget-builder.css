@@ -1,0 +1,46 @@
+:host {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  height: calc(100dvh - 190px);
+}
+
+.preview-section app-widget-card,
+.preview-section app-accordion-widget,
+.preview-section app-card-widget {
+  width: 100%;
+  max-width: 600px;
+}
+
+.empty-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 4rem 2rem;
+  text-align: center;
+  color: #a0aec0;
+}
+
+.empty-preview svg {
+  opacity: 0.3;
+}
+
+.empty-preview h3 {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #4a5568;
+}
+
+.empty-preview p {
+  margin: 0;
+  font-size: 0.6rem;
+  color: #718096;
+}
+
+canvas {
+  max-width: 100%;
+  max-height: 400px;
+}

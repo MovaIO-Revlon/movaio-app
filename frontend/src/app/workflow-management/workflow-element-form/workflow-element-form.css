@@ -1,0 +1,140 @@
+.workflow-element-form {
+  width: 19.188rem;
+  height: 26.875rem;
+  max-height: 65dvh;
+  box-shadow: 0px 4px 8px -1px #0000001a;
+  background: white;
+  border-radius: 0.313rem;
+
+  position: absolute;
+  right: 0.625rem;
+  bottom: 0.625rem;
+
+  display: flex;
+  flex-direction: column;
+}
+
+.workflow-element-form .title,
+.content,
+.footer {
+  padding: 0.875rem 0.938rem;
+}
+
+.workflow-element-form .title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-family: "Fira Sans", system-ui, sans-serif;
+  font-weight: 500;
+  font-style: Medium;
+  line-height: 100%;
+}
+
+.workflow-element-form .title button {
+  height: 1.5rem;
+  width: 1.5rem;
+  display: grid;
+  place-content: center;
+  border: 0;
+  background: none;
+}
+
+.workflow-element-form .content {
+  border-top: 1px solid #e1e0e3;
+  border-bottom: 1px solid #e1e0e3;
+  flex: 1;
+  overflow: auto;
+}
+
+.workflow-element-form .footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.workflow-element-form .footer button.delete {
+  border-radius: 0.75rem;
+  border: 1px solid #e4e4e4;
+  display: grid;
+  place-content: center;
+  height: 2.375rem;
+  width: 2.375rem;
+  color: #262e2b;
+}
+
+.workflow-element-form .footer button.action {
+  background-color: #ffa242 !important;
+  color: #ffffff !important;
+  border: 1.5px solid #ffffff;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.workflow-element-form .form-label {
+  font-family: "Fira Sans", system-ui, sans-serif;
+  font-weight: 500;
+  font-style: Medium;
+  font-size: 0.875rem;
+  line-height: 100%;
+  letter-spacing: 0%;
+}
+
+.workflow-element-form .section-card {
+  border: 1px solid #e1e0e3;
+  border-radius: 0.313rem;
+  background: #fff;
+  padding: 0.938rem;
+}
+
+.workflow-element-form .section-card .title {
+  font-family: "Fira Sans", system-ui, sans-serif;
+  font-weight: 500;
+  font-style: Medium;
+  font-size: 0.875rem;
+  margin-bottom: 0.438rem;
+  padding: 0;
+  line-height: 100%;
+  letter-spacing: 0%;
+}
+
+.workflow-element-form .section-card .title-2 {
+  display: flex;
+  justify-content: space-between;
+  font-family: "Fira Sans", system-ui, sans-serif;
+  font-weight: 500;
+  font-style: Medium;
+  line-height: 100%;
+  align-items: center;
+}
+
+.workflow-element-form .section-card .title-2 button {
+  padding: 0.5rem;
+  color: #c4c4c6;
+  border: 1px solid #e1e0e3;
+  background: #fff;
+  border-radius: 0.5rem;
+}
+
+.workflow-element-form .section-card .no-data {
+  color: #c4c4c6;
+  font-weight: 400;
+  text-align: center;
+  margin: 1.5rem 0;
+}
+
+.workflow-element-form .connected-agents-card {
+  border-color: #ffa2424d;
+  background: #ffa2421a;
+  color: #262e2b;
+}
+
+.workflow-element-form .connected-agents-card button {
+  border-radius: 0.5rem;
+  border: 1px solid #e1e0e3;
+  padding: 0.563rem 1.063rem;
+  background: #fff;
+  font-family: "Fira Sans", system-ui, sans-serif;
+  font-weight: 400;
+  font-size: 0.875rem;
+  color: #797979;
+}

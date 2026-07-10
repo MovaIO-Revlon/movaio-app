@@ -1,0 +1,92 @@
+<drawer
+  [attr.open]="open()"
+  (close)="closeModal()"
+  position="left"
+  style="--modal-width: 60rem"
+>
+  <div header>
+    <ng-content select="[header]"> </ng-content>
+
+    @if (withCloseButton()) {
+      <button class="btn-close fs-14 float-end" (click)="closeModal()"></button>
+    }
+  </div>
+
+  <div
+    body
+    class="body flex-grow-1 h-100 border rounded-3"
+    style="overflow: clip"
+  >
+    <div class="position-relative h-100 overflow-auto">
+      <table class="table mb-0 fs-14">
+        <caption class="visually-hidden">
+          Headings
+        </caption>
+        <thead>
+          <tr>
+            @for (heading of headings(); track $index) {
+              @if (!hiddenFields().includes(heading.key)) {
+                <th>
+                  <ng-container
+                    *ngTemplateOutlet="
+                      heading.headingTemplate ?? defaultHeading;
+                      context: {
+                        cell: heading?.headingTemplate
+                          ? heading
+                          : heading.label,
+                        key: heading?.key,
+                      }
+                    "
+                  >
+                  </ng-container>
+                </th>
+              }
+            }
+          </tr>
+        </thead>
+        <tbody>
+          @for (item of data(); track $index) {
+            <tr>
+              @for (heading of headings(); track $index) {
+                @if (!hiddenFields().includes(heading.key)) {
+                  @if (heading.stringTemplate) {
+                    <td [innerHTML]="renderCell(item, heading.key)"></td>
+                  } @else {
+                    <td>
+                      <ng-container
+                        *ngTemplateOutlet="
+                          heading.cellTemplate ?? defaultCell;
+                          context: {
+                            cell: heading?.cellTemplate
+                              ? item
+                              : getData(item, heading.key),
+                            key: heading?.key,
+                          }
+                        "
+                      >
+                      </ng-container>
+                    </td>
+                  }
+                }
+              }
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div footer>
+    <ng-content select="[footer]"> </ng-content>
+  </div>
+
+  <ng-content></ng-content>
+
+  <ng-template #defaultHeading let-cell="cell">
+    {{ cell }}
+  </ng-template>
+
+  <ng-template #defaultCell let-cell="cell">
+    {{ cell }}
+  </ng-template>
+</drawer>

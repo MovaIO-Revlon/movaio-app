@@ -1,0 +1,184 @@
+{
+  "top_10_issues": {
+    "agent_execution": {
+      "top_10_issues": {
+        "summary": "Top 10 issues reported from 2000-01-01 to 2026-04-16 based on incident_ticket_index1. Incident details and counts are aggregated by issue_type field.",
+        "top_issues": [
+          {
+            "incident_count": 42,
+            "issue_type": "incident",
+            "key_insights": "The majority of incidents relate to ITSM operational events—encompassing network, password, hardware, and software failures—as captured in IT support and infrastructure environments.",
+            "matching_incidents": [
+              {
+                "category": "Network Issue",
+                "date": "2025-12-04T13:00:00",
+                "description": "All workstations on the 3rd floor of Building v***@**  has A lost network connectivity at approximately 9:15 AM. Users cannot access email, shared drives, or  internet. Approximately 45 employees affected. Business operations severely impacted. Network switches appear to have power but no link lights showing on ports.",
+                "incident_id": "TKT-1001",
+                "priority": "Critical",
+                "severity": "Critical",
+                "state": "Resolved",
+                "title": "Complete loss of network v***@**.com connectivity in Building A - 3rd Floor"
+              }
+            ],
+            "rank": 1,
+            "total_downtime_minutes": 62233
+          }
+        ]
+      }
+    }
+  },
+  "top_10_applications": {
+    "agent_execution": {
+      "top_10_applications": {
+        "date_range_applied": "2000-01-01 to 2026-04-16",
+        "incident_filter_applied": "full set",
+        "summary": "Top 10 applications impacted from 2000-01-01 to 2026-04-16 in index 'incident_ticket_index1'. Analysis based on all incidents with the 'Application' field present in OpenSearch records.",
+        "top_applications": [
+          {
+            "application": "Identity & Access Management",
+            "incident_count": 8,
+            "key_insights": "Identity & Access Management had the highest number of incidents involving account lockouts, password reset issues, and access management, indicating persistent authentication and access challenges.",
+            "matching_incidents": [
+              {
+                "category": "Password Reset",
+                "created": "2025-12-16T11:30:00+00:00",
+                "date": "2025-12-16",
+                "incident_id": "TKT-1004",
+                "priority": "Low",
+                "severity": "Low",
+                "state": "Resolved",
+                "title": "Unable to login - forgot password after returning ssn 078 05 1120 from vacation"
+              }
+            ],
+            "rank": 1,
+            "total_downtime_minutes": 0
+          }
+        ]
+      }
+    }
+  },
+  "top_10_infrastructure_systems": {
+    "agent_execution": {
+      "top_10_infrastructure_systems": {
+        "date_range_applied": "2000-01-01 to 2026-04-16",
+        "summary": "Top 10 infrastructure systems impacted from 2000-01-01 to 2026-04-16, based on incidents in incident_ticket_index1.",
+        "top_infrastructure_systems": [
+          {
+            "incident_count": 4,
+            "infra_system": "Printer Hardware (Paper Jam)",
+            "key_insights": "Recurring paper jam issues affecting multiple departments. Maintenance and configuration reviews required.",
+            "matching_incidents": [
+              {
+                "category": "Printer Issue",
+                "created": "2025-12-31T06:15:00+00:00",
+                "date": "2025-12-31",
+                "incident_id": "TKT-1084",
+                "priority": "Critical",
+                "severity": "Critical",
+                "state": "On Hold",
+                "title": "Printer Dell Latitude 5420 paper jam in tray 11"
+              }
+            ],
+            "rank": 1,
+            "total_downtime_minutes": 0
+          }
+        ]
+      }
+    }
+  },
+  "Top 10 Resolutions": {
+    "agent_execution": {
+      "Top 10 Resolutions": {
+        "date_range_applied": "2000-01-01 to 2026-03-30",
+        "summary": "Top 10 Resolutions from 2000-01-01 to 2026-03-30 in abc_incident index based on incident records.",
+        "top_resolutions": [
+          {
+            "average_resolution_time_minutes": 3,
+            "incident_count": 209,
+            "key_insights": "Frequent need for password resets, often resolved by verifying EmployeeID and using Fischer, highlights opportunities to streamline or automate this process.",
+            "matching_incidents": [
+              {
+                "category": "DT",
+                "comment": "Outlook set to \"Hide\" when minimized. Remove \"Hide\" option. Close all open Outlook Windows and re-open. Working like user wants it to.",
+                "date": "2024-01-17T02:03:00+00:00",
+                "impact": "Low",
+                "incident_id": "INC0306113",
+                "matchPercentage": "100%",
+                "priority": "5 - Planning",
+                "serviceType": "",
+                "severity": "5 - Planning",
+                "title": "Outlook not functioning as normal"
+              }
+            ],
+            "rank": 1,
+            "resolution": "User needs network password reset."
+          }
+        ]
+      }
+    }
+  },
+  "Top 10 Root Causes": {
+    "agent_execution": {
+      "Top 10 Root Causes": {
+        "date_range_applied": "2000-01-01 to 2026-04-16",
+        "summary": "Most common root causes among incident_ticket_index1 records from 2000-01-01 to 2026-04-16, grouped by recurring resolution descriptions and root causes where available.",
+        "top_root_causes": [
+          {
+            "incident_count": 19,
+            "key_insights": "Recurring application errors (SAP, Salesforce, Workday, Oracle, Boomi integration, database/report issues) due to misconfigurations, connection timeouts, permission/policy changes, or code issues. Multiple cases impacting multiple users/departments with business process disruption.",
+            "matching_incidents": [
+              {
+                "category": "Application Error",
+                "created": "2025-12-24T22:00:00",
+                "date": "2025-12-24",
+                "incident_id": "TKT-1024",
+                "priority": "Critical",
+                "severity": "Critical",
+                "state": "Resolved",
+                "title": "Salesforce - Unable to create opportunities, error 'UNABLE_TO_LOCK_ROW'"
+              }
+            ],
+            "rank": 1,
+            "root_cause": "Application Error / System Misconfiguration / Integration Failure",
+            "total_downtime_minutes": 0
+          }
+        ]
+      }
+    }
+  },
+  "AI Inferences": {
+    "agent_execution": {
+      "AI Inferences": {
+        "ai_inferences": [
+          {
+            "description": "A significant majority of incidents concern password resets, account lockouts, and credential synchronization for AD, JD Edwards, SAP, UltiPro, and VPN systems, often resulting in repeated interventions for the same users and devices.",
+            "impact": "72–80% reduction in L1/L2 password reset workloads possible (high effort/high savings)",
+            "severity": "HIGH",
+            "title": "Identity/Access Issues Dominate"
+          }
+        ],
+        "date_range_applied": "2000-01-01 to 2026-03-30",
+        "incident_filter_applied": "full set",
+        "summary": "AI inferences from abc_incident index for period 2000-01-01 to 2026-03-30, full data set. Findings include identity/access dominance, VPN/infra issues, email security trends, endpoint device failures, and automation opportunities."
+      }
+    }
+  },
+  "Potential automation": {
+    "agent_execution": {
+      "Potential automation": {
+        "automation_use_cases": [
+          {
+            "automation_title": "Automated Password Reset Workflow",
+            "description": "Implement a self-service password reset tool for Active Directory and application accounts (e.g., JD Edwards, SAP, Outlook) to automate the password recovery and reset process.",
+            "incident_count": 392,
+            "potential_impact": "Reduce 60-70% of password reset/helpdesk tickets and accelerate user account recovery.",
+            "rank": 1
+          }
+        ],
+        "date_range_applied": "2000-01-01 to 2026-03-30",
+        "incident_filter_applied": "full set",
+        "summary": "Potential automation opportunities identified from incident records in index 'abc_incident' for the period 2000-01-01 to 2026-03-30 based on recurring incident and resolution patterns."
+      }
+    }
+  }
+}

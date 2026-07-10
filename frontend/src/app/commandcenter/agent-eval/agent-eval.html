@@ -1,0 +1,742 @@
+<div class="agent-eval-root">
+  <!-- Radio Tab Navigation -->
+  <div class="radio-tab-nav bg-white ms-3">
+    @for (tab of tabs; track tab.value) {
+      <label
+        class="radio-tab"
+        [class.active]="activeTab() === tab.value"
+        [class.radio-tab--disabled]="tab.value !== 'eval'"
+      >
+        <input
+          type="radio"
+          name="eval-tab"
+          [value]="tab.value"
+          [checked]="activeTab() === tab.value"
+          [disabled]="tab.value !== 'eval'"
+          (change)="onTabChange(tab.value)"
+        />
+        <span class="radio-tab__dot"></span>
+        <span class="radio-tab__text">{{ tab.label }}</span>
+      </label>
+    }
+  </div>
+
+  <!-- Tab Content: Evaluation -->
+  @if (activeTab() === 'eval') {
+    <div class="tab-content tab-content--eval">
+      <div class="form-section bg-white ms-3 mt-2">
+
+        <!-- Step 0: Select Agent -->
+        <div class="form-group form-group--full">
+          <label class="form-label" for="select-agent">
+            Select Agent <span class="required">*</span>
+          </label>
+          <div class="select-wrapper">
+            <select
+              id="select-agent"
+              class="form-select"
+              [(ngModel)]="selectedAgent"
+              (ngModelChange)="onAgentChange()"
+            >
+              <option value="" disabled>Select Agent</option>
+              <option *ngFor="let agent of agents" [value]="agent.agent_id">
+                {{ agent.name }}
+              </option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Step 1: Evaluation Type + Data Set side by side -->
+        @if (showStep1()) {
+          <div class="form-step-row">
+            <div class="form-group form-group--type">
+              <label class="form-label">
+                Evaluation Type <span class="required">*</span>
+              </label>
+              <div class="radio-group">
+                @for (type of evalTypes; track type.value) {
+                  <label
+                    class="radio-card"
+                    [class.radio-card--disabled]="type.value === 'online'"
+                  >
+                    <input
+                      type="radio"
+                      name="eval-type"
+                      [value]="type.value"
+                      [checked]="selectedEvalType() === type.value"
+                      [disabled]="type.value === 'online'"
+                      (change)="onEvalTypeChange(type.value)"
+                    />
+                    <span class="radio-card__indicator"></span>
+                    <span class="radio-card__label">{{ type.label }}</span>
+                  </label>
+                }
+              </div>
+            </div>
+
+            @if (showStep2()) {
+              <div class="form-group form-group--dataset">
+                <label class="form-label" for="data-set">Data Set<span class="required">*</span></label>
+                <div class="select-wrapper">
+                  <select
+                    id="data-set"
+                    class="form-select"
+                    [(ngModel)]="selectedDataSet"
+                    (ngModelChange)="onDataSetChange()"
+                  >
+                    <option value="" disabled>Select Data Set</option>
+                    <option value="Input/Output Data">Input/Output Data</option>
+                    <option value="Trace Data">Trace Data</option>
+                  </select>
+                </div>
+              </div>
+            }
+          </div>
+        }
+
+        <!-- Step 2: Data Input Section — conditional on dataset type -->
+        @if (showStep3()) {
+          <div class="form-step">
+
+            <!-- ==================== TRACE DATA UI ==================== -->
+            @if (isTraceData()) {
+              @for (trace of traceDataList(); track trace.id) {
+                <div class="data-pair-block">
+
+                  <!-- Wrapped in data-pair for side-by-side grid -->
+                  <div class="data-pair">
+
+                    <!-- Trace Data Column -->
+                    <div class="form-group data-pair__col">
+  <div class="label-with-btn">
+    <label class="form-label" for="trace-{{ trace.id }}">
+      Trace Data <span class="required">*</span>
+    </label>
+    <!-- <button type="button" class="btn btn-sm btn-outline-primary format-btn"
+            (click)="formatJsonField('trace-' + trace.id)">
+      <span>⟳</span> Format JSON
+    </button> -->
+  </div>
+                      <textarea
+                        id="trace-{{ trace.id }}"
+                        class="form-textarea form-textarea--code form-textarea--trace"
+                        [class.form-textarea--invalid]="isFieldInvalid('trace-' + trace.id)"
+                        rows="8"
+                        [ngModel]="trace.content"
+                        (ngModelChange)="updateTraceData(trace.id, $event)"
+                        placeholder='Paste your trace JSON here, e.g. { "trace_id": "...", "span_count": 11, "spans": [...] }'
+                      ></textarea>
+                   
+                      @if (isFieldInvalid('trace-' + trace.id)) {
+                        <div class="field-error">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"/>
+                            <line x1="12" y1="8" x2="12" y2="12"/>
+                            <line x1="12" y1="16" x2="12.01" y2="16"/>
+                          </svg>
+                          <span>{{ getJsonError('trace-' + trace.id) }}</span>
+                        </div>
+                      }
+                    </div>
+
+                    <!-- Expected Output Column -->
+                    <div class="form-group data-pair__col">
+  <div class="label-with-btn">
+    <label class="form-label" for="expected-trace-{{ trace.id }}">
+      Expected Output Data
+    </label>
+    <!-- <button type="button" class="btn btn-sm btn-outline-primary format-btn"
+            (click)="formatJsonField('expected-trace-' + trace.id)">
+      <span>⟳</span> Format JSON
+    </button> -->
+  </div>
+                      <textarea
+                        id="expected-trace-{{ trace.id }}"
+                        class="form-textarea form-textarea--code"
+                        [class.form-textarea--invalid]="isFieldInvalid('expected-trace-' + trace.id)"
+                        rows="8"
+                        [ngModel]="trace.expectedOutput"
+                        (ngModelChange)="updateTraceExpectedOutput(trace.id, $event)"
+                        placeholder='Enter valid JSON:
+{
+  "Expectation": "add what is expected output after prompt or query execution"
+}'
+                      ></textarea>
+                    
+                      @if (isFieldInvalid('expected-trace-' + trace.id)) {
+                        <div class="field-error">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"/>
+                            <line x1="12" y1="8" x2="12" y2="12"/>
+                            <line x1="12" y1="16" x2="12.01" y2="16"/>
+                          </svg>
+                          <span>{{ getJsonError('expected-trace-' + trace.id) }}</span>
+                        </div>
+                      }
+                    </div>
+                  </div>
+
+                  <!-- Actions Footer -->
+                  <div class="pair-actions pair-actions--io">
+                    <div class="pair-actions__left">
+                      <label class="upload-btn">
+                        <input type="file" accept=".json,application/json" (change)="onTraceFileUpload($event, trace.id)" />
+                        @if (isUploading('trace-' + trace.id)) {
+                          <svg class="upload-spinner" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+                          </svg>
+                          <span>Uploading...</span>
+                        } @else {
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                            <polyline points="17 8 12 3 7 8"/>
+                            <line x1="12" y1="3" x2="12" y2="15"/>
+                          </svg>
+                          <span>Upload File</span>
+                        }
+                      </label>
+                    </div>
+                                        <div class="pair-actions__center">
+                      <label class="upload-btn">
+                        <input type="file" accept=".json,application/json" (change)="onTraceExpectedFileUpload($event, trace.id)" />
+                        @if (isUploading('expected-trace-' + trace.id)) {
+                          <svg class="upload-spinner" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+                          </svg>
+                          <span>Uploading...</span>
+                        } @else {
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                            <polyline points="17 8 12 3 7 8"/>
+                            <line x1="12" y1="3" x2="12" y2="15"/>
+                          </svg>
+                          <span>Upload File</span>
+                        }
+                      </label>
+                    </div>
+                    <div class="pair-actions__right">
+                      @if (traceDataList().length > 1) {
+                        <button class="delete-pair-btn" type="button" (click)="removeTraceData(trace.id)">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="3 6 5 6 21 6"/>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                            <line x1="10" y1="11" x2="10" y2="17"/>
+                            <line x1="14" y1="11" x2="14" y2="17"/>
+                          </svg>
+                          Delete
+                        </button>
+                      }
+                      <button class="add-pair-btn" type="button" (click)="addTraceData()">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                          <line x1="12" y1="5" x2="12" y2="19"/>
+                          <line x1="5" y1="12" x2="19" y2="12"/>
+                        </svg>
+                        Add Trace Data
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              }
+            }
+
+            <!-- ==================== INPUT/OUTPUT DATA UI ==================== -->
+            @if (!isTraceData()) {
+              @for (pair of dataPairs(); track pair.id) {
+                <div class="data-pair-block">
+                  <div class="data-pair">
+<div class="form-group data-pair__col">
+  <div class="label-with-btn">
+    <label class="form-label" for="input-{{ pair.id }}">
+      Input Data <span class="required">*</span>
+    </label>
+    <!-- <button type="button" class="btn btn-sm btn-outline-primary format-btn"
+            (click)="formatJsonField('input-' + pair.id)">
+      <span>⟳</span> Format JSON
+    </button> -->
+  </div>
+                      <textarea
+                        id="input-{{ pair.id }}"
+                        class="form-textarea form-textarea--code"
+                        [class.form-textarea--invalid]="isFieldInvalid('input-' + pair.id)"
+                        rows="8"
+                        [ngModel]="pair.input"
+                        (ngModelChange)="updateInput(pair.id, $event)"
+                        placeholder='Enter valid JSON:
+{
+  "Input": "add agent prompt or query here",
+  "Expectation": "add what is expected output after prompt or query execution"
+}'
+                      ></textarea>
+                    
+                      @if (isFieldInvalid('input-' + pair.id)) {
+                        <div class="field-error">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"/>
+                            <line x1="12" y1="8" x2="12" y2="12"/>
+                            <line x1="12" y1="16" x2="12.01" y2="16"/>
+                          </svg>
+                          <span>{{ getJsonError('input-' + pair.id) }}</span>
+                        </div>
+                      }
+                    </div>
+                  <div class="form-group data-pair__col">
+  <div class="label-with-btn">
+    <label class="form-label" for="output-{{ pair.id }}">
+      Output Data <span class="required">*</span>
+    </label>
+    <!-- <button type="button" class="btn btn-sm btn-outline-primary format-btn"
+            (click)="formatJsonField('output-' + pair.id)">
+      <span>⟳</span> Format JSON
+    </button> -->
+  </div>
+                      <textarea
+                        id="output-{{ pair.id }}"
+                        class="form-textarea form-textarea--code"
+                        [class.form-textarea--invalid]="isFieldInvalid('output-' + pair.id)"
+                        rows="8"
+                        [ngModel]="pair.output"
+                        (ngModelChange)="updateOutput(pair.id, $event)"
+                        placeholder='Enter valid JSON:
+{
+  "Output": "add query output or response here"
+}'
+                      ></textarea>
+        
+                      @if (isFieldInvalid('output-' + pair.id)) {
+                        <div class="field-error">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"/>
+                            <line x1="12" y1="8" x2="12" y2="12"/>
+                            <line x1="12" y1="16" x2="12.01" y2="16"/>
+                          </svg>
+                          <span>{{ getJsonError('output-' + pair.id) }}</span>
+                        </div>
+                      }
+                    </div>
+                  </div>
+
+                  <!-- Single Row Actions -->
+                  <div class="pair-actions pair-actions--io">
+                    <div class="pair-actions__left">
+                      <label class="upload-btn">
+                        <input type="file" accept=".json,application/json" (change)="onFileUpload($event, pair.id, 'input')" />
+                        @if (isUploading('input-' + pair.id)) {
+                          <svg class="upload-spinner" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+                          </svg>
+                          <span>Uploading...</span>
+                        } @else {
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                            <polyline points="17 8 12 3 7 8"/>
+                            <line x1="12" y1="3" x2="12" y2="15"/>
+                          </svg>
+                          <span>Upload File</span>
+                        }
+                      </label>
+                    </div>
+                    <div class="pair-actions__center">
+                      <label class="upload-btn">
+                        <input type="file" accept=".json,application/json" (change)="onFileUpload($event, pair.id, 'output')" />
+                        @if (isUploading('output-' + pair.id)) {
+                          <svg class="upload-spinner" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+                          </svg>
+                          <span>Uploading...</span>
+                        } @else {
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                            <polyline points="17 8 12 3 7 8"/>
+                            <line x1="12" y1="3" x2="12" y2="15"/>
+                          </svg>
+                          <span>Upload File</span>
+                        }
+                      </label>
+                    </div>
+                    <div class="pair-actions__right">
+                      @if (dataPairs().length > 1) {
+                        <button class="delete-pair-btn" type="button" (click)="removeDataPair(pair.id)">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="3 6 5 6 21 6"/>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                            <line x1="10" y1="11" x2="10" y2="17"/>
+                            <line x1="14" y1="11" x2="14" y2="17"/>
+                          </svg>
+                          Delete
+                        </button>
+                      }
+                      <button class="add-pair-btn" type="button" (click)="addDataPair()">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                          <line x1="12" y1="5" x2="12" y2="19"/>
+                          <line x1="5" y1="12" x2="19" y2="12"/>
+                        </svg>
+                        Add Input/Output Data
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              }
+            }
+
+            <div class="action-bar">
+  <button
+    class="btn btn-primary bg-orange border-0 fs-14"
+    type="button"
+    [disabled]="hasInvalidFields() || !isSuperAdmin()"
+    [class.btn-disabled]="hasInvalidFields() || !isSuperAdmin()"
+    (click)="onEvaluate()"
+  >
+    @if (!isSuperAdmin()) {
+      Evaluate Agent
+    } @else if (hasInvalidFields()) {
+      Fix JSON Errors to Evaluate
+    } @else {
+      Evaluate Agent
+    }
+  </button>
+  @if (!isSuperAdmin()) {
+  } @else if (hasInvalidFields()) {
+    <span class="action-bar__hint">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/>
+        <line x1="12" y1="16" x2="12" y2="12"/>
+        <line x1="12" y1="8" x2="12.01" y2="8"/>
+      </svg>
+      One or more fields contain invalid JSON
+    </span>
+ 
+              }
+            </div>
+          </div>
+        }
+      </div>
+      <!-- ^^^ END of .form-section ^^^ -->
+
+      @if (evalError()) {
+        <div class="eval-error-banner bg-white ms-3 mt-2">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="15" y1="9" x2="9" y2="15"/>
+            <line x1="9" y1="9" x2="15" y2="15"/>
+          </svg>
+          <span>{{ evalError() }}</span>
+          <button class="eval-error-banner__close" type="button" (click)="evalError.set(null)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"/>
+              <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
+      }
+
+            <!-- Date-grouped Accordion -->
+      @if (isEvaluating() || showResults()) {
+        <div class="eval-runs-container bg-white ms-3 mt-2" #evalResultsContainer>
+
+          <!-- Header -->
+          <div class="eval-runs-header">
+            <div class="eval-runs-title">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#e8830c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                <polyline points="22 4 12 14.01 9 11.01"/>
+              </svg>
+              <h3>Agent Evaluation</h3>
+            </div>
+          </div>
+
+          <div class="eval-runs-accordion">
+
+            <!-- Fallback: evaluating but no results yet — show table with loading row inside same structure -->
+            @if (isEvaluating() && !showResults()) {
+              <div class="eval-run-item">
+                <div class="eval-run-body">
+                  <div class="ps-3 pe-3 eval-table-wrapper">
+                    <table class="eval-table">
+                      <thead>
+                        <tr>
+                          <th class="col-id">Case ID</th>
+                          <th class="col-input">Input</th>
+                          <th class="col-expected">Expected Output</th>
+                          <th class="col-actual">Actual Output</th>
+                          <th class="col-status"><span class="th-label">Status</span></th>
+                          <th class="col-correctness"><span class="th-label">Correctness</span></th>
+                          <th class="col-coherence"><span class="th-label">Coherence</span></th>
+                          <th class="col-relevance"><span class="th-label">Relevance</span></th>
+                          <th class="col-conciseness"><span class="th-label">Conciseness</span></th>
+                          <th class="col-safety"><span class="th-label">Safety</span></th>
+                          <th class="col-average"><span class="th-label">Average</span></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr class="eval-loading-row">
+                          <td colspan="11">
+                            <div class="eval-row-loader">
+                              <div class="eval-row-loader__spinner"></div>
+                              <span class="eval-row-loader__text">Evaluating Agent Results...</span>
+                            </div>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            }
+
+            <!-- Existing date-grouped results -->
+            @for (group of dateGroups(); track group.dateKey) {
+              <div class="eval-run-item" [class.eval-run-item--active]="isDateGroupExpanded(group.dateKey)">
+
+                <div class="eval-run-header" (click)="toggleDateGroup(group.dateKey)">
+                  <div class="eval-run-info">
+                    <div class="eval-run-datetime">
+                      <div class="eval-run-date">
+                        {{ group.dateLabel }}
+                      </div>
+                      <div class="eval-run-time">{{ getDateGroupSummary(group).latestTime }}</div>
+                    </div>
+                    <div class="eval-run-stats">
+                      <span class="stat-badge">{{ getDateGroupSummary(group).total }} Runs</span>
+                      <span class="pass-count">
+                        <span class="pass-count__dot"></span>
+                        {{ getDateGroupSummary(group).passed }} / {{ getDateGroupSummary(group).total }}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div class="eval-run-right">
+                    <div class="circular-progress">
+                      <svg viewBox="0 0 36 36" class="circular-chart">
+                        <path class="circle-bg"
+                          d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                        <path class="circle"
+                          [class.circle--medium]="getDateGroupSummary(group).passRate >= 50 && getDateGroupSummary(group).passRate < 80"
+                          [class.circle--low]="getDateGroupSummary(group).passRate < 50"
+                          [attr.stroke-dasharray]="getDateGroupSummary(group).passRate + ', 100'"
+                          d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                        <text x="18" y="18" class="percentage">{{ getDateGroupSummary(group).passRate }}%</text>
+                      </svg>
+                    </div>
+
+                    <div class="score-info-trigger">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"/>
+                        <line x1="12" y1="16" x2="12" y2="12"/>
+                        <line x1="12" y1="8" x2="12.01" y2="8"/>
+                      </svg>
+                      <div class="score-info-popup">
+                        <p class="score-info-popup__title">Metric Score Ranges</p>
+                        <ul class="score-info-popup__list">
+                          <li class="score-info-popup__item">
+                            <span class="score-info-popup__dot score-info-popup__dot--positive"></span>
+                            <span>
+                              <span class="score-info-popup__range">0.85 – 1.00</span>
+                              <span class="score-info-popup__label"> (Positive)</span>
+                            </span>
+                          </li>
+                          <li class="score-info-popup__item">
+                            <span class="score-info-popup__dot score-info-popup__dot--medium"></span>
+                            <span>
+                              <span class="score-info-popup__range">0.70 – 0.84</span>
+                              <span class="score-info-popup__label"> (Medium)</span>
+                            </span>
+                          </li>
+                          <li class="score-info-popup__item">
+                            <span class="score-info-popup__dot score-info-popup__dot--negative"></span>
+                            <span>
+                              <span class="score-info-popup__range">0.00 – 0.69</span>
+                              <span class="score-info-popup__label"> (Negative)</span>
+                            </span>
+                          </li>
+                        </ul>
+                      </div>
+                    </div>
+
+                    <div class="eval-run-chevron" [class.eval-run-chevron--open]="isDateGroupExpanded(group.dateKey)">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="6 9 12 15 18 9"/>
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+
+                @if (isDateGroupExpanded(group.dateKey)) {
+                  <div class="eval-run-body">
+                    <div class="ps-3 pe-3 eval-table-wrapper">
+                      <table class="eval-table">
+                        <thead>
+                          <tr>
+                            <th class="col-id">Case ID</th>
+                            <th class="col-input">Input</th>
+                            <th class="col-expected">Expected Output</th>
+                            <th class="col-actual">Actual Output</th>
+                            <th class="col-status" [appTooltip]="getMetricDefinition('status')">
+                              <span class="th-label">Status</span>
+                            </th>
+                            <th class="col-correctness" [appTooltip]="getMetricDefinition('correctness')">
+                              <span class="th-label">Correctness</span>
+                            </th>
+                            <th class="col-coherence" [appTooltip]="getMetricDefinition('coherence')">
+                              <span class="th-label">Coherence</span>
+                            </th>
+                            <th class="col-relevance" [appTooltip]="getMetricDefinition('relevance')">
+                              <span class="th-label">Relevance</span>
+                            </th>
+                            <th class="col-conciseness" [appTooltip]="getMetricDefinition('conciseness')">
+                              <span class="th-label">Conciseness</span>
+                            </th>
+                            <th class="col-safety" [appTooltip]="getMetricDefinition('safety')">
+                              <span class="th-label">Safety</span>
+                            </th>
+                            <th class="col-average" [appTooltip]="getMetricDefinition('average')">
+                              <span class="th-label">Average</span>
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <!-- Loading row — first row inside the existing table -->
+                          @if (isEvaluating()) {
+                            <tr class="eval-loading-row">
+                              <td colspan="11">
+                                <div class="eval-row-loader">
+                                  <div class="eval-row-loader__spinner"></div>
+                                  <span class="eval-row-loader__text">Evaluating Agent results...</span>
+                                </div>
+                              </td>
+                            </tr>
+                          }
+
+                          @for (result of group.results; track result.runId + result.testCaseId) {
+                            <tr>
+                              <td class="col-id">{{ result.testCaseId }}</td>
+                              <td class="col-input">
+                                <div class="cell-text-block" [class.cell-text-block--expanded]="isCellExpanded(result.runId + '-' + result.testCaseId + '-input')">
+                                  <span class="cell-text-content" [title]="result.input">{{ result.input }}</span>
+                                  @if (result.input && result.input.length > 80) {
+                                    <button class="see-more-btn" type="button" (click)="toggleCellExpand(result.runId + '-' + result.testCaseId + '-input')">
+                                      {{ isCellExpanded(result.runId + '-' + result.testCaseId + '-input') ? 'See Less' : 'See More' }}
+                                    </button>
+                                  }
+                                </div>
+                              </td>
+                              <td class="col-expected">
+                                <div class="cell-text-block" [class.cell-text-block--expanded]="isCellExpanded(result.runId + '-' + result.testCaseId + '-expected')">
+                                  <span class="cell-text-content" [title]="result.expectedOutput">{{ result.expectedOutput }}</span>
+                                  @if (result.expectedOutput && result.expectedOutput.length > 80) {
+                                    <button class="see-more-btn" type="button" (click)="toggleCellExpand(result.runId + '-' + result.testCaseId + '-expected')">
+                                      {{ isCellExpanded(result.runId + '-' + result.testCaseId + '-expected') ? 'See Less' : 'See More' }}
+                                    </button>
+                                  }
+                                </div>
+                              </td>
+                              <td class="col-actual">
+                                <div class="cell-text-block" [class.cell-text-block--expanded]="isCellExpanded(result.runId + '-' + result.testCaseId + '-actual')">
+                                  <span class="cell-text-content" [title]="result.actualOutput">{{ result.actualOutput }}</span>
+                                  @if (result.actualOutput && result.actualOutput.length > 80) {
+                                    <button class="see-more-btn" type="button" (click)="toggleCellExpand(result.runId + '-' + result.testCaseId + '-actual')">
+                                      {{ isCellExpanded(result.runId + '-' + result.testCaseId + '-actual') ? 'See Less' : 'See More' }}
+                                    </button>
+                                  }
+                                </div>
+                              </td>
+                              <td class="col-status">
+                                <span class="status-badge" [appTooltip]="getRationaleTooltip(result.statusRationale)" [class]="getStatusClass(result.status)">{{ result.status }}</span>
+                              </td>
+                              <td class="col-correctness" [appTooltip]="getRationaleTooltip(result.correctnessRationale)">
+                                <span [class]="getScoreBadgeClass(result.correctness)">{{ result.correctness }}</span>
+                              </td>
+                              <td class="col-coherence" [appTooltip]="getRationaleTooltip(result.coherenceRationale)">
+                                <span [class]="getScoreBadgeClass(result.coherence)">{{ result.coherence }}</span>
+                              </td>
+                              <td class="col-relevance" [appTooltip]="getRationaleTooltip(result.relevanceRationale)">
+                                <span [class]="getScoreBadgeClass(result.relevance)">{{ result.relevance }}</span>
+                              </td>
+                              <td class="col-conciseness" [appTooltip]="getRationaleTooltip(result.concisenessRationale)">
+                                <span [class]="getScoreBadgeClass(result.conciseness)">{{ result.conciseness }}</span>
+                              </td>
+                              <td class="col-safety" [appTooltip]="getRationaleTooltip(result.safetyRationale)">
+                                <span [class]="getScoreBadgeClass(result.safety)">{{ result.safety }}</span>
+                              </td>
+                              <td class="col-average" [appTooltip]="getAverageTooltip(result)">
+                                <span [class]="getScoreBadgeClass(result.average)" style="font-weight: 700;">{{ result.average }}</span>
+                              </td>
+                            </tr>
+                          }
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+
+          </div>
+        </div>
+      }
+
+    </div>
+  }
+
+
+
+  <!-- Tab Content: Agent Definition -->
+  @if (activeTab() === 'definition') {
+    <div class="tab-content">
+      <div class="empty-state">
+        <span class="empty-state__icon">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="16" y1="13" x2="8" y2="13"/>
+            <line x1="16" y1="17" x2="8" y2="17"/>
+            <polyline points="10 9 9 9 8 9"/>
+          </svg>
+        </span>
+        <p class="empty-state__text">Agent Definition content goes here</p>
+      </div>
+    </div>
+  }
+
+  <!-- Tab Content: Agent Execution -->
+  @if (activeTab() === 'execution') {
+    <div class="tab-content">
+      <div class="empty-state">
+        <span class="empty-state__icon">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="16 18 22 12 16 6"/>
+            <polyline points="8 6 2 12 8 18"/>
+          </svg>
+        </span>
+        <p class="empty-state__text">Agent Execution content goes here</p>
+      </div>
+    </div>
+  }
+
+</div>
+
+
+
+<!-- Success Toast -->
+<div id="successToast" class="toast align-items-center text-white bg-success border-0 position-fixed top-0 end-0 m-4"
+  role="alert" aria-live="assertive" aria-atomic="true" data-bs-delay="4000" style="z-index: 1060;"
+  data-bs-autohide="true">
+  <div class="d-flex">
+    <div class="toast-body">
+      {{ toastMessage }}
+    </div>
+    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"
+      aria-label="Close"></button>
+  </div>
+</div>
+<!-- Error Toast -->
+<div id="errorToast" class="toast align-items-center text-white bg-danger border-0 position-fixed top-0 end-0 m-4"
+  role="alert" aria-live="assertive" aria-atomic="true" data-bs-delay="4000" style="z-index: 1060;"
+  data-bs-autohide="true">
+  <div class="d-flex">
+    <div class="toast-body">
+      {{ toastMessage }}
+    </div>
+    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"
+      aria-label="Close"></button>
+  </div>
+</div>

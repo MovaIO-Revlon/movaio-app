@@ -1,0 +1,50 @@
+<popover
+  [(isOpen)]="isOpen"
+  [attr.popover-width]="parentWidth() ? 'parent' : 'auto'"
+  [disabled]="disabled()"
+>
+  <div
+    trigger
+    class="label"
+    [attr.aria-expanded]="isOpen()"
+    [class.disabled]="disabled()"
+  >
+    <span>{{ placeholder() }}</span>
+    <span class="icon">
+      <ng-content select="[icon]">
+        <i class="fa-solid fa-angle-right"></i>
+      </ng-content>
+    </span>
+  </div>
+
+  <div content class="options">
+    @if (withSelectAll()) {
+      <label class="option">
+        <input
+          type="checkbox"
+          class="form-check-input"
+          [checked]="selectedAll()"
+          (change)="handleSelect('all')"
+        />
+        <span class="label-text"> Select All </span>
+      </label>
+    }
+
+    @let val = value();
+    @for (item of options(); track $index) {
+      @let optionValue = getValue(item);
+      @let optionLabel = getLabel(item);
+      <label class="option" [title]="optionLabel">
+        <input
+          type="checkbox"
+          class="form-check-input"
+          [checked]="val.includes(optionValue)"
+          (change)="handleSelect(optionValue)"
+        />
+        <span class="label-text">
+          {{ optionLabel }}
+        </span>
+      </label>
+    }
+  </div>
+</popover>

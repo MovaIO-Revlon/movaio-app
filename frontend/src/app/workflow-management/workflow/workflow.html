@@ -1,0 +1,377 @@
+<div class="content h-100">
+  <div class="row">
+    <div class="col-md-12 h-100">
+      <!-- Add tabs section -->
+      <div class="d-flex border-bottom pt-3 mb-3">
+        <div class="tabsagent d-flex">
+          <div class="tabsagent2" *ngFor="let item of workflowCountsList; index as i"
+            [ngClass]="{ activeagent: item.active }" (click)="setActiveCountTab(i)">
+            <span>{{ item.label }}</span>
+            <span class="badge-agent">{{ item.count }}</span>
+          </div>
+        </div>
+      </div>
+      
+      <div class="d-flex h-100">
+        <div class="row m-0 h-100 w-100">
+          <div class="col-md-12">
+            <div class="h-100" style="padding-top: 50px;">
+              <div class="d-flex h-100" style="margin-top: -4%;margin-bottom: 15%;">
+                <!-- Add conditional class to sidebar based on isSideCollapsed -->
+                <div class="col-md-3 pe-3 sidebarAgent" [class.collapsed]="isSideCollapsed">
+                  <div class="card h-100">
+                    <!-- Always visible header with title -->
+                    <div class="card-header bg-white d-flex" >
+                      <!-- Title only when expanded -->
+                      <div class="fw-semibold text-rotate" 
+                           [class.d-none]="isSideCollapsed"
+                           [class.d-block]="!isSideCollapsed"> Workflow Statistics</div>
+                      <!-- Just chevron when collapsed -->
+                      <i class="fa-solid ms-auto pt-1 toggleAgentBtn" 
+                         [class.fa-chevron-right]="isSideCollapsed" 
+                         [class.fa-chevron-down]="!isSideCollapsed"
+                         (click)="toggleSidePanel('left')"></i>
+                    </div>
+                    <!-- Show card body only when not collapsed -->
+                    <div class="card-body h-91" *ngIf="!isSideCollapsed">
+                      <div class="d-block">
+                        <div class="accordion" id="workflowStatsAccordion">
+                         
+                          <!-- Accordion Item: By Workflow Type -->
+                          <div class="accordion-item border rounded-2 mb-2">
+                            <h2 class="accordion-header">
+                              <!-- Remove collapsed class and set aria-expanded to true -->
+                              <button class="accordion-button bg-transparent box-shad p-2 fs-14 fw-semibold" type="button"
+                                data-bs-toggle="collapse" data-bs-target="#collapseWorkflowType" aria-expanded="true"
+                                aria-controls="collapseWorkflowType">
+                                By Workflow Type
+                              </button>
+                            </h2>
+                            <!-- Add show class to make it open by default -->
+                            <div id="collapseWorkflowType" class="accordion-collapse collapse show" data-bs-parent="#workflowStatsAccordion">
+
+                              <div class="accordion-body scrollable-accordion-body">
+                                <div class="chart-container pb-3 mb-3">
+                                  <div class="chart-wrapper">
+                                    <canvas #workflowTypeCanvas id="workflowTypeChart" style="width:100%; height:100%;"></canvas>
+                                    <div class="chart-center">
+                                      <h2 class="fw-bold">{{ totalWorkflowsInAgencyChart }}</h2>
+                                      <span class="text-muted">Workflows</span>
+                                    </div>
+                                  </div>
+                                  <div class="legend mt-3">
+                                    <div class="legend-item d-flex align-items-center mb-1"
+                                      *ngFor="let item of workflowTypeData"
+                                      (click)="toggleWorkflowTypeFilter(item.label)"
+                                      style="cursor: pointer;">
+                                      <span class="legend-circle me-2" [ngStyle]="{ 'background-color': item.color }"></span>
+                                      <span class="fs-14 text-dark">{{ item.label }} ({{ item.count }})</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          <!-- Accordion Item: By Agencies -->
+                          <div class="accordion-item border rounded-2 mb-2">
+                            <h2 class="accordion-header">
+                              <!-- Remove collapsed class and set aria-expanded to true -->
+                              <button class="accordion-button bg-transparent box-shad p-2 fs-14 fw-semibold" type="button"
+                                data-bs-toggle="collapse" data-bs-target="#collapseAgencyStats" aria-expanded="true"
+                                aria-controls="collapseAgencyStats">
+                                By Agencies
+                              </button>
+                            </h2>
+                            <!-- Add show class to make it open by default -->
+                            <div id="collapseAgencyStats" class="accordion-collapse collapse show" data-bs-parent="#workflowStatsAccordion">
+                              <div class="accordion-body scrollable-accordion-body">
+                                <div class="chart-container pb-3 mb-3">
+                                  <div class="chart-wrapper">
+                                    <canvas #agencyCanvas id="agencyChart" style="width:100%; height:100%;"></canvas>
+                                    <div class="chart-center">
+                                      <h2 class="fw-bold">{{ totalWorkflowsInAgencyChart }}</h2>
+                                      <span class="text-muted">Workflows</span>
+                                    </div>
+                                  </div>
+                                  <div class="legend mt-3">
+                                    <div class="legend-item d-flex align-items-center mb-1 clickable-legend"
+                                      *ngFor="let item of agencyLegendData"
+                                      (click)="toggleAgencyFilter(item.label)"
+                                      style="cursor: pointer;">
+                                      <span class="legend-circle me-2" [ngStyle]="{ 'background-color': item.color }"></span>
+                                      <span class="fs-14 text-dark">{{ item.label }} ({{ item.count }})</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <!-- Horizontal title overlay when collapsed -->
+                    <div class="collapsed-title-overlay" *ngIf="isSideCollapsed">
+                      <span class="horizontal-body-title">Workflow Statistics</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- Adjust column width based on sidebar state -->
+                <div class="col-md" [class.p]="!isSideCollapsed" style="width: 60%;">
+                  <div class="card h-100">
+                    <div class="card-header bg-white d-flex" style="flex-wrap: wrap;">
+                      <div class="fw-semibold me-4">
+                        Workflow
+                        <span class="bg-light text-secondary px-2 py-1 rounded-2 ms-2">{{
+                          filteredItems().length
+                        }}</span>
+                      </div>
+                      <div class="position-relative me-4" style="width: 40%;"> 
+                        <i class="search-icon fa-solid fa-magnifying-glass sear-1 fs-12"></i>
+                        <input
+                          type="text"
+                          class="form-control ps-6 fs-12"
+                          placeholder="Search"
+                          [(ngModel)]="searchTerm"
+                          (input)="applySearch()"
+                        />
+                      </div>
+                      <button class="btn btn-filter" data-bs-toggle="modal" data-bs-target="#workflowfilter">
+                        <i class="fa-solid fa-sliders"></i> Filters
+                      </button>
+                      <button class="btn ms-3 fs-12 text-white bg-orange border rounded-2 ps-3 pe-3" [disabled]="!isPrivilegeEdit" (click)="openImportWorkflowModal()">
+                        <img src="assets/img/import.svg" alt="Import Workflow"/>
+                        Import Workflow
+                      </button>
+                      <button class="btn ms-3 fs-12 text-white bg-orange border rounded-2 ps-3 pe-3" [disabled]="!isPrivilegeEdit" routerLink="/marketplace/workflows/new">
+                        <img src="assets/img/add-square.svg" alt="Add Workflow"/>
+                        Create Workflow
+                      </button>
+                    </div>
+                    <div class="card-body pt-2 mb-3 h-91">
+                      <div class="workflow-list">
+                        @for (item of filteredItems(); track $index) {
+                        <div 
+                          class="workflow-card" 
+                          [routerLink]="[`/marketplace/workflows/${item.flow_id}`]"
+                          (click)="editWorkFlow(item)" 
+                        >
+                          <div class="status">
+                            @if (item.trending) {
+                            <span class="fs-14 text-orange">🔥</span>
+                            } @if (item.status === 'active') {
+                            <span class="dot"></span>
+                            }
+
+                            @if (item.IsExternal) {
+                            <button
+                              type="button"
+                              class="border text-secondary f-12 px-1 rounded-2 me-1"
+                              (click)="Onrefresh($event, item)" 
+                              [disabled]="isRefreshing && refreshingWorkflowId === item.flow_id"
+                              title="Refresh workflow">
+                              
+                              <!-- Show spinner only while refreshing this specific workflow -->
+                              <span *ngIf="isRefreshing && refreshingWorkflowId === item.flow_id" 
+                                    class="spinner-border spinner-border-sm"
+                                    role="status" 
+                                    aria-hidden="true">
+                              </span>
+                              
+                              <!-- Show refresh icon when not refreshing -->
+                              <i *ngIf="!isRefreshing || refreshingWorkflowId !== item.flow_id" class="fa-solid fa-sync-alt" [class.disabled]="!isPrivilegeRefresh"></i>
+                            </button>
+                            }
+                            <button
+                              class="border text-secondary f-12 px-1 rounded-2 delete-button"
+                              type="button" [disabled]="isRefreshing && refreshingWorkflowId === item.flow_id" [class.disabled]="!isPrivilegeDelete"
+                              (click)="$event.stopPropagation(); confirmWorkflowDelete(item)"
+                            >
+                              <i class="fa-regular fa-trash-can" title="Delete workflow"> </i>
+                            </button>
+                          </div>
+                          <div class="details">
+                            <div class="workflow-icon">
+                              <img src="assets/img/workflow-project-icon.svg" alt="Workflow Project"/>
+                            </div>
+                            <span class="workflow-title" [title]="item.flow_name"
+                              >{{ item.flow_name }}
+                            </span>
+                            <p class="workflow-description" [title]="item.flow_description">
+                              {{ item.flow_description }}
+                            </p>
+                          </div>
+                          <div class="workflow-timestamp">
+                            <img src="assets/img/calendar.svg" alt="calendar"/>
+                            {{ item.created_at | date : "dd/MM/yy" }}
+                            <span class="bg-light text-secondary ms-auto px-2">
+                              @if (item.IsExternal) { Base Workflow } @else { Advanced Workflow }
+                            </span>
+                          </div>
+                        </div>
+                        } @if(!filteredItems().length) {
+                        <div class="no-data text-muted fs-14 fw-semibold">
+                          Workflows has no data available
+                        </div>
+                        }
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div
+  class="modal fade"
+  id="import-workflow-modal"
+  tabindex="-1"
+  aria-labelledby="import workflow"
+  aria-hidden="true"
+  #importWorkflow
+>
+  <div class="modal-dialog modal-dialog-centered">
+    <form
+      (ngSubmit)="onImportWorkflowFormSubmit()"
+      class="modal-content"
+      [formGroup]="importWorkflowForm"
+    >
+      <div class="modal-header">
+        <h1 class="modal-title fs-5" id="import-workflow-label">
+          Import Workflow
+        </h1>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+          aria-label="Close"
+        ></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label for="apiKey" class="form-label">API Key</label>
+          <input
+            type="password"
+            formControlName="apiKey"
+            class="form-control"
+            id="apiKey"
+            placeholder="Enter API Key"
+          />
+          <form-error
+            controlName="apiKey"
+            [messages]="{
+            required: 'Api key is required',
+          }"
+          />
+        </div>
+
+        <div class="mb-3">
+          <label for="workflowId" class="form-label">Workflow ID</label>
+          <input
+            type="text"
+            formControlName="workflowId"
+            class="form-control"
+            id="workflowId"
+            placeholder="Enter Worflow ID"
+          />
+          <form-error
+            controlName="workflowId"
+            [messages]="{
+            required: 'Workflow ID is required',
+          }"
+          />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="submit" class="btn btn-action">Import Workflow</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<app-toast [toastMessage]="toast.toastMessage()" />
+
+<div
+  class="modal fade"
+  id="workflowfilter"
+  tabindex="-1"
+  aria-labelledby="workflowfilterLabel"
+  aria-hidden="true"
+  #workflowfilter
+>
+  <div class="modal-dialog filter-cont">
+    <form
+      [formGroup]="filterForm"
+      (ngSubmit)="onApplyFilter()"
+      class="modal-content h-100"
+    >
+      <div class="modal-header border-0">
+        <h1 class="modal-title fs-5 fw-semibold" id="workflowfilterLabel">
+          Filters
+        </h1>
+        <button
+          type="button"
+          class="btn-close b-close"
+          data-bs-dismiss="modal"
+          aria-label="Close"
+        >
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <div class="modal-body fs-14 fw-semibold">
+        <label class="form-label">Agency </label>
+
+        <app-select
+          [options]="agencyOptions"
+          placeholder="Select Agency"
+          formControlName="agency"
+        />
+
+        <label class="form-label mt-3">Team </label>
+
+        <app-select
+          [options]="teamsOptions"
+          placeholder="Select Team"
+          formControlName="team"
+        />
+      </div>
+      <div class="modal-footer border-0">
+        <button
+          type="button"
+          class="btn bg-white border fs-12"
+          (click)="clearWorkflowFilterModal()"
+        >
+          Clear Filters
+        </button>
+        <button type="submit" class="btn btn-primary bg-orange border-0 fs-12">
+          Apply Filters
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteConfirmModalWF" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Confirm Delete</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        Are you sure you want to delete workflow "{{workflowToDelete?.flow_name}}"?
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn bg-orange" (click)="deleteWorkflow(workflowToDelete)">Delete</button>
+      </div>
+    </div>
+  </div>
+</div>

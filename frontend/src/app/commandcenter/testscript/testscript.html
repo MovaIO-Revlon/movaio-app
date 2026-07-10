@@ -1,0 +1,212 @@
+<app-header></app-header>
+   <div class="row h-90 m-0">
+  <div class="col-md-1  p-0">
+  <div class="pos-fix-left bg-white border-end ">
+    <div class="d-flex justify-content-center mb-3">
+  <a class="test-case text-center text-decoration-none" href="javascript:void(0)" [ngClass]="{ 'active-left': isActiveRoute('/commandcenter/testcase'), 'text-dark': !isActiveRoute('/commandcenter/testcase') }" (click)="testcase_link()">
+  <i class="fa-solid fa-file-lines d-block m-auto mb-2" aria-hidden="true"></i>
+  <span class=" fs-12 fw-semibold">Test Case Agency </span>
+  </a>
+   </div>
+       <div class="d-flex justify-content-center mb-3">
+  <a class="test-case text-center text-decoration-none " href="javascript:void(0)" [ngClass]="{ 'active-left': isActiveRoute('/commandcenter/testscript'), 'text-dark': !isActiveRoute('/commandcenter/testscript') }">
+  <i class="fa-solid fa-file d-block m-auto mb-2" aria-hidden="true"></i>
+  <span class="fs-12 fw-semibold">Test Script Agency </span>
+  </a>
+   </div>
+   <div class="d-flex justify-content-center mb-3">
+  <a class="test-case text-center text-decoration-none " href="javascript:void(0)">
+  <i class="fa fa-database d-block m-auto mb-2" aria-hidden="true"></i>
+  <span class=" fs-12 fw-semibold">Test Data Agency </span>
+  </a>
+   </div>
+  </div>
+   </div>
+  
+  <div class="col-md">
+	<div class="row mt-2 h-100">
+	<div class="col-md-3">
+	<!---->
+	<div class="card h-100">
+	<div class="card-header bg-white d-flex">
+	<div class="fw-semibold"> Test Case Agency Workflow</div>
+	<i class="fa-solid fa-chevron-down ms-auto pt-1"></i>
+	</div>
+	<div class="card-body">
+		<!---->
+		<div class="d-block">
+		 <div class="d-flex">
+			 <div class="bot-line">
+				  <img src="assets/img/bot.png" class="" alt="bot"/> 
+				  <div class="dotted-line"></div>
+			 </div>	 
+			  <span class="ps-2 pt-2 fs-14"> Test Case Planner </span>
+			   <img src="assets/img/check.png" class="ms-auto mt-2" alt="check" width="22" height="25" />
+		 </div>
+		  <div class="d-flex">
+			 <div class="bot-line">
+				  <img src="assets/img/bot.png" class="" alt="bot" /> 
+				  <div class="dotted-line"></div>
+			 </div>	 
+			  <span class="ps-2 pt-2 fs-14"> Use Case Reader </span>
+			   <img src="assets/img/check.png" alt="check" class="ms-auto mt-2" width="22" height="25" />
+		 </div>
+		  <div class="d-flex pos-1"> 	  
+				  <img src="assets/img/strip3.png" class="w-124" alt="strip" /> 
+				  <div class="d-flex flex-column">
+				  <img src="assets/img/doc.png" width="20" class="w-15" alt="doc" /> 
+				  <img src="assets/img/jira.png" width="50" class="w-15" alt="jira"/>
+				  <img src="assets/img/excel.png" width="20" class="w-15" alt="excel"/>
+				  </div>	
+            					  
+		 </div>
+		 <div class="d-flex">
+			 <div class="bot-line">
+				  <img src="assets/img/bot.png" class="" alt="bot" /> 
+				  <div class="dotted-line"></div>
+			 </div>	 
+			  <span class="ps-2 pt-2 fs-14"> Test Case Generator </span>
+			   <img src="assets/img/check.png" alt="check" class="ms-auto mt-2" width="22" height="25" />
+		 </div>
+         <div class="d-flex pos-1">			  
+				  <img src="assets/img/strip2.png" alt="strip" class="w-125" /> 
+				  <div class="d-flex flex-column">
+				  <img src="assets/img/excel.png" alt="excel" width="20" class="w-16" />
+				  <img src="assets/img/jira.png" alt="jira" width="50" class="w-16" />
+			
+				  </div>			   
+		 </div>	 
+		   <div class="d-flex ">
+			 <div class="bot-line">
+				  <img src="assets/img/bot.png" class="" alt="bot"/> 
+				  <div class="dotted-line"></div>
+			 </div>	 
+			  <span class="ps-2 pt-2 fs-14"> Test Case Formatter </span>
+			   <img src="assets/img/check.png" alt="check" class="ms-auto mt-2" width="22" height="25" />
+		 </div>
+		 	  <div class="d-flex pos-2">			  
+				  <img src="assets/img/strip2.png" class="w-125" alt="strip"/> 
+				  <div class="d-flex flex-column">
+				  <img src="assets/img/excel.png" width="20" class="w-16" alt="excel"/>
+				  <img src="assets/img/jira.png" width="50" class="w-16" alt="jira" />
+			
+				  </div>			   
+		 </div>
+		  
+         </div>
+
+        <!---->
+	</div>
+	</div>
+	<!---->
+	</div>
+		<div class="col-md p-0">
+	<!---->
+	<div class="card h-100">
+	<div class="card-header bg-white d-flex">
+	<div class="fw-semibold"> Explainable TestCase Agency </div>
+	<i class="fa-solid fa-chevron-down ms-auto pt-1"></i>
+	</div>
+	<div class="card-body">
+<!---->
+<div class="d-flex">
+<div class="mb-3 me-2">
+  <label for="exampleFormControlTextarea1" class="form-label fs-12 fw-semibold"> System Prompt </label>
+  <textarea class="form-control resize" id="exampleFormControlTextarea1" rows="3"></textarea>
+</div>
+<div class="mb-3">
+  <label for="exampleFormControlTextarea1" class="form-label fs-12 fw-semibold"> Refined Prompt </label>
+  <textarea class="form-control resize" id="exampleFormControlTextarea1" rows="3"></textarea>
+</div>
+</div>
+<div class="d-flex">
+<div class="mb-3 me-2">
+  <label for="exampleFormControlTextarea1" class="form-label fs-12 fw-semibold"> Thoughts </label>
+  <textarea class="form-control resize" id="exampleFormControlTextarea1" rows="3"></textarea>
+</div>
+<div class="mb-3">
+  <label for="exampleFormControlTextarea1" class="form-label fs-12 fw-semibold"> Actions </label>
+  <textarea class="form-control resize" id="exampleFormControlTextarea1" rows="3"></textarea>
+</div>
+</div>
+<div class="d-flex">
+<div class="mb-3 me-2">
+  <label for="exampleFormControlTextarea1" class="form-label fs-12 fw-semibold"> Tools </label>
+  <textarea class="form-control resize" id="exampleFormControlTextarea1" rows="3"></textarea>
+</div>
+<div class="mb-3">
+  <label for="exampleFormControlTextarea1" class="form-label fs-12 fw-semibold"> Functions </label>
+  <textarea class="form-control resize" id="exampleFormControlTextarea1" rows="3"></textarea>
+</div>
+</div>
+<!---->
+
+	</div>
+	</div>
+	<!---->
+	</div>
+		<div class="col-md">
+	<!---->
+	<div class="card h-100">
+	<div class="card-header bg-white d-flex">
+	<div class="fw-semibold"> Test Cases Created </div>
+	<i class="fa-solid fa-chevron-down ms-auto pt-1"></i>
+	</div>
+	<div class="card-body">
+	<!---->
+	<div class="border rounded-2">
+	<table class="table tableth fs-12 ">
+	<caption class="visually-hidden">Test Cases</caption>
+  <thead>
+    <tr>
+      <th scope="col">#</th>
+      <th scope="col">Test Case Name</th>
+      <th scope="col">Test Case Description</th>
+      <th scope="col">AI Accuracy</th>
+	  <th scope="col"> Verified by Human  </th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>1</td>
+      <td>Login</td>
+      <td>Login toKYC Plus application with valid credentials</td>
+      <td>97%</td>
+	  <td> <input class="form-check-input border-dark p-2" type="checkbox" value="" id="checkDefault"> </td>
+    </tr>
+	  <tr>
+      <td>1</td>
+      <td>Login</td>
+      <td>Login toKYC Plus application with valid credentials</td>
+      <td>97%</td>
+	  <td> <input class="form-check-input border-dark p-2" type="checkbox" value="" id="checkDefault"> </td>
+    </tr>
+	  <tr>
+      <td>1</td>
+      <td>Login</td>
+      <td>Login toKYC Plus application with valid credentials</td>
+      <td>97%</td>
+	  <td> <input class="form-check-input border-dark p-2" type="checkbox" value="" id="checkDefault"> </td>
+    </tr>
+ 
+    
+  </tbody>
+</table>
+</div>
+	<!---->
+
+	</div>
+	 <div class="modal-footer p-2 border-top">
+        <button type="button" class="btn bg-white border me-2 fs-12" data-bs-dismiss="modal"> <i class="fa-solid fa-file-arrow-down"></i> Download </button>
+        <button type="button" class="btn bg-orange text-white fs-12">  Push to JIRA </button>
+      </div>
+	</div>
+	<!---->
+	</div>
+	</div>
+  
+  
+  </div>
+  </div>
+ 
+

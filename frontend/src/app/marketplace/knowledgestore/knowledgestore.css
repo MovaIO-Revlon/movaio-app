@@ -1,0 +1,263 @@
+.card-kg-store {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 14px;
+  cursor: pointer;
+  transition: box-shadow 0.3s ease, border 0.3s ease;
+  box-shadow: none;
+  min-height: 210px;
+  width: 100%;
+}
+
+.card-kg-store:hover {
+  box-shadow: 0 0 0 1px #000000;
+  border: none;
+}
+
+.dot-green {
+  width: 11px;
+  height: 11px;
+  background-color: #34bc54;
+  border-radius: 100%;
+  display: inline-block;
+}
+
+.kg-h-100 {
+  height: 96% !important;
+}
+
+.kg-card {
+  background: #fff6ef;
+  /* light background */
+  border: 1px solid #f4a261;
+  /* orange border */
+  border-radius: 8px;
+  padding: 12px 16px;
+}
+
+.kg-card div {
+  min-width: 120px;
+}
+
+.kg-card strong {
+  font-weight: 600;
+}
+
+/*Step Indicator -- start*/
+
+.text-active-step {
+  color: #202121;
+  padding-top: 3px;
+  padding-left: 4px;
+  font-size: 14px;
+}
+
+.step-indicator {
+  display: flex;
+  justify-content: center;
+  /* centers steps */
+  gap: 170px;
+  /* adjust spacing between steps */
+  font-size: 16px;
+  margin: auto;
+}
+
+.step {
+  position: relative;
+  text-align: center;
+  display: flex;
+  max-width: 141px;
+  padding-right: 5px;
+}
+
+.step::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 100%;
+  width: 156px;
+  height: 2px;
+  background-color: #ddd;
+  transform: translateY(-50%);
+}
+
+.step:last-child::after {
+  content: none;
+}
+
+.step.active {
+  font-weight: bold;
+  color: #ffb944;
+}
+
+.step.completed {
+  color: #ffb944;
+}
+
+.step-number {
+  width: 21px;
+  height: 20px;
+  border-radius: 50%;
+  background-color: #939795;
+  display: inline-block;
+  line-height: 22px;
+  color: white;
+  font-size: 12px;
+}
+
+.step.active .step-number {
+  background-color: #ffb944;
+}
+
+.step.completed .step-number {
+  background-color: #ffb944;
+}
+
+.text-color-wiz {
+  color: #adb0af;
+  padding-top: 3px;
+  padding-left: 6px;
+  font-size: 14px;
+}
+
+.container-wiz {
+  width: 64%;
+  margin: 50px auto;
+  background-color: #fff;
+  padding: 30px;
+  border-radius: 8px;
+  border: solid 1px #eee;
+}
+
+.cancel-btn,
+.back-btn {
+  padding: 10px 20px;
+  background-color: white;
+  color: #666;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.cancel-btn:hover,
+.back-btn:hover {
+  border-color: #ff9f43;
+  color: #ff9f43;
+}
+
+.next-btn,
+.save-btn {
+  padding: 10px 20px;
+  background-color: #ff9f43;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.next-btn:hover:not(:disabled),
+.save-btn:hover:not(:disabled) {
+  background-color: #ff8c1a;
+}
+
+.next-btn:disabled,
+.save-btn:disabled {
+  background-color: #e0e0e0;
+  color: #999;
+  cursor: not-allowed;
+}
+
+/*Step Indicator -- end*/
+
+.file-card {
+  transition: box-shadow 0.2s;
+  box-shadow: 0 1px 2px rgba(255, 193, 7, 0.09);
+}
+
+.file-card:hover {
+  box-shadow: 0 2px 8px rgba(255, 193, 7, 0.17);
+}
+
+.model-height {
+  height: 400px;
+}
+
+.custom-select-bg {
+  border: 3px solid #b0aeb3;         /* border color like screenshot */
+  color: #000000 !important;   
+}
+
+.selected-badge {
+  background: orange;
+  color:white;
+  padding: 3px 12px;
+  border-radius: 16px;
+  font-size: 14px;
+  height: 32px;
+  line-height: 32px;
+  display: inline-block;
+  max-width: 80px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.overflow-indicator {
+  color: #b8a6c4;
+  font-weight: bold;
+  font-size: 14px;
+  height: 32px;
+  line-height: 32px;    /* vertical center */
+  display: inline-block;
+  margin-left: 7px;
+}
+
+.btn:hover {
+    color: #fff;
+    background-color: #ffffff;
+}
+/*knowledgestore.css */
+.color-box {
+  width: 16px;
+  height: 14px;
+  border-radius: 4px;
+  display: inline-block;
+}
+
+.knowledge-graph-box {
+  background-color: #FFA242;
+
+}
+
+.knowledge-base-box {
+  background-color: #F17A92;
+
+  
+}
+
+.kgsidebarAgent{
+  height: auto !important;
+}
+
+/* Make the left sidebar card stretch to the viewport height and let body scroll */
+.kgsidebarAgent.sidebarKg {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 120px);
+}
+.kgsidebarAgent.sidebarKg .card {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+.kgsidebarAgent.sidebarKg .card .card-body {
+  flex: 1 1 auto;
+  overflow: auto;
+}

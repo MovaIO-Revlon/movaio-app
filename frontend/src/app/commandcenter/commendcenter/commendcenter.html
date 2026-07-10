@@ -1,0 +1,83 @@
+<app-header></app-header>
+<div class="d-flex h-100">
+	<div class="position-relative left-p1">
+		<div class="sidebar-agency bg-white border-end ">
+			<ul>
+				<li>
+					<a class="text-decoration-none">
+						<i class="fa-solid" aria-hidden="true"></i>
+						<img src="assets/img/QE_Twin.png" class="rounded-2 w-11 me-2" alt="QE Twin" />
+						<span class=" fs-12 fw-semibold text mb-1">QE Twin</span>
+					</a>
+				</li>
+
+				<li routerLink="/commandcenter/testcase" routerLinkActive="active-left " [routerLinkActiveOptions]="{ exact: true }">
+					<a class="text-decoration-none ">
+						<i class="fa-solid" aria-hidden="true"></i>
+						<img src="assets/img/Functional_Test_Case_Creator.png" alt="TC Creator" class="rounded-2 w-11 me-2" />
+						<span class="fs-12 fw-semibold text">Functional Test Case Generator </span>
+					</a>
+				</li>
+				<li>
+					<a class="text-decoration-none ">
+						<i class="fa-solid" aria-hidden="true"></i>
+						<img src="assets/img/BDD_Script_Generator.png" class="rounded-2 w-11 me-2" alt="BDD Creator" />
+						<span class=" fs-12 fw-semibold text"> BDD Script Generator </span>
+					</a>
+				</li>
+				<li>
+					<a class="text-decoration-none">
+						<i class="fa-solid" aria-hidden="true"></i>
+						<img src="assets/img/Test_Data_Generator.png" class="rounded-2 w-11 me-2" alt="Data Creator" />
+						<span class=" fs-12 fw-semibold text">Test Data Generator</span>
+					</a>
+				</li>
+				<li>
+					<a class="text-decoration-none ">
+						<i class="fa-solid" aria-hidden="true"></i>
+						<img src="assets/img/Defect_Resolution_Assistant.png" class="rounded-2 w-11 me-2" alt="Defect Resolution"/>
+						<span class="fs-12 fw-semibold text"> Defect Resolution Assistant </span>
+					</a>
+				</li>
+				<li>
+					<a class="text-decoration-none ">
+						<i class="fa-solid" aria-hidden="true"></i>
+						<img src="assets/img/Test_Coverage_Insights.png" class="rounded-2 w-11 me-2" alt="Insights"/>
+						<span class=" fs-12 fw-semibold text"> Test Coverage Insights </span>
+					</a>
+				</li>
+				<li>
+					<a class="text-decoration-none">
+						<i class="fa-solid" aria-hidden="true"></i>
+						<img src="assets/img/Regression_Insights.png" class="rounded-2 w-11 me-2" alt="Insights" />
+						<span class=" fs-12 fw-semibold text">Regression Insights</span>
+					</a>
+				</li>
+				<li>
+					<a class="text-decoration-none ">
+						<i class="fa-solid" aria-hidden="true"></i>
+						<img src="assets/img/Defect_Hotspots.png" class="rounded-2 w-11 me-2" alt="Defect Hotspot"/>
+						<span class="fs-12 fw-semibold text"> Defect Hotspots </span>
+					</a>
+				</li>
+				<li>
+					<a class="text-decoration-none ">
+						<i class="fa-solid" aria-hidden="true"></i>
+						<img src="assets/img/Automated_Test_Execution.png" class="rounded-2 w-11 me-2" alt="TC Execution"/>
+						<span class=" fs-12 fw-semibold text"> Automated Test Execution </span>
+					</a>
+				</li>
+				<li>
+					<a class="text-decoration-none ">
+						<i class="fa-solid" aria-hidden="true"></i>
+						<img src="assets/img/Chaos_Injection.png" class="rounded-2 w-11 me-2" alt="Chaos Injection" />
+						<span class=" fs-12 fw-semibold text"> Chaos Injection </span>
+					</a>
+				</li>
+			</ul>
+		</div>
+	</div>
+	<div class="flex-grow-1 overflow-auto">
+		<router-outlet></router-outlet>
+	</div>
+</div>

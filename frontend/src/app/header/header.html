@@ -1,0 +1,590 @@
+<nav class="navbar navbar-expand-lg bg-white fixed-top border-bottom" aria-label="Main navigation">
+  <div class="container-fluid">
+    <a *ngIf="!isNewPort" class="navbar-brand" [href]="DashboardURL"><img src="assets/img/header.svg" width="100" alt="Company Logo" /></a>
+    <a *ngIf="isNewPort" class="navbar-brand" [href]="DashboardURL"><img src="assets/img/header_newport.png"
+        style="width: 280px;" alt="NewPort Company Logo" /></a>
+
+    <strong *ngIf="projectTitle" class="fs-16 pt-2"
+      style="color: grey;border-left:solid 1px #000000;padding-left:10px;">{{projectTitle}}</strong>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent"
+      aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+
+
+      <ul class="navbar-nav mb-2 mb-lg-0 ms-auto">
+        <li class="nav-item pe-3 fs-14 pt-2 route-menu"><a class="text-dark text-decoration-none route-menu"
+            href="javascript:void(0)"
+            [ngClass]="{ 'red-clr': isActiveRoute('/managesubscription'), 'text-dark': !isActiveRoute('/managesubscription') }"
+            [routerLink]="['/managesubscription']">AI Solutions</a></li>
+        <li class="nav-item pe-3 fs-14 pt-2 route-menu"><a class="text-dark text-decoration-none route-menu"
+            href="javascript:void(0)"
+            [ngClass]="{ 'red-clr': isActiveRoutePrefix('/commandcenterdashboard'), 'text-dark': !isActiveRoutePrefix('/commandcenterdashboard') }"
+            (click)="center_link()">Command Center</a></li>
+        <li class="nav-item pe-3 fs-14 pt-2 route-menu"><a class="text-dark text-decoration-none route-menu"
+            href="javascript:void(0)"
+            [ngClass]="{ 'red-clr': isActiveRoutePrefix('/marketplace'), 'text-dark': !isActiveRoutePrefix('/marketplace') }"
+            (click)="marketplace_link()">Market Place</a></li>
+        <li class="nav-item pe-3 ps-3">
+          <div class="d-flex">
+            <i class="fa-solid fa-bell rou-ico me-2"></i>
+            <a href="javascript:void(0)" (click)="openRolePrivilegeModal()" *ngIf="isSuperAdminMaster()">
+              <i class="fa-solid fa-gear rou-ico gear-colour"></i>
+            </a>
+          </div>
+        </li>
+        <li class="nav-item">
+          <popover popover-width="parent" [closeOnClick]="true">
+            <div trigger class="d-flex flex-nowrap gap-2 cursor-pointer" >
+              <img [src]="displayAvatar" class="rounded-2 w-10" alt="Avatar"/>
+              <span class="fs-12 d-flex justify-content-between flex-column">
+                <strong style="white-space: nowrap;">{{ userName }}</strong>
+                <span>{{ roleDetail }}</span>
+              </span>
+            </div>
+            <div content class="user-menu bg-white fs-12 rounded-3 border d-flex flex-column py-1">
+              <a class="px-3 py-1 text-muted" href="javascript:void(0)" (click)="editProfile()">Edit Profile</a>
+                <a  *ngIf="isSuperAdminMaster()" class="px-3 py-1 text-muted border-bottom" data-bs-toggle="modal" data-bs-target="#onUserManagenent"
+                    href="javascript:void(0)" (click)="UserOnboard()">User Management</a>
+                <a class="px-3 py-1 text-muted" *ngIf="isSuperAdminMaster() || isPrivilegeViewLogs" routerLink="/logs">Logs</a>
+                <a *ngIf="isSuperAdminMaster()" routerLink="/roles-teams" class="px-3 py-1 text-muted">Roles &amp; Teams</a>
+                <a class="px-3 py-1 text-muted" href="javascript:void(0)" (click)="doLogOut()"> Logout </a>
+              </div>
+          </popover>
+        </li>
+
+      </ul>
+
+    </div>
+  </div>
+</nav>
+
+<div class="modal fade" #onUserManagenent id="onUserManagenent" tabindex="-1" aria-labelledby="exampleModalLabel"
+  aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="modal-title fs-14"><strong> User Management </strong></div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"
+          (click)="OnboardPopupClose()"></button>
+      </div>
+      <div class="container">
+        <!---->
+        <ul class="nav nav-tabs mb-2" id="myTab" role="tablist">
+          <li class="nav-item" role="presentation">
+            <button class="nav-link nav-orange active fs-14 text-dark" id="home-tab" data-bs-toggle="tab"
+              data-bs-target="#home-tab-pane" type="button" role="tab" aria-controls="home-tab-pane"
+              aria-selected="true" href="javascript:void(0)" (click)="tabChange(true)">User Details</button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link nav-orange fs-14 text-dark" id="profile-tab" data-bs-toggle="tab"
+              data-bs-target="#profile-tab-pane" type="button" role="tab" aria-controls="profile-tab-pane"
+              aria-selected="false" href="javascript:void(0)" (click)="tabChange(false)">{{UserheaderCaption}}</button>
+          </li>
+        </ul>
+      </div>
+      <div class="tab-content">
+        <div class="tab-pane fade show active ps-3 pe-3" id="home-tab-pane" role="tabpanel" aria-labelledby="home-tab"
+          tabindex="0">
+          <div class="modal-body ps-1">
+            <div class="d-flex-end">
+              <div class="row g-3 align-items-center">
+                <div class="col-auto d-flex-end" style="width:40%;">
+                  <input type="text" autocomplete="off" class="form-control" placeholder="Search"
+                    [(ngModel)]="searchUserDtls" (input)="filterUserManagement()" />
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="border rounded-2 mb-2">
+            <div class="table-sticky">
+              <div class="user-popup-grid-container">
+                <table class="table tableth fs-12">
+                    <caption class="visually-hidden">User Management</caption>
+                  <thead class="table-light1">
+                    <tr class="myth-table3 sticky" style=" position: sticky; top:0; z-index: 1; ">
+                      <th scope="col">#</th>
+                      <th scope="col"> First Name </th>
+                      <th scope="col"> Last Name </th>
+                      <th scope="col"> Email ID </th>
+                      <th scope="col"> AI Solution </th>
+                      <th scope="col"> Team </th>
+                      <th scope="col"> Role </th>
+                      <th scope="col"> IsActive </th>
+                      <th scope="col"> Action </th>
+                    </tr>
+                  </thead>
+                  <tbody *ngIf="totalRecordsUM > 0 && totalItemsUM > 0">
+                    <tr class="mytd-table3"
+                      *ngFor="let item of UserManagementGridData | paginate: { itemsPerPage: itemsPerPageUM, currentPage: currentPageUM, totalItems: totalItemsUM,id:'UserManagement'}; let i = index">
+                      <td>{{ (currentPageUM - 1) * itemsPerPageUM + i + 1 }}</td>
+                      <td>{{ item.FirstName }}</td>
+                      <td>{{ item.LastName }}</td>
+                      <td> {{ item.Email }}</td>
+                      <td class="text-nowrap">
+                        <div *ngFor="let project of item.PrjDetails">{{ project.prj_name }}</div>
+
+                      </td>
+                      <td class="text-nowrap">
+                        <div *ngFor="let project of item.PrjDetails">{{ project.team_name }}</div>
+
+                      </td>
+                      <td class="text-nowrap">
+                        <div *ngFor="let project of item.PrjDetails">{{ project.role_name }}</div>
+
+                      </td>
+
+                      <td> {{item.IsActive}}</td>
+                      <td class="action-icons">
+                        <div class="d-flex align-items-center gap-2">
+                          <i class="fa fa-envelope grid-action" aria-hidden="true" title="Welcome mail"
+                            [ngClass]="{'disabled-icon': !item.IsActive}"
+                            (click)="item.IsActive && WelcomeEmailTrigger(item.Email)">
+                          </i>
+                          <i class="fa-solid fa-pen-to-square grid-action" title="Edit User"
+                            [ngClass]="{'disabled-icon': !item.IsActive}" (click)="editUser(item)">
+                          </i>
+                          <i class="fa-solid fa-user-xmark grid-action" title="Inactive User"
+                            (click)="inActiveUser(item.Email,item.IsActive)">
+                          </i>
+                          <i class="fa-regular fa-trash-can grid-action" title="Delete User"
+                            (click)="deleteUser(item.Email)">
+                          </i>
+                        </div>
+                      </td>
+                    </tr>
+                  </tbody>
+
+                  <tbody class="text-center" *ngIf="totalRecordsUM == 0 && totalItemsUM == 0">
+                    <tr>
+                      <td colspan="10">No data to be displayed</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div class="p-3 d-flex justify-content-between align-items-center mt-3 px-2 fs-12"
+              *ngIf="totalRecordsUM > 0">
+              <!-- Left summary -->
+              <div>
+                Showing {{ calculateStartEndUserM() }} of {{ totalRecordsUM }} users
+              </div>
+
+              <!-- Right controls -->
+              <div class="d-flex align-items-center gap-3">
+
+
+                <!-- Item range -->
+                <div>{{ startItemUM }} – {{ endItemUM }} of {{ totalRecordsUM }}</div>
+
+                <!-- Pagination buttons -->
+                <nav  aria-label="User management pagination">
+                  <ul class="pagination pagination-sm mb-0">
+                    <!-- First page -->
+                    <li class="page-item" [class.disabled]="currentPageUM === 1" (click)="goToPageUM(1)">
+                      <a class="page-link"><i class="fa fa-angle-double-left"></i></a>
+                    </li>
+
+                    <!-- Previous page -->
+                    <li class="page-item" [class.disabled]="currentPageUM === 1"
+                      (click)="goToPageUM(currentPageUM - 1)">
+                      <a class="page-link"><i class="fa fa-angle-left"></i></a>
+                    </li>
+
+                    <!-- Current page -->
+                    <li class="page-item active">
+                      <a class="page-link">{{ currentPageUM }}</a>
+                    </li>
+
+                    <!-- Next page (show if not last) -->
+                    <li class="page-item" *ngIf="currentPageUM < totalPagesUM" (click)="goToPageUM(currentPageUM + 1)">
+                      <a class="page-link">{{ currentPageUM + 1 }}</a>
+                    </li>
+
+                    <!-- Next arrow -->
+                    <li class="page-item" [class.disabled]="currentPageUM === totalPagesUM"
+                      (click)="goToPageUM(currentPageUM + 1)">
+                      <a class="page-link"><i class="fa fa-angle-right"></i></a>
+                    </li>
+
+                    <!-- Last page -->
+                    <li class="page-item" [class.disabled]="currentPageUM === totalPagesUM"
+                      (click)="goToPageUM(totalPagesUM)">
+                      <a class="page-link"><i class="fa fa-angle-double-right"></i></a>
+                    </li>
+                  </ul>
+                </nav>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="tab-pane fade" id="profile-tab-pane" role="tabpanel" aria-labelledby="profile-tab" tabindex="0">
+          <form [formGroup]="onboardForm" (ngSubmit)="onSubmit()">
+            <div class="modal-body">
+              <div class="row fs-13">
+
+                <div class="row-md-6 col-md mb-2 fs-13">
+                  <div class="col-md-12 mb-2">
+                    <label class="form-label fw-semibold">First Name <i class="text-danger">*</i> </label>
+                    <input type="text" autocomplete="off" class="form-control form-control-sm"
+                      formControlName="firstName" autocomplete="off" placeholder="Enter First Name ">
+                    <div *ngIf="onboardForm.get('firstName')?.touched && onboardForm.get('firstName')?.invalid"
+                      class="form-text text-muted" [ngStyle]="{ 'color': 'red' }">
+                      <div *ngIf="onboardForm.get('firstName')?.errors?.['required']" [ngStyle]="{ 'color': 'red' }">
+                        First
+                        Name is required.</div>
+                      <div *ngIf="onboardForm.get('firstName')?.errors?.['maxlength']" [ngStyle]="{ 'color': 'red' }">
+                        First Name should not exceed 25 characters.</div>
+                      <div *ngIf="onboardForm.get('firstName')?.errors?.['pattern']" [ngStyle]="{ 'color': 'red' }">
+                        First Name should not have numeric values.</div>
+                    </div>
+                  </div>
+                  <div class="col-md-12 mb-2">
+                    <label class="form-label fw-semibold">Last Name <i class="text-danger">*</i> </label>
+                    <input type="text" class="form-control form-control-sm" formControlName="lastName"
+                      autocomplete="off" placeholder="Enter Last Name">
+                    <div *ngIf="onboardForm.get('lastName')?.touched && onboardForm.get('lastName')?.invalid"
+                      class="form-text text-muted" [ngStyle]="{ 'color': 'red' }">
+                      <div *ngIf="onboardForm.get('lastName')?.errors?.['required']" [ngStyle]="{ 'color': 'red' }">Last
+                        Name is required.</div>
+                      <div *ngIf="onboardForm.get('lastName')?.errors?.['pattern']" [ngStyle]="{ 'color': 'red' }">Last
+                        Name should not have numeric values.</div>
+                      <div *ngIf="onboardForm.get('lastName')?.errors?.['maxlength']" [ngStyle]="{ 'color': 'red' }">
+                        Last
+                        Name should not exceed 25 characters.</div>
+                    </div>
+                  </div>
+                  <div class="col-md-12 mb-2">
+                    <label class="form-label fw-semibold">Email ID <i class="text-danger">*</i> </label>
+                    <input type="text" class="form-control form-control-sm" formControlName="emailId"
+                      (input)="duplicateEmailValidator()" autocomplete="off" placeholder="Enter Email ID">
+                    <div *ngIf="isEmailIdInvalid()" class="form-text text-muted" [ngStyle]="{ 'color': 'red' }">
+                      <div *ngIf="onboardForm.get('emailId')?.errors?.['required']" [ngStyle]="{ 'color': 'red' }">Email
+                        ID is required.</div>
+                      <div *ngIf="onboardForm.get('emailId')?.errors?.['InvalidEmail']" [ngStyle]="{ 'color': 'red' }">
+                        Invalid email format. Please enter your official company email (&#64;domain.com).</div>
+                      <div *ngIf="onboardForm.get('emailId')?.errors?.['duplicateEmail']"
+                        [ngStyle]="{ 'color': 'red' }">
+                        Email ID already exists.</div>
+                      <div *ngIf="onboardForm.get('emailId')?.errors?.['maxlength']" [ngStyle]="{ 'color': 'red' }">
+                        Email
+                        ID should not exceed 75 characters.</div>
+                      <div *ngIf="onboardForm.get('emailId')?.errors?.['invalidmail']" [ngStyle]="{ 'color': 'red' }">
+                        No spaces or special characters allowed except . and &#64;</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="col-md mb-2">
+
+                  <!-- Project Dropdown -->
+                  <div class="col-md-12 mb-1">
+                    <label class="form-label fw-semibold">AI Solution <i class="text-danger">*</i></label>
+                    <select class="form-select" style="font-size:13px;" formControlName="project"
+                      (change)="onProjectChange($event)">
+                      <option value="" disabled selected>Select AI Solution</option>
+                      <option *ngFor="let project of ProjectManagementData" [value]="project.projectName"
+                        [disabled]="isProjectAdded(project.projectName)">
+                        {{ project.projectName }}{{ isProjectAdded(project.projectName) ? '\u00A0\u00A0\u00A0✓' : '' }}
+                      </option>
+                    </select>
+                  </div>
+
+                  <!-- Team Dropdown -->
+                  <!-- Team Dropdown -->
+                  <div class="col-md-12 mb-2">
+                    <label class="form-label fw-semibold">Team <i class="text-danger">*</i></label>
+                    <select class="form-select" style="font-size:13px;" formControlName="team"
+                      (change)="onTeamChange()">
+                      <option value="" disabled selected>Select Team</option>
+                      <option *ngFor="let team of TeamManagementData" [ngValue]="team">
+                        {{ team.TeamName }}
+                      </option>
+                    </select>
+                  </div>
+
+                  <!-- Role Dropdown -->
+                  <!-- Role Dropdown -->
+                  <div class="col-md-12 mb-2">
+                    <label class="form-label fw-semibold">Role <i class="text-danger">*</i></label>
+                    <select class="form-select" style="font-size:13px;" formControlName="role">
+                      <option value="" disabled selected>Select Role</option>
+                      <option *ngFor="let role of RoleManagementData" [ngValue]="role">
+                        {{ role.RoleName }}
+                      </option>
+                    </select>
+                  </div>
+
+                  <button type="button" class="action-button btn btn-primary bg-orange border-0 mt-4"
+                    (click)="addMapping()" [disabled]="!isAddMappingEnabled()">
+                    Add AI Solution
+                  </button>
+
+                  <div class="added-schedules pt-3">
+                    <!-- Loop through mappings -->
+                    <div *ngFor="let item of selectedMappings; let i = index"
+                      class="d-flex align-items-center justify-content-between mb-2">
+
+                      <!-- Orange container -->
+                      <div class="mapping-card d-flex flex-column flex-md-row w-100 justify-content-between">
+                        <div><strong>AI Solution</strong><br>{{ item.projectName }}</div>
+                        <div><strong>Team</strong><br>{{ item.teamName }}</div>
+                        <div><strong>Role</strong><br>{{ item.roleName }}</div>
+                      </div>
+
+                      <!-- Action icons (outside container, but aligned in same row) -->
+                      <div class="ms-3  d-flex align-items-center">
+                        <i class="fa-solid fa-pencil grid-action me-3" title="Edit Mapping"
+                          (click)="editMapping(item, i)">
+                        </i>
+                        <i class="fa-regular fa-trash-can grid-action text-danger" title="Delete Mapping"
+                          (click)="removeMapping(i)">
+                        </i>
+                      </div>
+
+                    </div>
+                  </div>
+
+
+                </div>
+
+
+
+                <div class="modal-footer">
+                  <button type="submit" class="btn btn-primary bg-orange border-0 text-white fs-12"
+                    [disabled]="!isSaveEnabled">{{buttonCaption}}</button>
+                </div>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Profile Modal -->
+<div class="modal fade" #editProfileModal id="editProfileModal" tabindex="-1" aria-labelledby="editProfileModalLabel"
+  aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="modal-title fs-14"><strong>Edit Profile</strong></div>
+        <button type="button" class="btn-close" aria-label="Close" (click)="closeEditProfileModal()"></button>
+      </div>
+      <form [formGroup]="onboardForm" (ngSubmit)="onSubmit()">
+        <div class="modal-body">
+          <div class="row fs-13">
+            <!-- Password Field -->
+            <div class="col-md-6 mb-2">
+              <label class="form-label fw-semibold">Change Password</label>
+
+              <div class="input-group">
+                <input [type]="isPasswordVisible ? 'text' : 'password'" class="form-control form-control-sm"
+                  placeholder="Enter New Password" id="password" formControlName="password" autocomplete="off"
+                  (blur)="validatePassword()" />
+                <button type="button" class="btn btn-outline-secondary pwd-h" (click)="togglePasswordVisibility()">
+                  <i class="bi" [ngClass]="isPasswordVisible ? 'bi-eye-slash' : 'bi-eye'"></i>
+                </button>
+              </div>
+
+              <!-- Validation messages -->
+              <div
+                *ngIf="(onboardForm.get('password')?.dirty || onboardForm.get('password')?.touched) && onboardForm.get('password')?.invalid"
+                class="form-text text-muted" [ngStyle]="{ 'color': 'red' }" class="form-text"
+                [ngStyle]="{ color: 'red' }">
+                <div *ngIf="onboardForm.get('password')?.errors?.['minlength']">
+                  Password must be at least 8 characters long.
+                </div>
+                <div *ngIf="onboardForm.get('password')?.errors?.['pattern']">
+                  Password must contain at least 1 uppercase letter, 1 lowercase letter,
+                  1 number, and 1 special character.
+                </div>
+
+                <div *ngIf="onboardForm.get('password')?.errors?.['sameAsOld']">
+                  New password cannot be the same as the old password.
+                </div>
+                <div *ngIf="onboardForm.get('password')?.errors?.['invalidChars']">
+                  Password allows only special characters like &#64;, $, !, %, *, ?, &, #
+                </div>
+
+
+              </div>
+            </div>
+
+            <!-- Avatar Field -->
+            <div class="col-md-6 mb-2">
+              <label class="form-label fw-semibold d-flex align-items-center">Avatar
+                <div *ngIf="avatarUploading" class="spinner-border spinner-border-sm text-primary ms-2" role="status">
+                  <span class="visually-hidden">Loading...</span>
+                </div>
+              </label>
+              <input *ngIf="showFileInput" #fileInput class="form-control fs-14" type="file"
+                (change)="onImageChange($event)" [disabled]="avatarUploading" accept="image/*" />
+              <small *ngIf="fileError" class="text-danger">{{ fileError }}</small>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-primary bg-orange border-0 text-white fs-12"
+            [disabled]="!isSaveEnabled ||avatarUploading"> {{ buttonCaption }} </button>
+          <button type="button" class="btn btn-secondary fs-12" (click)="closeEditProfileModal()"> Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal final message -->
+<div class="modal fade" #loadalert id="loadalert" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true"
+  data-bs-backdrop="static" data-bs-keyboard="false">
+
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="modal-title fs-13" id="exampleModalLabel1" [innerHTML]="popupTitle" style="display:none"></div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"
+          (click)="closealert()"></button>
+      </div>
+      <div class="modal-body">
+        <p class="mod-clr1"> {{Usermessage}} </p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary bg-color border-0 br-30 fs-13 pad-2" data-dismiss="modal"
+          href="javascript:void(0)" (click)="closealert()">OK</button>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" #changePasswordModal id="change-password" tabindex="-1" aria-labelledby="exampleModalLabel"
+  aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="modal-title fs-13"><strong> Change Password </strong></div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"
+          (click)="PopupClose()"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row m-0">
+          <div class="col-md-6 m-auto">
+            <button type="button" class="btn btn-blue text-white" data-bs-toggle="modal" data-bs-target="#showstatus"
+              style="display:none;" data-bs-dismiss="modal" #confirmpopup> popup </button>
+            <form [formGroup]="changePasswordForm" (ngSubmit)="changePassword()">
+              <div>
+                <div class="col-md mb-3">
+                  <label class="form-label fs-13">Current Password </label>
+                  <input type="password" class="form-control border-color text-left" formControlName="currentPassword"
+                    placeholder="Current Password" autocomplete="off" (blur)="checkCurrentPassword('New')">
+                  <small *ngIf="passwordError !== ''" id="currentPassword" [ngStyle]="{ 'color': 'red' }">
+                    {{ passwordError }}
+                  </small>
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label fs-13">New Password</label>
+                  <div class="password-wrapper">
+                    <input [type]="isPasswordVisible ? 'text' : 'password'" class="form-control border-color text-left"
+                      style="width: 170px;" placeholder="Enter Password" id="newPassword" formControlName="newPassword"
+                      autocomplete="off" />
+                    <button type="button" class="btn btn-outline-secondary password-toggle"
+                      (click)="togglePasswordVisibility()" (blur)="checkCurrentPassword('Old')">
+                      <i class="bi" [ngClass]="isPasswordVisible ? 'bi-eye-slash' : 'bi-eye'"></i>
+                    </button>
+                  </div>
+                  <div *ngIf="passwordSameError" class="text-danger fs-13" style=" width: 150%;">
+                    Old Passwords can't be same like new password'.
+                  </div>
+                </div>
+
+                <div class="col-md-6 mb-3">
+                  <label class="form-label fs-13" style="width: 140px;">Confirm New Password</label>
+                  <div class="password-wrapper">
+                    <input [type]="isPasswordVisible ? 'text' : 'password'" class="form-control border-color text-left"
+                      style="width: 170px;" placeholder="Enter Password" id="confirmPassword"
+                      formControlName="confirmPassword" autocomplete="off" />
+                    <button type="button" class="btn btn-outline-secondary password-toggle"
+                      (click)="togglePasswordVisibility()">
+                      <i class="bi" [ngClass]="isPasswordVisible ? 'bi-eye-slash' : 'bi-eye'"></i>
+                    </button>
+                  </div>
+                  <div *ngIf="changePasswordForm?.hasError('passwordMismatch')" class="text-danger fs-13"
+                    style=" width: 150%;">
+                    Passwords do not match.
+                  </div>
+                </div>
+                <span id="messagechangepwd" class="mt-2 d-block"></span>
+              </div>
+              <div class="text-center mb-3">
+                <button type="submit" class="btn btn-primary bg-color border-0 br-30 fs-13 pad-2"
+                  [disabled]="changePasswordForm.invalid">Change Password</button>
+                &nbsp;&nbsp;
+                <button type="button" class="btn btn-primary bg-color border-0 br-30 fs-13 pad-2" data-dismiss="modal"
+                  href="javascript:void(0)" (click)="PopupClose()">Cancel</button>
+              </div>
+            </form>
+          </div>
+          <div class="col-md-6">
+            <ul class="list-group" style="font-size: 14px;">
+              <li class="list-group-item">Password must have a minimum of</li>
+              <li class="list-group-item">
+                <i class="fa"
+                  [ngClass]="{ 'fa-times': !isPasswordValid('character'), 'fa-check': isPasswordValid('character') }"
+                  [ngStyle]="{ 'color': isPasswordValid('character') ? '#008000' : '#ff0000' }" id="characterIcon"></i>
+                8 characters
+              </li>
+              <li class="list-group-item">
+                <i class="fa"
+                  [ngClass]="{ 'fa-times': !isPasswordValid('uppercase'), 'fa-check': isPasswordValid('uppercase') }"
+                  [ngStyle]="{ 'color': isPasswordValid('uppercase') ? '#008000' : '#ff0000' }" id="uppercaseIcon"></i>
+                1 uppercase letter
+              </li>
+              <li class="list-group-item">
+                <i class="fa"
+                  [ngClass]="{ 'fa-times': !isPasswordValid('lowercase'), 'fa-check': isPasswordValid('lowercase') }"
+                  [ngStyle]="{ 'color': isPasswordValid('lowercase') ? '#008000' : '#ff0000' }" id="lowercaseIcon"></i>
+                1 lowercase letter
+              </li>
+              <li class="list-group-item">
+                <i class="fa"
+                  [ngClass]="{ 'fa-times': !isPasswordValid('number'), 'fa-check': isPasswordValid('number') }"
+                  [ngStyle]="{ 'color': isPasswordValid('number') ? '#008000' : '#ff0000' }" id="numberIcon"></i>
+                1 number
+              </li>
+              <li class="list-group-item">
+                <i class="fa"
+                  [ngClass]="{ 'fa-times': !isPasswordValid('specialchar'), 'fa-check': isPasswordValid('specialchar') }"
+                  [ngStyle]="{ 'color': isPasswordValid('specialchar') ? '#008000' : '#ff0000' }"
+                  id="specialcharIcon"></i>
+                1 special character
+              </li>
+            </ul>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Role Privilege Modal -->
+<div class="modal fade" id="rolePrivilegeModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Role Privilege Mapping</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <app-role-privilege-mapping></app-role-privilege-mapping>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="text-white fixed-bottom bg-secondary text-center fs-13"> Copyright &#169; 2026 Movate. All Rights Reserved.
+</div>

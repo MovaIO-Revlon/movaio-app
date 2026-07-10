@@ -1,0 +1,726 @@
+<app-header></app-header>
+<div class="dashboard-container h-100">
+  <div class="row m-0 h-100 w-100">
+    <div class="h-106 pt-2">
+      <!-- Header -->
+      <div class="card h-95">
+         <div class="card-header bg-white d-flex">
+          <div class="header p-0 ">
+            <h3>👋 Hello, <span class="highlight">{{UserName}}</span>!</h3>
+            <p class="fw-bold m-0">Greetings! Your AI Solutions are ready to use. Explore and manage them below.</p>
+          </div>
+          <div class="position-relative me-2 ps-4" style="margin-top: 2%; width: 30% !important;">
+            <i class="fa-solid fa-magnifying-glass sear-1 fs-12 ps-4"></i>
+            <input type="text" class="form-control search ps-6 fs-12" placeholder="Search" [(ngModel)]="searchQuery"
+              (input)="onSearch(searchQuery)" />
+          </div>
+          <button class=" bg-white border rounded-2 ps-2 pe-1" style="margin-top: 2%;" data-bs-toggle="modal"
+            data-bs-target="#projectFilterModal">
+            <i class="fa-solid fa-sliders"></i> Filters
+          </button>
+          <button *ngIf="isSuperAdminMaster()" class="ms-3 fs-12 text-white bg-orange border rounded-2 ps-3 pe-2"
+            style="margin-top: 2%;" data-bs-toggle="modal" data-bs-target="#createProjectModal"
+            (click)="openCreateModal()">
+            <i class="fa-solid fa-plus"></i> Create AI Solution
+          </button>
+        </div>
+
+        <!-- Projects Grid -->
+        <div class="card-body1 pt-2 card-height">
+          <div class="row card-height">
+            <div class="col-md-4 pe-0 mb-2" *ngFor="let project of filteredProjects">
+              <div class="card-agent" [ngClass]="{ 'disabled-sub-card': !project.active }"
+                (click)="project.active && switchProject(project.projectName)">
+                <div class="d-flex align-items-start justify-content-between">
+                  <div class="d-flex">
+                    <div class="avatar-agent me-2">
+                      <img [src]="'assets/img/subscription.png'" width="40" height="40" alt="avatar" loading="lazy" />
+                    </div>
+                    <div>
+                     <div class="fw-semibold fs-14 align" [appTooltip]="getProjectTooltip(project.projectName)"> {{ getProjectDisplayName(project.projectName) }}</div>
+                    </div>
+                  </div>
+                  <div class="d-flex align-items-center gap-1 status-tag">  
+				  
+                    <!-- Refresh button (always visible in edit mode) -->
+                    <button *ngIf="isSuperAdminMaster() || (isPrivilegeRefresh && project.projectName===loggedUser.ActiveProject)" type="button"
+                      class="btn btn-sm btn-sensitive d-flex align-items-center me-2" (click)="onRefresh(project); $event.stopPropagation()"
+                      [disabled]="refreshingProjectNames.has(project.projectName) && isMasterSubscription(project.projectName)"
+                      [ngClass]="{ 'disabled-sub-card': isMasterSubscription(project.projectName) }">
+
+                      <!-- Show spinner only while refreshing -->
+                      <span *ngIf="refreshingProjectNames.has(project.projectName)" class="spinner-border spinner-border-sm text-light" role="status"
+                        aria-hidden="true">
+                      </span>
+
+                      <!-- Show refresh icon when not refreshing -->
+                      <img *ngIf="!refreshingProjectNames.has(project.projectName)" src="assets/img/refresh.png" alt="refresh"
+                        style="width:15px; height:15px;" />
+                    </button>
+
+                    <button *ngIf="isSuperAdminMaster()"
+                      class="fs-12 text-white bg-orange border rounded-2 ps-1 pe-1" data-bs-toggle="modal"
+                      data-bs-target="#editProjectModal" (click)="openEditModal(project); $event.stopPropagation()"
+                      [disabled]="isMasterSubscription(project.projectName)"
+                      [ngClass]="{ 'disabled-sub-card': isMasterSubscription(project.projectName) }">
+                      <i class="fa-solid fa-pen-to-square"></i> 
+                    </button>
+
+                    <div *ngIf="project.greendot_active">
+                      <span class="dot-green"></span>
+                    </div>
+                  </div>
+                </div>
+                 <div class="mt-3 d-flex gap-2 text-orange fs-12 pb-2">
+                  <div class="desc-wrap" [appTooltip]="project.description">
+                    {{ project.description }}
+                  </div>
+                  <i class="fa-solid fa-circle-info route-menu" [appTooltip]="project.description"></i>
+                </div>
+                <div class="mt-2 text-muted fs-12 d-flex align-items-center gap-4 text-orange border-bottom">
+                  <div> <img src="assets/img/prj_teams.png" alt="team_icon" class="meta-icon"
+                      style="width:20px; height:28px;" />Teams: {{ project.teamsCount || project.teams?.length || 0 }}
+                  </div>
+
+                  <div> <img src="assets/img/user.png" alt="user_icon" class="meta-icon"
+                      style="width:20px; height:19px;" />Users: {{ project.usersCount || 0 }}</div>
+                  <div> <img src="assets/img/Sub_Agency_Icon.png" alt="user_icon" class="meta-icon pe-1"
+                      style="width:23px; height:19px;" />Agency: {{ project.AgencyCount || 0 }}
+                  </div>
+                  <div> <img src="assets/img/Sub_Agent_Icon.png" alt="user_icon" class="meta-icon pe-1"
+                      style="width:22px; height:19px;" />Agents: {{ project.AgentCount || 0 }}
+                  </div>
+                </div>
+                <div class="fs-12 mt-2 d-flex align-items-center" style="height: 1.5rem">
+                  <img src="assets/img/createdOn.png" alt="user_icon" class="meta-icon" style="width:14px; height:14px;" />
+                  <span class="ps-1">{{ project.dateUpdated ?? project.dateCreated | date: 'dd/MM/yyyy'}}</span>
+
+                   @if (project.app_url && isAssignedSubscription(project)) {
+                      <a
+                        class="btn btn-sm text-white rounded-2 ms-auto"
+                        style="
+                        background: linear-gradient(90deg, #F87D00 0%, #F2554E 48.56%, #CD1D98 100%);
+                        --bs-btn-padding-y: 0.1rem;
+                        --bs-btn-padding-x: 0.4rem;"
+                        title="Launch Application"
+                        (click)="$event.stopPropagation()"
+                        target="_blank"
+                        [href]="project.app_url">
+                        <i class="fa-solid fa-rocket"></i> 
+                      </a>
+                    }
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Project Filter Modal -->
+  <div class="modal fade" id="projectFilterModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1"
+    aria-labelledby="projectFilterModalLabel" aria-hidden="true">
+    <div class="modal-dialog filter-cont">
+      <div class="modal-content h-100">
+        <div class="modal-header border-0">
+          <h1 class="modal-title fs-5 fw-semibold" id="projectFilterModalLabel">Filters</h1>
+          <button type="button" class="btn-close b-close" data-bs-dismiss="modal" aria-label="Close">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+        <div class="modal-body agent-overflow fs-14 fw-semibold">
+          <div class="mb-3">
+            <label class="form-label">Select a Team</label>
+            <select class="form-select fs-14" [(ngModel)]="selectedFilterTeam">
+              <option value="">All Teams</option>
+              <option *ngFor="let team of availableTeams" [value]="getTeamName(team)">
+                {{ getTeamName(team) }}
+              </option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Select Roles</label>
+            <select class="form-select fs-14" [(ngModel)]="selectedFilterRole">
+              <option value="">All Roles</option>
+              <option *ngFor="let role of availableRoles" [value]="getRoleName(role)">
+                {{ getRoleName(role) }}
+              </option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer border-0">
+          <button type="button" class="btn bg-white border fs-12" data-bs-dismiss="modal" (click)="clearFilters()">
+            Clear Filters
+          </button>
+          <button type="button" class="btn btn-primary bg-orange border-0 fs-12" (click)="applyFilters()"
+            data-bs-dismiss="modal">
+            Apply Filters
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Create Project Modal -->
+  <div class="modal fade" id="createProjectModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1"
+    aria-labelledby="createProjectModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl" style="padding-left: 63px">
+      <div class="modal-content" style="width:76%; margin-left:127px">
+        <div class="modal-header">
+          <h1 class="modal-title fw-semibold fs-14" id="createProjectModalLabel">Create AI Solution</h1>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="wizard-container">
+            <!-- Step Indicator -->
+            <div class="border-bottom p-3">
+              <div class="step-indicator">
+                <div class="step" [ngClass]="{ 'active': currentStep >= 1, 'completed': currentStep > 1 }" id="step-1">
+                  <div class="step-number">1</div>
+                  <div [ngClass]="currentStep >= 1 ? 'text-active-step' : 'text-color-wiz'">
+                    AI Solution Details
+                  </div>
+                </div>
+                <div class="step" [ngClass]="{ 'active': currentStep >= 2, 'completed': currentStep > 2 }" id="step-2">
+                  <div class="step-number">2</div>
+                  <div [ngClass]="currentStep >= 2 ? 'text-active-step' : 'text-color-wiz'">
+                    Teams & Roles
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Form Sections -->
+            <form [formGroup]="projectForm" autocomplete="off">
+              <!-- Step 1: Project Details -->
+              <div class="form-section" [ngClass]="{ 'active': currentStep === 1 }" id="form-step-1">
+
+                <div class="row m-0 p-3 mt-2 border-bottom">
+                  <div class="d-flex">
+                    <div class="avatar-agent me-2" style="height: 60px;width: 57px;">
+                      <div class="icon-layers">
+                        <div class="layer"></div>
+                        <div class="layer"></div>
+                        <div class="layer"></div>
+                      </div>
+                    </div>
+                    <div class="col-md ps-3">
+                      <div class="mb-2">
+                        <label class="form-label fs-14 fw-semibold">
+                          AI Solution Name <i class="text-danger">*</i>
+                        </label>
+                        <input type="text" class="form-control fs-12" formControlName="projectName"
+                          placeholder="Enter AI Solution Name" (input)="checkProjectNameDuplicate()" />
+                        <div *ngIf="
+                            projectForm.get('projectName')?.invalid &&
+                            (projectForm.get('projectName')?.touched ||
+                              projectForm.get('projectName')?.dirty)
+                          " class="text-danger fs-13">
+                          AI Solution Name is required.
+                        </div>
+                        <div *ngIf="isProjectNameDuplicate && projectForm.get('projectName')?.valid"
+                          class="text-danger fs-13">
+                          This AI Solution name is already in use.
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+                <div class="row m-0 p-2">
+                  <div class="col-md pt-3">
+                    <div class="mb-2">
+                      <label class="form-label fs-14 fw-semibold">
+                        AI Solution Database Name <i class="text-danger">*</i>
+                      </label>
+                      <input type="text" class="form-control fs-12" formControlName="project_db_name"
+                        placeholder="Enter database name" (input)="checkProjectDbNameDuplicate()" />
+                      <div *ngIf="projectForm.get('project_db_name')?.hasError('required') && 
+                (projectForm.get('project_db_name')?.touched || projectForm.get('project_db_name')?.dirty)"
+         class="text-danger fs-13">
+      AI Solution Database Name is required.
+    </div>
+
+    <!-- 2. Invalid format error - show ONLY when field has value but format is wrong -->
+    <div *ngIf="projectForm.get('project_db_name')?.hasError('invalidDbName') && 
+                !projectForm.get('project_db_name')?.hasError('required') &&
+                (projectForm.get('project_db_name')?.touched || projectForm.get('project_db_name')?.dirty)"
+         class="text-danger fs-13">
+      Only letters, numbers, and _ allowed. No spaces or special chars.
+    </div>
+
+    <!-- 3. Duplicate name error (unchanged) -->
+    <div *ngIf="isProjectDbNameDuplicate && projectForm.get('project_db_name')?.valid"
+         class="text-danger fs-13">
+      This AI Solution database name is already in use.
+    </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="row m-0 p-2">
+
+                  <div class="mb-2">
+                    <label class="form-label fs-14 fw-semibold">
+                      Description <i class="text-danger">*</i>
+                    </label>
+                    <textarea class="form-control fs-12" rows="3" formControlName="description"
+                      placeholder="Enter AI Solution Description"></textarea>
+                    <div *ngIf="
+                            projectForm.get('description')?.invalid &&
+                            (projectForm.get('description')?.touched ||
+                              projectForm.get('description')?.dirty)
+                          " class="text-danger fs-13">
+                      Description is required.
+                    </div>
+                  </div>
+                </div>
+
+                <div class="row m-0 p-2">
+                   <details>
+                    <summary class="d-flex align-items-center justify-content-between form-label fs-14 fw-semibold">
+                     <span>Advanced config</span> <i class="fa-solid fa-chevron-down"></i>
+                    </summary>
+                    <div class="mb-2 mt-2 pb-3">
+                      <label class="form-label fs-14 fw-semibold">
+                        Application URL
+                      </label>
+                      <input class="form-control fs-12" rows="3" formControlName="app_url"
+                        placeholder="Enter application url" />
+                      <form-error controlName="app_url" />
+                    </div>
+                  </details>
+                </div>
+              </div>
+
+              <!-- Step 2: Teams & Roles -->
+              <div class="form-section" id="form-step-2" [ngClass]="{ 'active': currentStep === 2 }">
+                <div class="container-wiz ps-5">
+                  <div class="schedule-container">
+                    <div class="schedule-form">
+                      <h2 class="fs-14 fw-semibold pb-3">Configure Teams & Roles</h2>
+                      <div class="mb-2">
+                        <label class="form-label fs-14 fw-semibold">
+                          Select a Team <i class="text-danger">*</i>
+                        </label>
+                        <select class="form-select fs-12" [(ngModel)]="selectedTeam"
+                          [ngModelOptions]="{ standalone: true }">
+                          <option value="">Select a Team</option>
+                          <option *ngFor="let team of availableTeams" [value]="getTeamName(team)">
+                            {{ getTeamName(team) }}
+                          </option>
+                        </select>
+                        <div *ngIf="teamSelectionInvalid && (!selectedTeam || selectedTeam === '')"
+                          class="text-danger fs-13">
+                          Team selection is required.
+                        </div>
+                      </div>
+                      <div class="mb-2">
+                        <label class="form-label fs-14 fw-semibold">
+                          Select Roles <i class="text-danger">*</i>
+                        </label>
+                        <div class="dropdown">
+                          <button class="btn btn-outline-secondary dropdown-toggle form-control fs-12" type="button"
+                            id="rolesDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                            {{ selectedRoles.length > 0 ? selectedRoles.join(', ') : 'Select Roles' }}
+                          </button>
+                          <ul class="dropdown-menu ps-4 overflow-auto" aria-labelledby="rolesDropdown" style="max-height: 180px;">
+                            <li *ngFor="let role of availableRoles">
+                              <div class="form-check px-3">
+                                <input class="form-check-input" type="checkbox" [value]="getRoleName(role)"
+                                  [checked]="selectedRoles.includes(getRoleName(role))"
+                                  (change)="onRoleSelectionChange(getRoleName(role), $event)" />
+                                <label class="form-check-label fs-14">{{ getRoleName(role) }}</label>
+                              </div>
+                            </li>
+                          </ul>
+                        </div>
+                        <div *ngIf="teamSelectionInvalid && selectedRoles.length === 0" class="text-danger fs-13">
+                          At least one role must be selected.
+                        </div>
+                      </div>
+                      <button type="button" class="action-button btn btn-primary bg-orange border-0 mt-4"
+                        (click)="addTeamAndRoles()" [disabled]="!selectedTeam || selectedRoles.length === 0">
+                        Add Teams & Roles
+                      </button>
+                    </div>
+                    <div class="added-schedules ms-4">
+                      <h3 class="fs-14 fw-semibold pb-3" style="padding-right: 70px;">Added Teams & Roles</h3>
+                      <div *ngFor="let team of addedTeams; let i = index" class="d-flex mb-2 mt-4">
+                        <div class="mapping-card d-flex flex-column flex-md-row w-100 justify-content-between">
+                          <div class="fs-14"><strong>Team</strong><br>{{ team.teamName }}</div>
+                          <div class="fs-14"><strong>Roles</strong><br>{{ getRolesText(team) }}</div>
+                        </div>
+
+
+                        <i class="fa-solid fa-pencil pad-t-wiz" (click)="editTeam(i)"></i>
+                        <i class="fa-regular fa-trash-can pad-t-wiz" (click)="removeTeam(i)"></i>
+                      </div>
+                      <div *ngIf="addedTeams.length === 0" class="empty-state">
+                        No teams added yet
+                      </div>
+                      <div *ngIf="currentStep === 2 && addedTeams.length === 0 && teamsValidationShown"
+                        class="text-danger fs-13 mt-2">
+                        At least one team with roles must be added.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Button Container -->
+              <div class="button-container border-top p-2">
+                <button type="button" class="go-back-button fs-15" id="go-back-btn" [disabled]="currentStep === 1"
+                  (click)="previousStep()">
+                  Go Back
+                </button>
+                <button type="submit" class="action-button btn btn-primary bg-orange border-0 fs-12" id="next-btn"
+                  (click)="currentStep === 1 ? nextStep() : saveProject()" [disabled]="
+    (currentStep === 1 && !projectForm.valid) ||
+    (currentStep === 2 && addedTeams.length === 0) ||
+    isProjectNameDuplicate ||
+    isProjectDbNameDuplicate
+  ">
+                  {{ currentStep === 1 ? 'Next' : 'Save AI Solution' }}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Project Modal -->
+  <div class="modal fade" id="editProjectModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1"
+    aria-labelledby="editProjectModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl" style="padding-left: 63px">
+      <div class="modal-content" style="width:76%; margin-left:127px">
+        <div class="modal-header">
+          <h1 class="modal-title fw-semibold fs-14" id="editProjectModalLabel">Edit AI Solution</h1>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="wizard-container">
+            <!-- Step Indicator -->
+            <div class="border-bottom p-3">
+              <div class="step-indicator">
+                <div class="step" [ngClass]="{ 'active': currentStep >= 1, 'completed': currentStep > 1 }" id="step-1">
+                  <div class="step-number">1</div>
+                  <div [ngClass]="currentStep >= 1 ? 'text-active-step' : 'text-color-wiz'">
+                    AI Solution Details
+                  </div>
+                </div>
+                <div class="step" [ngClass]="{ 'active': currentStep >= 2, 'completed': currentStep > 2 }" id="step-2">
+                  <div class="step-number">2</div>
+                  <div [ngClass]="currentStep >= 2 ? 'text-active-step' : 'text-color-wiz'">
+                    Teams & Roles
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Form Sections -->
+            <form [formGroup]="projectForm" autocomplete="off">
+              <!-- Step 1: Project Details -->
+              <div class="form-section" [ngClass]="{ 'active': currentStep === 1 }" id="form-step-1">
+                <div class="d-flex justify-content-between align-items-start p-4 border-bottom"
+                  style="padding-bottom: 5px !important">
+                  <div class="d-flex align-items-center mb-3">
+                    <div class="col-md-1 avatar-agent me-2">
+                      <div class="icon-layers">
+                        <div class="layer"></div>
+                        <div class="layer"></div>
+                        <div class="layer"></div>
+                      </div>
+                    </div>
+                    <div>
+                      <div class="fw-semibold fs-6">
+                        {{ projectForm.get('projectName')?.value || '-' }}
+                      </div>
+                      <div class="fs-14">{{ selectedProject?.projectId }}</div>
+                    </div>
+                  </div>
+                  <div class="d-flex ms-auto align-items-start">
+                    <div class="text-end">
+                      <span class="status-badge" [class.active]="selectedProject?.active">
+                        <span class="status-dot"></span> {{ selectedProject?.active ? 'Active' : 'Inactive' }}
+                      </span>
+
+                    </div>
+                    <div class="d-flex flex-column align-items-start gap-1 ps-3">
+                      <div *ngIf="projectForm.get('active')?.value" class="badge-active">
+                        ● Active
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="container-wiz">
+                  <div class="col-md">
+                    <div class="mb-2 pb-2">
+                      <label class="form-label fs-14 fw-semibold">
+                        Description <i class="text-danger">*</i>
+                      </label>
+                      <textarea class="form-control fs-12" rows="3" formControlName="description"></textarea>
+                      <div *ngIf="
+                            projectForm.get('description')?.invalid &&
+                            (projectForm.get('description')?.touched ||
+                              projectForm.get('description')?.dirty)
+                          " class="text-danger fs-13">
+                        Description is required.
+                      </div>
+                    </div>
+
+                  </div>
+
+                  <div class="row">
+                    <!-- Date Created -->
+                    <div class="col-md-6">
+                      <div class="mb-3">
+                        <label class="form-label fs-14 fw-semibold">
+                          Date Created <i class="text-danger">*</i>
+                        </label>
+                        <input type="text" class="form-control fs-12" formControlName="dateCreated"
+                          [value]="projectForm.get('dateCreated')?.value | date: 'dd/MM/yyyy'" readonly />
+                        <div *ngIf="
+        projectForm.get('dateCreated')?.invalid &&
+        (projectForm.get('dateCreated')?.touched || projectForm.get('dateCreated')?.dirty)"
+                          class="text-danger fs-13 mt-1">
+                          Date Created is required.
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Date Updated -->
+                    <div class="col-md-6">
+                      <div class="mb-3">
+                        <label class="form-label fs-14 fw-semibold">
+                          Date Updated <i class="text-danger">*</i>
+                        </label>
+                        <input type="text" class="form-control fs-12" formControlName="dateUpdated"
+                          [value]="projectForm.get('dateUpdated')?.value | date: 'dd/MM/yyyy'" readonly />
+                        <div *ngIf="
+        projectForm.get('dateUpdated')?.invalid &&
+        (projectForm.get('dateUpdated')?.touched || projectForm.get('dateUpdated')?.dirty)"
+                          class="text-danger fs-13 mt-1">
+                          Date Updated is required.
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-md">
+                    <div class="mb-2 pb-2">
+                      <label class="form-label fs-14 fw-semibold">
+                        AI Solution Database Name <i class="text-danger">*</i>
+                      </label>
+                      <input type="text" class="form-control fs-12" formControlName="project_db_name"
+                        placeholder="Enter AI solution database name" [readonly]="showEditModal" />
+                      <div *ngIf="
+                            projectForm.get('project_db_name')?.invalid &&
+                            projectForm.get('project_db_name')?.touched
+                          " class="text-danger fs-13">
+                        AI Solution Database Name is required.
+                      </div>
+                    </div>
+                  </div>
+                  <details>
+                    <summary class="d-flex align-items-center justify-content-between form-label fs-14 fw-semibold">
+                     <span>Advanced config</span> <i class="fa-solid fa-chevron-down"></i>
+                    </summary>
+                    <div class="mb-2 mt-2 pt-3">
+                      <label class="form-label fs-14 fw-semibold">Application URL </label>
+                      <input type="text" class="form-control fs-12" formControlName="app_url"
+                        placeholder="Enter application url" />
+                      <form-error controlName="app_url" />
+                    </div>
+                  </details>
+                  <div class="teams-table" aria-label="Teams">
+                    <table>
+                      <caption class="visually-hidden">Teams</caption>
+                      <thead>
+                        <tr>
+                          <th scope="col">#</th>
+                          <th scope="col">Team</th>
+                          <th scope="col">Role</th>
+                          <th scope="col">User</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <ng-container *ngFor="let team of addedTeams; let teamIndex = index">
+                          <tr *ngFor="let role of team.roles; let roleIndex = index">
+                            <td>{{ teamIndex + 1 }}</td>
+                            <td>{{ roleIndex === 0 ? team.teamName : '' }}</td>
+                            <td>{{ role.role }}</td>
+                            <td>-</td>
+                          </tr>
+                        </ng-container>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Step 2: Teams & Roles -->
+              <div class="form-section" id="form-step-2" [ngClass]="{ 'active': currentStep === 2 }">
+                <div class="container-wiz">
+                  <div class="schedule-container">
+                    <div class="schedule-form">
+                      <h2 class="fs-14 fw-semibold pb-3">Configure Teams & Roles</h2>
+                      <div class="mb-2">
+                        <label class="form-label fs-14 fw-semibold">
+                          Select a Team <i class="text-danger">*</i>
+                        </label>
+                        <select class="form-select fs-12" [(ngModel)]="selectedTeam"
+                          [ngModelOptions]="{ standalone: true }">
+                          <option value="">Select a Team</option>
+                          <option *ngFor="let team of availableTeams" [value]="getTeamName(team)">
+                            {{ getTeamName(team) }}
+                          </option>
+                        </select>
+                        <div *ngIf="teamSelectionInvalid && (!selectedTeam || selectedTeam === '')"
+                          class="text-danger fs-13">
+                          Team selection is required.
+                        </div>
+                      </div>
+                      <div class="mb-2 pt-3">
+                        <label class="form-label fs-14 fw-semibold">
+                          Select Roles <i class="text-danger">*</i>
+                        </label>
+                        <div class="dropdown">
+                          <button class="btn btn-outline-secondary dropdown-toggle form-control fs-12" type="button"
+                            id="rolesDropdownEdit" data-bs-toggle="dropdown" aria-expanded="false">
+                            {{ selectedRoles.length > 0 ? selectedRoles.join(', ') : 'Select Roles' }}
+                          </button>
+                          <ul class="dropdown-menu ps-4 overflow-auto" aria-labelledby="rolesDropdownEdit"  style="max-height: 180px;">
+                            <li *ngFor="let role of availableRoles">
+                              <div class="form-check px-3">
+                                <input class="form-check-input" type="checkbox" [value]="getRoleName(role)"
+                                  [checked]="selectedRoles.includes(getRoleName(role))"
+                                  (change)="onRoleSelectionChange(getRoleName(role), $event)" />
+                                <label class="form-check-label fs-14">{{ getRoleName(role) }}</label>
+                              </div>
+                            </li>
+                          </ul>
+                        </div>
+                        <div *ngIf="teamSelectionInvalid && selectedRoles.length === 0" class="text-danger fs-13">
+                          At least one role must be selected.
+                        </div>
+                      </div>
+                      <button type="button" class="action-button btn btn-primary bg-orange border-0 mt-4"
+                        (click)="addTeamAndRoles()" [disabled]="!selectedTeam || selectedRoles.length === 0">
+                        Add Teams & Roles
+                      </button>
+                    </div>
+                    <div class="added-schedules ms-4">
+                      <h3 class="fs-14 fw-semibold pb-3" style="padding-right: 70px;">Added Teams & Roles</h3>
+                      <div *ngFor="let team of addedTeams; let i = index" class="d-flex mb-2 mt-4">
+                        <div class="mapping-card d-flex flex-column flex-md-row w-100 justify-content-between">
+                          <div class="fs-14"><strong>Team</strong><br>{{ team.teamName }}</div>
+                          <div class="fs-14"><strong>Roles</strong><br>{{ getRolesText(team) }}</div>
+                        </div>
+
+
+                        <i class="fa-solid fa-pencil pad-t-wiz" (click)="editTeam(i)"></i>
+                        <i class="fa-regular fa-trash-can pad-t-wiz" (click)="removeTeam(i)"></i>
+                      </div>
+                      <div *ngIf="addedTeams.length === 0" class="empty-state">
+                        No teams added yet
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Button Container -->
+              <div class="button-container border-top p-2 d-flex justify-content-between align-items-center ps-4">
+
+                <!-- Left side: Delete or empty spacer -->
+                <div>
+                  <button *ngIf="currentStep === 1" type="button"
+                    class="delete-btn btn bg-danger text-white border-0 fs-15" data-bs-toggle="modal"
+                    data-bs-target="#deleteConfirmModal" (click)="confirmDeleteProject(selectedProject)">
+                    Delete
+                  </button>
+
+                  <!-- Invisible spacer for Step 2 -->
+                  <div *ngIf="currentStep !== 1" style="width: 80px;"></div>
+                </div>
+
+                <!-- Right side: Go Back + Next/Save buttons -->
+                <div class="d-flex gap-2">
+                  <button type="button" class="go-back-button fs-15 btn btn-outline-secondary" id="go-back-btn"
+                    [disabled]="currentStep === 1" (click)="previousStep()">
+                    Go Back
+                  </button>
+
+                  <!-- Next Button (only show in step 1) -->
+                  <button *ngIf="currentStep === 1" type="button"
+                    class="action-button btn btn-primary bg-orange border-0 fs-12" (click)="nextStep()"
+                    [disabled]="!projectForm.valid || isProjectNameDuplicate">
+                    Next
+                  </button>
+
+                  <!-- Save Project Button (only show in step 2) -->
+                  <button *ngIf="currentStep === 2" type="button"
+                    class="action-button btn btn-primary bg-orange border-0 fs-12" (click)="updateProject()"
+                    [disabled]="addedTeams.length === 0 || !projectForm.valid || isProjectNameDuplicate">
+                    Save AI Solution
+                  </button>
+                </div>
+              </div>
+
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete Confirmation Modal -->
+  <div class="modal fade" id="deleteConfirmModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1"
+    aria-labelledby="deleteConfirmModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header border-0">
+          <h1 class="modal-title fs-5 fw-semibold" id="deleteConfirmModalLabel">Confirm Delete</h1>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body text-center">
+          <p>Are you sure you want to delete AI Solution "{{projectToDelete?.projectName}}"?</p>
+        </div>
+        <div class="modal-footer border-0">
+          <button type="button" class="btn bg-white border fs-12" data-bs-dismiss="modal">
+            Cancel
+          </button>
+          <button type="button" class="btn btn-danger text-white border-0 fs-12" (click)="deleteProjectConfirmed()"
+            data-bs-dismiss="modal">
+            Delete
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Success Toast -->
+  <div id="successToast" class="toast align-items-center text-white bg-success border-0 position-fixed top-0 end-0 m-4"
+    role="alert" aria-live="assertive" aria-atomic="true" data-bs-delay="4000" style="z-index: 1060;"
+    data-bs-autohide="true">
+    <div class="d-flex">
+      <div class="toast-body">{{ toastMessage }}</div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"
+        aria-label="Close"></button>
+    </div>
+  </div>
+
+  <!-- Error Toast -->
+  <div id="errorToast" class="toast align-items-center text-white bg-danger border-0 position-fixed top-0 end-0 m-4"
+    role="alert" aria-live="assertive" aria-atomic="true" data-bs-delay="4000" style="z-index: 1060;"
+    data-bs-autohide="true">
+    <div class="d-flex">
+      <div class="toast-body">{{ toastMessage }}</div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"
+        aria-label="Close"></button>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,118 @@
+:host {
+  position: absolute;
+}
+:host .header p {
+  margin: 0;
+}
+
+:host .header .title {
+  color: #262e2b;
+  font-weight: 500;
+  font-size: 1.125rem;
+  line-height: 1.5rem;
+}
+
+:host .header .description {
+  color: #262e2b;
+  font-weight: 400;
+  font-size: 0.875rem;
+  line-height: 1.5rem;
+}
+
+:host .body .id-input {
+  border: 1px solid #e1e0e3;
+  border-radius: 0.4rem;
+  font-size: 0.875rem;
+  padding: 0.3rem 0.688rem;
+  font-weight: 400;
+  outline: none;
+}
+
+:host .body .id-input::placeholder {
+  color: #e1e0e3;
+}
+
+:host .body .id-btn {
+  background-color: #ffa242;
+  border: 1px solid #fff;
+  padding: 0.625rem 1.063rem;
+  border-radius: 0.4rem;
+  color: #fff;
+  font-size: 0.875rem;
+  font-weight: 400;
+}
+
+.section-title {
+  font-size: 1.375rem;
+  font-weight: 600;
+  color: #262e2b;
+}
+
+.progress-circle {
+  --size: 30px;
+  --thickness: 10px;
+  --value: 0;
+  --color: #29b14b;
+
+  width: var(--size);
+  height: var(--size);
+  border-radius: 50%;
+
+  background: conic-gradient(
+    var(--color) calc(var(--value) * 3.6deg),
+    var(--bs-gray-200) 0deg
+  );
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.progress-circle-inner {
+  width: calc(var(--size) - var(--thickness));
+  height: calc(var(--size) - var(--thickness));
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.solution > summary {
+  display: flex;
+  align-items: center;
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+  padding: 1.125rem 1.188rem;
+}
+
+.solution > summary > .success-rate {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  margin-left: auto;
+}
+
+.solution > summary > .title {
+  color: #262e2b;
+  font-weight: 600;
+  font-size: 0.938rem;
+}
+
+.solution > summary > .success-rate :nth-child(1) {
+  text-align: right;
+}
+
+.solution > summary .status {
+  padding: 0.3rem 1rem;
+  background-color: #ffa242;
+  color: #fff;
+}
+
+.solution[open] summary > i {
+  transform: rotate(180deg);
+}
+
+.solution > div {
+  padding: 1.125rem 1.188rem;
+}

@@ -1,0 +1,222 @@
+<entity-table
+  [open]="open()"
+  [data]="pager.paginatedData()"
+  [headings]="headers"
+  (close)="closeModal()"
+>
+  <div header class="header d-flex gap-3 align-items-center">
+    @if (data().length > 1) {
+    <ul class="nav nav-tabs">
+      @for (item of data(); track $index) {
+        <li class="nav-item">
+          <span
+          (click)="selectedTab.set($index)"
+            [class.active]="selectedTab() === $index"
+            [class.text-warning]="selectedTab() === $index"
+            [class.text-muted]="selectedTab() !== $index"
+            class="fs-18 nav-link fw-medium text-capitalize cursor-pointer"
+          >
+            {{ item.title }}
+          </span>
+        </li>
+      }
+    </ul>
+  } @else {
+    <span  class="fs-18 nav-link fw-medium text-capitalize cursor-pointer">
+      {{ $any(data()[0])?.title }}
+    </span>
+  }
+    <span
+      class="badge d-flex align-items-center justify-content-center bg-warning-subtle text-warning"
+      [class.ms-auto]="data().length > 1"
+      >{{ pager.filteredData().length }} Incidents</span
+    >
+
+    <button
+      style="width: 1.8rem; height: 1.8rem"
+      (click)="closeModal()"
+      [class.ms-auto]="data().length <= 1"
+      class="btn-warning btn rounded-circle text-warning fs-12 btn-sm bg-warning-subtle border-warning-subtle"
+    >
+      <i class="fa fa-x"></i>
+    </button>
+  </div>
+
+  <div
+    footer
+    class="pt-3 d-flex justify-content-between align-items-center fs-12"
+  >
+    <div>
+      Showing {{ pager.startIndex() + 1 }} to {{ pager.endIndex() }} of
+      {{ pager.filteredData().length }} Incidents
+    </div>
+
+    <div class="d-flex align-items-center gap-3">
+      <!-- Results per page -->
+      <div class="d-flex align-items-center gap-2">
+        <label class="mb-0" for="page-size">Results per page</label>
+        <select
+          id="page-size"
+          class="form-select form-select-sm w-auto"
+          [(ngModel)]="pager.pageSize"
+        >
+          @for (size of pager.pageSizeOptions(); track $index) {
+            <option [value]="size" [selected]="size === pager.pageSize()">
+              {{ size }}
+            </option>
+          }
+        </select>
+      </div>
+
+      <!-- Pagination buttons -->
+      <nav>
+        <ul class="pagination pagination-sm mb-0">
+          <li
+            class="page-item"
+            [class.disabled]="!pager.hasPrevPage()"
+            (click)="pager.reset()"
+            (keydown.enter)="pager.reset()"
+          >
+            <a class="page-link">
+              <i class="fa fa-angle-double-left"></i>
+            </a>
+          </li>
+          <li
+            class="page-item"
+            [class.disabled]="!pager.hasPrevPage()"
+            (click)="pager.prevPage()"
+            (keydown.enter)="pager.prevPage()"
+          >
+            <a class="page-link"><i class="fa fa-angle-left"></i></a>
+          </li>
+          <li class="page-item active">
+            <a class="page-link">{{ pager.page() }}</a>
+          </li>
+
+          @if (pager.page() < pager.totalPages()) {
+            <li
+              class="page-item"
+              (click)="pager.setPage(pager.page() + 1)"
+              (keydown.enter)="pager.setPage(pager.page() + 1)"
+            >
+              <a class="page-link">{{ pager.page() + 1 }}</a>
+            </li>
+          }
+
+          <li
+            class="page-item"
+            [class.disabled]="!pager.hasNextPage()"
+            (click)="pager.nextPage()"
+            (keydown.enter)="pager.nextPage()"
+          >
+            <a class="page-link"><i class="fa fa-angle-right"></i></a>
+          </li>
+          <li
+            class="page-item"
+            [class.disabled]="!pager.hasNextPage()"
+            (click)="pager.goToLast()"
+            (keydown.enter)="pager.goToLast()"
+          >
+            <a class="page-link"><i class="fa fa-angle-double-right"></i></a>
+          </li>
+        </ul>
+      </nav>
+    </div>
+  </div>
+
+  <ng-template #headingCell let-cell="cell">
+    <popover
+      [attr.popover-position]="cell.key === 'assignedTo' ? 'left' : 'right'"
+    >
+      <ng-container
+        trigger
+        *ngTemplateOutlet="filterIconButton; context: { label: cell.label }"
+      >
+      </ng-container>
+      <div content class="bg-white p-2 border shadow rounded-2 fs-14">
+        @if (cell.key === "date") {
+          <select
+            class="form-select-sm form-select mb-2"
+            [(ngModel)]="pager.filters()[`${cell.key}.equal`]"
+          >
+            <option value="equal">Equals</option>
+          </select>
+
+          <input
+            type="date"
+            class="form-control form-control-sm"
+            [ngModel]="pager.filters()[cell.key]"
+            (ngModelChange)="updateFilter(cell.key, $event)"
+          />
+        } @else if (["priority", "severity"].includes(cell.key)) {
+          <div class="d-flex flex-column gap-1 mt-2" style="min-width: 8rem">
+            @for (option of getOptions(cell.key); track option) {
+              <label
+                class="text-capitalize d-flex align-items-center gap-1 fw-normal text-muted"
+                ><input
+                  type="checkbox"
+                  [checked]="$any(pager.filters()[cell.key])?.includes(option)"
+                  (click)="selectCheckBox(cell.key, option)"
+                />
+                {{ option }}</label
+              >
+            }
+          </div>
+        } @else {
+          <div content class="position-relative">
+            <i
+              class="fa fa-search position-absolute text-muted"
+              style="left: 0.5rem; top: 50%; transform: translateY(-50%)"
+            ></i>
+            <input
+              [ngModel]="pager.filters()[cell.key]"
+              (ngModelChange)="updateFilter(cell.key, $event)"
+              placeholder="Search"
+              type="text"
+              class="form-control form-control-sm ps-4"
+            />
+          </div>
+        }
+      </div>
+    </popover>
+  </ng-template>
+
+  <ng-template #incidentIdCell let-cell="cell" let-key="key">
+    <span class="position-relative ps-3">
+      <span
+        [style.background]="'#059BDC'"
+        style="width: 5px; height: 1.5rem; left: 0; top: -0.3rem"
+        class="d-inline-block position-absolute rounded-2"
+      ></span>
+
+      {{ cell[key] }}
+    </span>
+  </ng-template>
+
+  <ng-template #descriptionCell let-cell="cell" let-key="key">
+    <div [title]="cell[key]" class="text-truncate" style="max-width: 10rem">
+      {{ cell[key] }}
+    </div>
+  </ng-template>
+</entity-table>
+
+<ng-template #filterIconButton let-label="label">
+  <span class="d-flex align-items-center gap-2 cursor-pointer">
+    <span> {{ label }}</span>
+    <svg
+      class="user-select-none"
+      width="12"
+      height="8"
+      viewBox="0 0 12 8"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M4.47797 7.53335H6.92242V6.31112H4.47797V7.53335ZM0.200195 0.200012V1.42223H11.2002V0.200012H0.200195ZM2.03353 4.47779H9.36686V3.25557H2.03353V4.47779Z"
+        fill="#262E2B"
+        stroke="#262E2B"
+        stroke-width="0.4"
+      />
+    </svg>
+  </span>
+</ng-template>

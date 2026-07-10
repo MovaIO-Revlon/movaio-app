@@ -1,0 +1,514 @@
+<app-header></app-header>
+
+<div
+  style="height: 92dvh"
+  class="roles-teams-tab p-3 dashboard-container d-flex flex-column"
+>
+  <div class="border bg-white rounded-2 d-flex flex-column h-100">
+    <div class="d-flex align-items-center border-bottom gap-3 px-3 py-2">
+      <ul
+        class="nav nav-tabs fw-normal text-muted border-0 flex-grow-1"
+        id="roles-teams-tab"
+        role="tablist"
+      >
+        <li class="nav-item" role="presentation">
+          <button
+            class="nav-link active nav-orange fs-14 text-dark"
+            id="roles-tab"
+            data-bs-toggle="tab"
+            data-bs-target="#roles"
+            type="button"
+            role="tab"
+            aria-controls="roles"
+            aria-selected="true"
+            (click)="setActiveTab('roles')"
+          >
+            Roles
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button
+            class="nav-link nav-orange fs-14 text-dark"
+            id="teams-tab"
+            data-bs-toggle="tab"
+            data-bs-target="#teams"
+            type="button"
+            role="tab"
+            aria-controls="teams"
+            aria-selected="false"
+            (click)="setActiveTab('teams')"
+          >
+            Teams
+          </button>
+        </li>
+      </ul>
+
+      @if (activeTab === "roles") {
+        <input
+          type="text"
+          autocomplete="off"
+          class="form-control form-control-sm rounded-2 w-50"
+          style="min-width: 300px"
+          placeholder="Search roles..."
+          [(ngModel)]="roles.searchTerm"
+        />
+
+        <button
+          type="button"
+          class="btn btn-warning btn-sm text-white px-4"
+          data-bs-toggle="modal"
+          data-bs-target="#roles-modal"
+          (click)="closeRoleForm()"
+        >
+          Add New
+        </button>
+      }
+      @if (activeTab === "teams") {
+        <input
+          type="text"
+          autocomplete="off"
+          class="form-control form-control-sm rounded-2 w-50"
+          style="min-width: 300px"
+          placeholder="Search teams..."
+          [(ngModel)]="teams.searchTerm"
+        />
+
+        <button
+          type="button"
+          class="btn btn-warning btn-sm text-white px-4"
+          data-bs-toggle="modal"
+          data-bs-target="#teams-modal"
+          (click)="closeTeamsForm()"
+        >
+          Add New
+        </button>
+      }
+    </div>
+
+    <div class="tab-content h-100 overflow-hidden p-3">
+      <div
+        class="tab-pane active flex-column h-100 overflow-auto"
+        id="roles"
+        role="tabpanel"
+        aria-labelledby="roles-tab"
+      >
+        <div class="table-sticky overflow-auto h-100 border rounded-2">
+          <table class="table fs-12" aria-label="Roles">
+            <caption class="visually-hidden">
+              Roles
+            </caption>
+            <thead>
+              <tr class="sticky" style="position: sticky; top: 0; z-index: 1">
+                <th scope="col">#</th>
+                <th scope="col">Name</th>
+                <th scope="col">Created At</th>
+                <th scope="col">Created By</th>
+                <th scope="col">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (item of roles.paginatedData; track $index) {
+                <tr>
+                  <td>{{ item.RoleId }}</td>
+                  <td>{{ item.RoleName }}</td>
+                  <td>{{ item.Created_Date | date: "dd/MM/yyyy" }}</td>
+                  <td>{{ item.Created_By }}</td>
+                  <td>
+                    <i
+                      class="fa-solid fa-pen-to-square cursor-pointer"
+                      title="Edit Role"
+                      (click)="editRole(item)"
+                    >
+                    </i>
+
+                    <i
+                      class="fa-solid fa-trash cursor-pointer ms-3"
+                      title="Delete Role"
+                      (click)="deleteRole(item)"
+                    >
+                    </i>
+                  </td>
+                </tr>
+              }
+              @if (!roles.paginatedData.length) {
+                <tr>
+                  <td colspan="5" class="py-4">No roles found</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        <div
+          class="d-flex pt-3 pb-2 justify-content-between align-items-center fs-12"
+        >
+          <div>
+            Showing {{ roles.startIndex + 1 }} to {{ roles.endIndex }} of
+            {{ roles.filteredData.length }} roles
+          </div>
+
+          <div class="d-flex align-items-center gap-3">
+            <!-- Results per page -->
+            <div class="d-flex align-items-center gap-2">
+              <label class="mb-0">Results per page</label>
+              <select
+                class="form-select form-select-sm w-auto"
+                [(ngModel)]="roles.pageSize"
+                (change)="paginate('roles')"
+              >
+                @for (size of pageSizeOptions; track $index) {
+                  <option [value]="size" [selected]="size === roles.pageSize">
+                    {{ size }}
+                  </option>
+                }
+              </select>
+            </div>
+
+            <!-- Item range -->
+            <div>
+              {{ roles.startIndex + 1 }} - {{ roles.endIndex }} of
+              {{ roles.filteredData.length }}
+            </div>
+
+            <!-- Pagination buttons -->
+            <nav aria-label="Roles pagination">
+              <ul class="pagination pagination-sm mb-0">
+                <li
+                  class="page-item"
+                  [class.disabled]="roles.page === 1"
+                  (click)="goToPage(1, 'roles')"
+                >
+                  <a class="page-link">
+                    <i class="fa fa-angle-double-left"></i>
+                  </a>
+                </li>
+                <li
+                  class="page-item"
+                  [class.disabled]="roles.page === 1"
+                  (click)="prevPage('roles')"
+                >
+                  <a class="page-link"><i class="fa fa-angle-left"></i></a>
+                </li>
+                <li class="page-item active">
+                  <a class="page-link">{{ roles.page }}</a>
+                </li>
+
+                @if (roles.page < roles.totalPages) {
+                  <li
+                    class="page-item"
+                    (click)="goToPage(roles.page + 1, 'roles')"
+                  >
+                    <a class="page-link">{{ roles.page + 1 }}</a>
+                  </li>
+                }
+
+                <li
+                  class="page-item"
+                  [class.disabled]="roles.page === roles.totalPages"
+                  (click)="nextPage('roles')"
+                >
+                  <a class="page-link"><i class="fa fa-angle-right"></i></a>
+                </li>
+                <li
+                  class="page-item"
+                  [class.disabled]="roles.page === roles.totalPages"
+                  (click)="goToPage(roles.totalPages, 'roles')"
+                >
+                  <a class="page-link"
+                    ><i class="fa fa-angle-double-right"></i
+                  ></a>
+                </li>
+              </ul>
+            </nav>
+          </div>
+        </div>
+      </div>
+      <div
+        class="tab-pane flex-column h-100 overflow-auto"
+        id="teams"
+        role="tabpanel"
+        aria-labelledby="teams-tab"
+      >
+        <div class="table-sticky overflow-auto h-100 border rounded-2">
+          <table class="table fs-12" aria-label="Roles">
+            <caption class="visually-hidden">
+              Teams
+            </caption>
+            <thead>
+              <tr class="sticky" style="position: sticky; top: 0; z-index: 1">
+                <th scope="col">#</th>
+                <th scope="col">Name</th>
+                <th scope="col">Created At</th>
+                <th scope="col">Created By</th>
+                <th scope="col">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (item of teams.paginatedData; track $index) {
+                <tr>
+                  <td>{{ item.TeamId }}</td>
+                  <td>{{ item.TeamName }}</td>
+                  <td>{{ item.Created_Date | date: "dd/MM/yyyy" }}</td>
+                  <td>{{ item.Created_By }}</td>
+                  <td>
+                    <i
+                      class="fa-solid fa-pen-to-square cursor-pointer"
+                      title="Edit Team"
+                      (click)="editTeam(item)"
+                    >
+                    </i>
+
+                    <i
+                      class="fa-solid fa-trash cursor-pointer ms-3"
+                      title="Delete Team"
+                      (click)="deleteTeam(item)"
+                    >
+                    </i>
+                  </td>
+                </tr>
+              }
+              @if (!teams.paginatedData.length) {
+                <tr>
+                  <td colspan="5" class="py-4">No teams found</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        <div
+          class="d-flex pt-3 pb-2 justify-content-between align-items-center fs-12"
+        >
+          <div>
+            Showing {{ teams.startIndex + 1 }} to {{ teams.endIndex }} of
+            {{ teams.filteredData.length }} Teams
+          </div>
+
+          <div class="d-flex align-items-center gap-3">
+            <!-- Results per page -->
+            <div class="d-flex align-items-center gap-2">
+              <label class="mb-0">Results per page</label>
+              <select
+                class="form-select form-select-sm w-auto"
+                [(ngModel)]="teams.pageSize"
+                (change)="paginate('teams')"
+              >
+                @for (size of pageSizeOptions; track $index) {
+                  <option [value]="size" [selected]="size === teams.pageSize">
+                    {{ size }}
+                  </option>
+                }
+              </select>
+            </div>
+
+            <!-- Item range -->
+            <div>
+              {{ teams.startIndex + 1 }} - {{ teams.endIndex }} of
+              {{ teams.filteredData.length }}
+            </div>
+
+            <!-- Pagination buttons -->
+            <nav aria-label="Pagination buttons">
+              <ul class="pagination pagination-sm mb-0">
+                <li
+                  class="page-item"
+                  [class.disabled]="teams.page === 1"
+                  (click)="goToPage(1, 'teams')"
+                >
+                  <a class="page-link">
+                    <i class="fa fa-angle-double-left"></i>
+                  </a>
+                </li>
+                <li
+                  class="page-item"
+                  [class.disabled]="teams.page === 1"
+                  (click)="prevPage('teams')"
+                >
+                  <a class="page-link"><i class="fa fa-angle-left"></i></a>
+                </li>
+                <li class="page-item active">
+                  <a class="page-link">{{ teams.page }}</a>
+                </li>
+
+                @if (teams.page < teams.totalPages) {
+                  <li
+                    class="page-item"
+                    (click)="goToPage(teams.page + 1, 'teams')"
+                  >
+                    <a class="page-link">{{ teams.page + 1 }}</a>
+                  </li>
+                }
+
+                <li
+                  class="page-item"
+                  [class.disabled]="teams.page === teams.totalPages"
+                  (click)="nextPage('teams')"
+                >
+                  <a class="page-link"><i class="fa fa-angle-right"></i></a>
+                </li>
+                <li
+                  class="page-item"
+                  [class.disabled]="teams.page === teams.totalPages"
+                  (click)="goToPage(teams.totalPages, 'teams')"
+                >
+                  <a class="page-link"
+                    ><i class="fa fa-angle-double-right"></i
+                  ></a>
+                </li>
+              </ul>
+            </nav>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div
+  class="modal fade"
+  id="roles-modal"
+  data-bs-backdrop="static"
+  data-bs-keyboard="false"
+  tabindex="-1"
+  aria-labelledby="role"
+  aria-hidden="true"
+>
+  <div class="modal-dialog modal-dialog-centered">
+    <form
+      (ngSubmit)="createRole()"
+      class="modal-content"
+      [formGroup]="roleForm"
+    >
+      <div class="modal-header fs-12">
+        <h1 class="modal-title fs-12">
+          @if (selectedRole) {
+            Edit Role
+          } @else {
+            Create Roles
+          }
+        </h1>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+          aria-label="Close"
+          (click)="closeRoleForm()"
+        ></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label for="roleName" class="form-label fs-12 text-muted">Name</label>
+
+          <input
+            type="text"
+            formControlName="roleName"
+            class="form-control form-control-sm fw-normal"
+            id="roleName"
+            [placeholder]="
+              selectedRole ? '' : 'To add roles type name and press enter'
+            "
+          />
+          <form-error
+            controlName="roleName"
+            [messages]="{
+              required: 'Role name is required',
+              duplicate: 'A role exists with a similar name',
+            }"
+          />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button
+          type="button"
+          class="btn border text-muted px-4 btn-sm bg-white"
+          data-bs-dismiss="modal"
+          aria-label="Close"
+          (click)="closeRoleForm()"
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          [disabled]="roleForm.invalid"
+          class="btn btn-action btn-warning text-white px-4 btn-sm bg-warning"
+        >
+          Submit
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div
+  class="modal fade"
+  id="teams-modal"
+  tabindex="-1"
+  aria-labelledby="teams"
+  aria-hidden="true"
+>
+  <div class="modal-dialog modal-dialog-centered">
+    <form
+      (ngSubmit)="createTeam()"
+      class="modal-content"
+      [formGroup]="teamForm"
+    >
+      <div class="modal-header fs-12">
+        <h1 class="modal-title fs-12">
+          @if (selectedTeam) {
+            Edit Team
+          } @else {
+            Create Teams
+          }
+        </h1>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+          aria-label="Close"
+          (click)="closeTeamsForm()"
+        ></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label for="teamName" class="form-label fs-12 text-muted">Name</label>
+          <input
+            type="text"
+            formControlName="teamName"
+            class="form-control form-control-sm fw-normal"
+            id="teamName"
+            [placeholder]="
+              selectedTeam ? '' : 'To add team type name and press enter'
+            "
+          />
+          <form-error
+            controlName="teamName"
+            [messages]="{
+              required: 'Team name is required',
+              duplicate: 'A team exists with a similar name',
+            }"
+          />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button
+          type="button"
+          class="btn border text-muted px-4 btn-sm bg-white"
+          data-bs-dismiss="modal"
+          aria-label="Close"
+          (click)="closeTeamsForm()"
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          [disabled]="teamForm.invalid"
+          class="btn btn-action btn-warning text-white px-4 btn-sm bg-warning"
+        >
+          Submit
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<app-toast [toastMessage]="toast.toastMessage()" />

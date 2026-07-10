@@ -1,0 +1,295 @@
+<app-header></app-header>
+
+<div
+  style="height: 92dvh"
+  class="plugins-tab p-3 dashboard-container d-flex flex-column"
+>
+  <div class="border bg-white rounded-2 d-flex flex-column h-100">
+    <div class="d-flex align-items-center border-bottom gap-3 px-3 py-2 justify-content-between">
+        <div
+            class="nav-link active nav-orange fs-14 text-dark"
+          >
+            Plugins
+        </div>
+
+        <input
+          type="text"
+          autocomplete="off"
+          class="form-control form-control-sm rounded-2 w-50"
+          style="min-width: 300px"
+          placeholder="Search Plugins..."
+          [(ngModel)]="plugins.searchTerm"
+        />
+
+        <button
+          type="button"
+          class="btn btn-warning btn-sm text-white px-4"
+          data-bs-toggle="modal"
+          data-bs-target="#pluginsModal"
+        >
+          Add New
+        </button>
+    </div>
+
+    <div class="tab-content h-100 overflow-hidden p-3">
+      <div
+        class="tab-pane active flex-column h-100 overflow-auto"
+        id="plugins"
+        role="tabpanel"
+        aria-labelledby="plugins-tab"
+      >
+        <div class="table-sticky overflow-auto h-100 border rounded-2">
+          <table class="table fs-12" aria-label="Plugins">
+            <caption class="visually-hidden">
+              Plugins
+            </caption>
+            <thead>
+              <tr class="sticky" style="position: sticky; top: 0; z-index: 1">
+                <th scope="col">#</th>
+                <th scope="col">Name</th>
+                <th scope="col">Created At</th>
+                <th scope="col">Created By</th>
+                <th scope="col">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (item of plugins.paginatedData; track $index) {
+                <tr>
+                  <td>{{ $index + 1 }}</td>
+                  <td>{{ item.PluginName }}</td>
+                  <td>{{ item.Created_Date.$date | date: "dd/MM/yyyy" }}</td>
+                  <td>{{ item.Created_By }}</td>
+                  <td>
+                    <i
+                      class="fa-solid fa-pen-to-square cursor-pointer"
+                      title="Edit Plugin"
+                      (click)="editPlugin(item)"
+                    >
+                    </i>
+
+                    <i
+                      class="fa-solid fa-trash cursor-pointer ms-3"
+                      title="Delete Plugin"
+                      (click)="deletePlugin(item)"
+                    >
+                    </i>
+                  </td>
+                </tr>
+              }
+              @if (!plugins.paginatedData.length) {
+                <tr>
+                  <td colspan="5" class="py-4">No plugins found</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        <div
+          class="d-flex pt-3 pb-2 justify-content-between align-items-center fs-12"
+        >
+          <div>
+            Showing {{ plugins.startIndex + 1 }} to {{ plugins.endIndex }} of
+            {{ plugins.filteredData.length }} plugins
+          </div>
+
+          <div class="d-flex align-items-center gap-3">
+            <!-- Results per page -->
+            <div class="d-flex align-items-center gap-2">
+              <label class="mb-0">Results per page</label>
+              <select
+                class="form-select form-select-sm w-auto"
+                [(ngModel)]="plugins.pageSize"
+                (change)="paginate('plugins')"
+              >
+                @for (size of pageSizeOptions; track $index) {
+                  <option [value]="size" [selected]="size === plugins.pageSize">
+                    {{ size }}
+                  </option>
+                }
+              </select>
+            </div>
+
+            <!-- Item range -->
+            <div>
+              {{ plugins.startIndex + 1 }} - {{ plugins.endIndex }} of
+              {{ plugins.filteredData.length }}
+            </div>
+
+            <!-- Pagination buttons -->
+            <nav aria-label="Plugins pagination">
+              <ul class="pagination pagination-sm mb-0">
+                <li
+                  class="page-item"
+                  [class.disabled]="plugins.page === 1"
+                  (click)="goToPage(1, 'plugins')"
+                >
+                  <a class="page-link">
+                    <i class="fa fa-angle-double-left"></i>
+                  </a>
+                </li>
+                <li
+                  class="page-item"
+                  [class.disabled]="plugins.page === 1"
+                  (click)="prevPage('plugins')"
+                >
+                  <a class="page-link"><i class="fa fa-angle-left"></i></a>
+                </li>
+                <li class="page-item active">
+                  <a class="page-link">{{ plugins.page }}</a>
+                </li>
+
+                @if (plugins.page < plugins.totalPages) {
+                  <li
+                    class="page-item"
+                    (click)="goToPage(plugins.page + 1, 'plugins')"
+                  >
+                    <a class="page-link">{{ plugins.page + 1 }}</a>
+                  </li>
+                }
+
+                <li
+                  class="page-item"
+                  [class.disabled]="plugins.page === plugins.totalPages"
+                  (click)="nextPage('plugins')"
+                >
+                  <a class="page-link"><i class="fa fa-angle-right"></i></a>
+                </li>
+                <li
+                  class="page-item"
+                  [class.disabled]="plugins.page === plugins.totalPages"
+                  (click)="goToPage(plugins.totalPages, 'plugins')"
+                >
+                  <a class="page-link"
+                    ><i class="fa fa-angle-double-right"></i
+                  ></a>
+                </li>
+              </ul>
+            </nav>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<div
+  class="modal fade"
+  id="pluginsModal"
+  data-bs-backdrop="static"
+  data-bs-keyboard="false"
+  tabindex="-1"
+  aria-labelledby="plugins-modal-label"
+  aria-hidden="true"
+>
+  <div class="modal-dialog modal-dialog-centered">
+    <form
+      class="modal-content"
+      [formGroup]="pluginForm"
+    >
+      <div class="modal-header fs-12">
+        <h1 class="modal-title fs-12">
+          @if (selectedPlugin) {
+            Edit Plugin
+          } @else {
+            Create Plugins
+          }
+        </h1>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+          aria-label="Close"
+          (click)="closePluginForm()"
+        ></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label for="pluginName" class="form-label fs-12 text-muted">Name</label>
+
+          <input
+            type="text"
+            formControlName="pluginName"
+            class="form-control form-control-sm fw-normal"
+            id="pluginName"
+            placeholder="Plugin Name"
+          />
+          <form-error
+            controlName="pluginName"
+            [messages]="{
+              required: 'Plugin Name is required',
+              duplicate: 'Plugin Name already exists'
+            }"
+          />
+        </div>
+        <div class="mb-3">
+          <label for="agency" class="form-label fs-12 text-muted">Agency</label>
+          <app-multi-select
+            [parentWidth]="false"
+            style="
+              --width: 100%;
+              --label-padding-y: 0.3rem;
+              --label-font-size: 0.85rem;
+              --option-font-size: 0.85rem;
+              --checkbox-size: 0.9rem;
+              --min-height: auto;
+            "
+            [options]="agencyList"
+            formControlName="agencyList"
+            placeholder="Agency List"
+          ></app-multi-select>
+          <form-error
+            controlName="agencyList"
+            [messages]="{
+              required: 'Atleast one agency is required'
+            }"
+          />
+        </div>
+        <div class="mb-3">
+          <label for="agents" class="form-label fs-12 text-muted">Agents</label>
+          <app-multi-select
+            [parentWidth]="false"
+            style="
+              --width: 100%;
+              --label-padding-y: 0.3rem;
+              --label-font-size: 0.85rem;
+              --option-font-size: 0.85rem;
+              --checkbox-size: 0.9rem;
+              --min-height: auto;
+            "
+            [options]="agentsList"
+            formControlName="agentsList"
+            placeholder="Agents List"
+          ></app-multi-select>
+          <form-error
+            controlName="agentsList"
+            [messages]="{
+              required: 'Atleast one agent is required'
+            }"
+          />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button
+          type="button"
+          class="btn border text-muted px-4 btn-sm bg-white"
+          data-bs-dismiss="modal"
+          aria-label="Close"
+          (click)="closePluginForm()"
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          [disabled]="pluginForm.invalid || pluginForm.pristine"
+          (click)="submitForm()"
+          class="btn btn-action btn-warning text-white px-4 btn-sm bg-warning"
+        >
+          Submit
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+
+<app-toast [toastMessage]="toast.toastMessage()" />

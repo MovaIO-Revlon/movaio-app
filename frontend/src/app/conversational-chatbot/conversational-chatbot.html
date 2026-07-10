@@ -1,0 +1,182 @@
+<app-header></app-header>
+<div class="chatbot">
+    <div class="chat-layout">
+        <aside class="sidebar" [ngClass]="{ collapsed: sidebarCollapsed }">
+            <div class="sidebar-header-wrapper" *ngIf="!sidebarCollapsed">
+                <div class="sidebar-header">Welcome to Interactive chatbot</div>
+                <button class="sidebar-toggle" (click)="toggleSidebar()" [attr.aria-label]="sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'" title="Toggle sidebar">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path [attr.d]="sidebarCollapsed ? 'M9 6l6 6-6 6' : 'M15 6l-6 6 6 6'" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                </button>
+            </div>
+            <div class="sidebar-toggle-collapsed" *ngIf="sidebarCollapsed">
+                <button class="sidebar-toggle" (click)="toggleSidebar()" [attr.aria-label]="sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'" title="Toggle sidebar">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path [attr.d]="sidebarCollapsed ? 'M9 6l6 6-6 6' : 'M15 6l-6 6 6 6'" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                </button>
+            </div>
+            <div class="sidebar-content" *ngIf="!sidebarCollapsed">
+                <div class="field-group">
+                    <label class="field-label" for="agency-select">Agency</label>
+                    <select id="agency-select" [(ngModel)]="selectedAgencyId" (ngModelChange)="onAgencyChange($event)">
+                        <option [ngValue]="null" disabled>Select an agency</option>
+                        <option *ngFor="let agency of agencies; trackBy: trackByAgency" [ngValue]="agency.agency_id">{{ agency.agency_name }} ({{ agency.interactiveAgentsCount}})</option>
+                    </select>
+                </div>
+                <div class="field-group">
+                    <label class="field-label" for="agent-select">Agent</label>
+                    <select id="agent-select" [(ngModel)]="selectedAgentId" (ngModelChange)="onAgentChange($event)" [disabled]="!selectedAgencyId">
+                        <option [ngValue]="null" disabled>Select an agent</option>
+                        <option *ngFor="let agent of filteredAgents; trackBy: trackByAgent" [ngValue]="agent.agent_id">{{ agent.name }}</option>
+                    </select>
+                </div>
+                <!-- Popular Query Section -->
+                <div class="popular-query-section" *ngIf="selectedAgent">
+                    <div class="popular-query-header">
+                        <button class="collapse-arrow" (click)="toggleRecentQueryCollapse()" [attr.aria-expanded]="!isRecentQueryCollapsed">
+                            <svg class="chevron-icon" [class.collapsed]="isRecentQueryCollapsed" width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                            </svg>
+                        </button>
+                        <h3 class="popular-query-heading">Recent query</h3>
+                    </div>
+                    <div class="query-card" (click)="selectRecentQuery()" *ngIf="!isRecentQueryCollapsed">
+                        <p class="query-text">{{ selectedAgent?.recent_query || '' }}</p>
+                    </div>
+                </div>
+                
+                <!-- <p class="agent-intro" *ngIf="selectedAgent">I'm your {{ selectedAgent.name }} agent — your AI-powered partner for all your needs.</p> -->
+                <div class="loading" *ngIf="agencyLoading">Loading agencies…</div>
+            </div>
+        </aside>
+
+        <section class="chat-panel">
+            <div class="chat-header">
+                <span class="chat-title" *ngIf="selectedAgent">{{ selectedAgent.name }}</span>
+                <button type="button" class="close-chat" aria-label="Close chat" title="Back" (click)="closeChat()">✕</button>
+            </div>
+
+            <div class="messages" #messagesList>
+        <div *ngFor="let m of chatResponses; let i = index" class="message" [ngClass]="m.role">
+            <!-- Thinking Box for Assistant Messages -->
+            <div *ngIf="m.role === 'assistant' && m.thinkingLogs && m.thinkingLogs.length > 0" class="thinking-box-container">
+                <button class="thinking-box-header" (click)="toggleThinkingBox(i, $event)" [attr.aria-expanded]="!m.isThinkingBoxCollapsed">
+                    <svg class="chevron-icon" [class.collapsed]="m.isThinkingBoxCollapsed" width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                    <span class="thinking-box-title">✨ Show Thinking</span>
+                    <span class="thinking-step-count">{{ m.thinkingLogs.length }} steps</span>
+                </button>
+                
+                <div class="thinking-box-content" *ngIf="!m.isThinkingBoxCollapsed" [@slideDown]>
+                    <div class="thinking-logs">
+                        <div *ngFor="let log of m.thinkingLogs; let logIndex = index" class="thinking-log-item">
+                            <button class="log-item-header" (click)="toggleThinkingLog(i, logIndex, $event)" [attr.aria-expanded]="!log.expanded">
+                                <svg class="log-chevron" [class.collapsed]="log.expanded" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                                </svg>
+                                <!-- <span class="log-icon">{{ log.title.split(' ')[0] }}</span> -->
+                                <span class="log-title">{{ log.title }}</span>
+                            </button>
+                            <div class="log-item-content" *ngIf="log.expanded" [@slideDown]>
+                                <div [innerHTML]="log.content" class="log-details-wrapper"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bubble">
+                <div class="content">
+                    <div *ngIf="m.role === 'user' && m.text">{{ m.text }}</div>
+                    <div *ngIf="m.role === 'user' && m.attachments?.length">
+                        <div *ngFor="let a of m.attachments" class="attachment">📎 {{ a.name }}</div>
+                    </div>
+                    <!-- <div *ngIf="m.role === 'assistant' && m.showThinking" class="thinking">Thinking<span class="dots">...</span></div> -->
+                    <div *ngIf="m.role==='assistant' && !m.showThinking" class="d-flex" >
+                        <div [innerHTML]="m.html" class="bg-eee p-1 rounded text-wrap streamed-response"></div>
+                    </div>
+                </div>
+            </div>
+            <!-- actions placed outside the bubble, below the message -->
+            <div class="footer">
+                <div class="message-actions">
+                    <button class="icon copy" *ngIf="(m.text || m.html) && !m.showThinking" (click)="copyMessage(m)" aria-label="Copy message" title="Copy message">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M9 3H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            <rect x="9" y="9" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.5"/>
+                        </svg>
+                    </button>
+                    <button class="icon download" *ngIf="m.role === 'assistant' && !m.showThinking" (click)="downloadResponse(m)" aria-label="Download response" title="Download response">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 3v12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M8 11l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M4 19h16" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
+                    <button class="icon regen" *ngIf="m.role === 'assistant' && !m.showThinking" (click)="regenerate(m)" aria-label="Regenerate"
+                        title="Regenerate">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M21 12a9 9 0 1 0-3 6.6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
+                                stroke-linejoin="round" />
+                            <path d="M21 3v6h-6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
+                                stroke-linejoin="round" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="composer-div">
+         <!-- global suggested actions (right aligned above input) -->
+        <!-- <div class="global-suggestions" *ngIf="suggestions?.length"> -->
+            <!-- <div class="suggestion-group"> -->
+                <!-- <div class="suggested right stacked"> -->
+                    <!-- <button type="button" *ngFor="let s of suggestions" title="{{ s }}" (click)="selectSuggestion(s)"> -->
+                        <!-- <span>{{ truncateSuggestion(s, 62) }}</span> -->
+                    <!-- </button> -->
+                <!-- </div> -->
+            <!-- </div> -->
+        <!-- </div> -->
+        <div class="composer">
+            <div class="composer-inner">
+                <div class="left-controls">
+                    <button class="new-chat-btn" (click)="startNewChat()" [disabled]="!selectedAgentId" aria-label="Start new chat" title="New chat">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 5v14m7-7H5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                        <span class="button-label" *ngIf="!sidebarCollapsed">New chat</span>
+                    </button>
+                </div>
+
+                <div class="input-wrap">
+                    <div class="inner-box">
+                        <div class="pending-attachments" *ngIf="pendingAttachments?.length">
+                            <div *ngFor="let a of pendingAttachments; let i = index" class="attachment-chip">
+                                <span class="name">{{ a.name }}</span>
+                                <button class="remove" (click)="removeAttachment(i)" aria-label="Remove">✕</button>
+                            </div>
+                        </div>
+
+                        <label class="visually-hidden" for="chat-input">Message</label>
+                        <input id="chat-input" [(ngModel)]="draft" (keydown.enter)="onSend()" placeholder="Select an agent before typing..."
+                            [disabled]="!selectedAgentId" class="text-input" />
+                    </div>
+
+                    <button class="icon send-circle" (click)="onSend()" [disabled]="!canSend()" aria-label="Send" title="Send">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M22 2L11 13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"
+                                stroke-linejoin="round" />
+                            <path d="M22 2L15 22l-4-9-9-4 18-7z" fill="currentColor" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    </section>
+    </div>
+</div>

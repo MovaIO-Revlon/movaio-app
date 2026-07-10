@@ -1,0 +1,344 @@
+<div class="root">
+  <div class="sidebar" [class.open]="sidebarOpen()">
+    <div class="title">
+      <span>MCP Connectors Statistics</span>
+
+      <button
+        (click)="toggleSidebar()"
+        type="button"
+        class="btn bg-white btn-sm border-0"
+      >
+        <i class="fa fa-solid fa-chevron-right text-muted"></i>
+      </button>
+    </div>
+
+    @if (sidebarOpen()) {
+      <details open class="chart-card">
+        <summary>
+          <span> By Connector Types</span>
+          <i class="fa fa-solid fa-chevron-right text-muted"></i>
+        </summary>
+        <div>
+          <connectors-chart
+            [data]="chartData()"
+            [totalConnectorCount]="connectorCount()"
+            [filteredCount]="filteredCount()"
+            [selected]="pager.filters()['connectorType']"
+            (selectedChange)="pager.setFilters({ connectorType: $event })"
+          />
+        </div>
+      </details>
+      <details open class="chart-card">
+        <summary>
+          <span> By Entity Types</span>
+          <i class="fa fa-solid fa-chevron-right text-muted"></i>
+        </summary>
+        <div>
+          <entities-chart
+            [data]="entityData()"
+            [total]="entityTotalCount()"
+            [filteredCount]="filteredCount()"
+            [selected]="pager.filters()['entityType']"
+            (selectedChange)="pager.setFilters({ entityType: $event })"
+          />
+        </div>
+      </details>
+    }
+  </div>
+  <div class="content position-relative">
+    <div
+      class="header d-flex gap-3 align-items-center border-bottom pb-1 px-3"
+      style="margin: 0 -1rem"
+    >
+      <div class="title">MCP Connectors</div>
+      <div
+        class="position-relative ms-auto fs-12 w-100"
+        style="max-width: 24rem"
+      >
+        <i
+          class="fa-solid fa-search position-absolute"
+          style="left: 0.5rem; top: 50%; transform: translateY(-50%)"
+        ></i>
+        <input
+          class="form-control fs-12 ps-4"
+          placeholder="Search"
+          [ngModel]="pager.filters().search"
+          (ngModelChange)="pager.setFilters({ search: $event })"
+        />
+      </div>
+
+      <button
+        type="button"
+        [disabled]="!isPrivilegeEdit"
+        (click)="openOnboardModal()"
+        class="btn fs-12 border text-white px-3 bg-warning"
+      >
+        <i class="fa-regular fa-square-plus"></i>
+        <span class="ps-2">New MCP Connector</span>
+      </button>
+    </div>
+
+    <div class="flex-grow-1 overflow-auto">
+      <div class="list">
+        @for (item of pager.paginatedData(); track $index) {
+          <div
+            class="mcp-card position-relative"
+            (click)="openOnboardModal(item)"
+          >
+            <div
+              class="card-action d-flex align-items-center position-absolute pe-2 pt-1"
+              style="top: 0; right: 0"
+            >
+              <button
+                class="btn bg-white btn-sm text-muted border-0"
+                [appTooltip]="'Delete MCP Connector'"
+                type="button"
+                *ngIf="!isPrivilegeDelete"
+                (click)="openDeleteConfirmModal($event, item)"
+              >
+                <i class="fa-regular fa-trash-can"></i>
+              </button>
+
+              <span
+                class="rounded-circle"
+                style="top: 0; right: 1rem; width: 10px; height: 10px"
+                [style.background-color]="
+                  item.status === 'active' ? '#29b14b' : '#dc3545'
+                "
+              ></span>
+            </div>
+
+            <div class="card-header">
+              <div class="icon">
+                <img
+                  [src]="
+                    connectorIconsMap[item.connector_type] ||
+                    connectorIconsMap['excel']
+                  "
+                  [alt]="item.connector_type"
+                />
+              </div>
+              <div style="min-width: 0">
+                <div class="card-title" [title]="item.index_name">
+                  {{ item.index_name }}
+                </div>
+                <div class="card-description text-capitalize">
+                  {{ item.connector_type }}
+                </div>
+              </div>
+            </div>
+
+            <div class="card-body">
+              <div><strong>Entity Type</strong>: {{ item.entity_type }}</div>
+              <div
+                class="text-truncate"
+                [title]="item.onboarded_agent.agent_name"
+              >
+                <strong>Agent</strong>: {{ item.onboarded_agent.agent_name }}
+              </div>
+            </div>
+
+            <div class="d-flex align-items-center gap-2">
+              <button
+                (click)="syncToOpenSearch($event, item)"
+                class="btn btn-sm text-success rounded-2"
+                style="
+                  background-color: #e5f3e7;
+                  color: #29b14b;
+                  min-width: 10rem;
+                "
+              >
+                @if (item.last_synced_at) {
+                  Last sync: {{ item.last_synced_at | timeAgo }}
+                } @else {
+                  Sync Now
+                }
+              </button>
+              <i
+                (click)="syncToOpenSearch($event, item)"
+                class="fa-solid fa-rotate"
+              ></i>
+            </div>
+
+            <div class="border-top fs-14 pt-2">
+              <i class="fa-regular fa-calendar"></i>
+              <span class="ps-1">
+                @let isSame = isSameDate(item.createdAt, item.ingested_at);
+                @let label = isSame ? "Created" : "Updated";
+                @let date =
+                  isSame
+                    ? item.createdAt.replace("+00:00Z", "Z")
+                    : item.ingested_at;
+
+                {{ label }}
+                @if (date) {
+                  {{ date | date: "dd/MM/yyyy" }}
+                } @else {
+                  --/--/--
+                }
+              </span>
+            </div>
+          </div>
+        }
+
+        @if (!searchIndexQuery.isLoading() && !pager.paginatedData().length) {
+          <p
+            class="text-center fs-14 text-muted py-5"
+            style="grid-column: 1 / -1"
+          >
+            No Results Found
+          </p>
+        }
+      </div>
+    </div>
+
+    @if (searchIndexQuery.isLoading() || loading()) {
+      <div
+        style="inset: 0"
+        class="inset-0 position-absolute z-2 d-flex align-items-center justify-content-center"
+      >
+        <div
+          class="spinner-border text-muted"
+          role="status"
+          style="--bs-spinner-border-width: 0.1rem"
+        >
+          <span class="visually-hidden">Loading...</span>
+        </div>
+      </div>
+    }
+
+    <div
+      style="margin: 0 -1rem"
+      class="pt-2 px-2 border-top d-flex justify-content-between align-items-center fs-12"
+    >
+      <div>
+        Showing {{ pager.startIndex() + 1 }} to {{ pager.endIndex() }} of
+        {{ pager.filteredData().length }} MCP's
+      </div>
+
+      <div class="d-flex align-items-center gap-3">
+        <div class="d-flex align-items-center gap-2">
+          <label class="mb-0" for="page-size">Results per page</label>
+          <select
+            id="page-size"
+            class="form-select form-select-sm w-auto"
+            [(ngModel)]="pager.pageSize"
+          >
+            @for (size of pager.pageSizeOptions(); track $index) {
+              <option [value]="size" [selected]="size === pager.pageSize()">
+                {{ size }}
+              </option>
+            }
+          </select>
+        </div>
+
+        <nav>
+          <ul class="pagination pagination-sm mb-0">
+            <li
+              class="page-item"
+              [class.disabled]="!pager.hasPrevPage()"
+              (click)="pager.reset()"
+              (keydown.enter)="pager.reset()"
+            >
+              <a class="page-link">
+                <i class="fa fa-angle-double-left"></i>
+              </a>
+            </li>
+            <li
+              class="page-item"
+              [class.disabled]="!pager.hasPrevPage()"
+              (click)="pager.prevPage()"
+              (keydown.enter)="pager.prevPage()"
+            >
+              <a class="page-link"><i class="fa fa-angle-left"></i></a>
+            </li>
+            <li class="page-item active">
+              <a class="page-link">{{ pager.page() }}</a>
+            </li>
+
+            @if (pager.page() < pager.totalPages()) {
+              <li
+                class="page-item"
+                (click)="pager.setPage(pager.page() + 1)"
+                (keydown.enter)="pager.setPage(pager.page() + 1)"
+              >
+                <a class="page-link">{{ pager.page() + 1 }}</a>
+              </li>
+            }
+
+            <li
+              class="page-item"
+              [class.disabled]="!pager.hasNextPage()"
+              (click)="pager.nextPage()"
+              (keydown.enter)="pager.nextPage()"
+            >
+              <a class="page-link"><i class="fa fa-angle-right"></i></a>
+            </li>
+            <li
+              class="page-item"
+              [class.disabled]="!pager.hasNextPage()"
+              (click)="pager.goToLast()"
+              (keydown.enter)="pager.goToLast()"
+            >
+              <a class="page-link"><i class="fa fa-angle-double-right"></i></a>
+            </li>
+          </ul>
+        </nav>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div
+  class="modal fade"
+  #deleteConfirmModal
+  tabindex="-1"
+  aria-labelledby="deleteConfirmLabel"
+  aria-hidden="true"
+>
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header border-0">
+        <h5 class="modal-title fw-semibold" id="deleteConfirmLabel">
+          Confirm Delete
+        </h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+          aria-label="Close"
+        ></button>
+      </div>
+      <div class="modal-body">
+        <p class="fs-14">
+          Are you sure you want to delete this MCP Connector? This action cannot
+          be undone.
+        </p>
+      </div>
+      <div class="modal-footer border-0">
+        <button
+          type="button"
+          class="btn btn-secondary fs-12"
+          data-bs-dismiss="modal"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          class="btn btn-danger fs-12"
+          (click)="confirmDelete()"
+          data-bs-dismiss="modal"
+        >
+          Delete
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<app-toast [toastMessage]="toast.toastMessage()" />
+
+<mcp-form-modal
+  (close)="$event && searchIndexQuery.reload()"
+  (onDelete)="openDeleteConfirmModal(null, $event)"
+/>

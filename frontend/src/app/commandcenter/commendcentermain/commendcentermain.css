@@ -1,0 +1,598 @@
+/*command center card*/
+
+.card-header-cc {
+    padding: 16px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.card-header-cc[data-status="In Progress"] {
+    background-color: #e6f0ff;
+    /* Light blue */
+}
+
+.card-header-cc[data-status="yet to start"] {
+    background-color: #fff2e6;
+    /* Light blue */
+}
+
+.card-header-cc[data-status="Need Assistance"] {
+    background-color: #fffbf7;
+    /* Light orange */
+}
+
+.card-header-cc[data-status="Completed"] {
+    background-color: #e6f9f0;
+    /* Light green */
+}
+
+
+.card-header-cc[data-status="Active"] {
+background-color: #e6f0ff;
+    /* Light green */
+}
+
+.text-block-cc {
+    display: flex;
+    flex-direction: column;
+}
+
+.title-cc {
+    font-weight: 700;
+    font-size: 15px;
+    color: #2c2c2c;
+    margin: 0;
+}
+
+.subtitle-cc {
+    font-size: 13px;
+    color: #999999;
+    margin-top: 4px;
+    max-height: 35px;
+    overflow: hidden;
+    margin-bottom: 0;
+    padding-right: 5px;
+}
+
+.right-block-cc {
+    text-align: right;
+}
+
+.pill-cc {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 14px;
+    display: inline-block;
+    margin-bottom: 8px;
+}
+
+.pill-cc[data-status="yet to start"] {
+    background-color: #f2a359;
+    color: #dc6e07;
+    white-space: nowrap;
+}
+
+/* Pill colors per status */
+.pill-cc[data-status="In Progress"] {
+    background-color: #6f96d1;
+    color: #004085;
+    white-space: nowrap;
+}
+
+.pill-cc[data-status="Active"] {
+    background-color: #6f96d1;
+    color: #004085;
+    white-space: nowrap;
+}
+
+
+.pill-cc[data-status="Need Assistance"] {
+    background-color: #b59363;
+    color: #a3501a;
+    white-space: nowrap;
+}
+
+.pill-cc[data-status="Completed"] {
+    background-color: #bae6d1;
+    color: #1a7f5a;
+    white-space: nowrap;
+}
+
+.confidence-cc {
+    font-size: 18px;
+    font-weight: 700;
+    margin: 0;
+}
+
+/* Color per level */
+.confidence-cc[data-confidence="high"] {
+    color: #1a7f5a;
+    /* Green */
+}
+
+.confidence-cc[data-confidence="medium"] {
+    color: #a13a1d;
+    /* Orange */
+}
+
+.confidence-cc[data-confidence="low"] {
+    color: #004085;
+    /* Red */
+}
+
+.confidence-label-cc {
+    font-size: 12px;
+    color: #444444;
+    margin-top: -2px;
+}
+
+.info-item {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+}
+
+.info-icon {
+    width: 18px;
+    height: 18px;
+    color: #666666;
+}
+
+.info-label {
+    font-size: 12px;
+    color: #666666;
+    margin: 0;
+}
+
+.info-value {
+    font-size: 13px;
+    font-weight: 700;
+    margin: 2px 0 0;
+}
+
+.info-value.orange {
+    color: #f48c26;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.external-icon {
+    font-size: 12px;
+    color: #f48c26;
+
+}
+
+.action-section-cc {
+    background: #ffffff;
+    border-radius: 0 0 8px 8px;
+    padding: 16px 20px;
+    max-width: 500px;
+    border-top: 1px solid #e0e0e0;
+}
+
+.action-required-cc {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #1a1a1a;
+    margin-bottom: 16px;
+}
+
+.action-required-cc .icon-cc {
+    background-color: #ff6b6b;
+    color: white;
+    font-size: 12px;
+    width: 18px;
+    height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    font-weight: bold;
+}
+
+.buttons-cc {
+    display: flex;
+    gap: 12px;
+}
+
+.btn-cc {
+    font-size: 12px;
+    font-weight: 600;
+    padding: 10px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    border: none;
+    transition: background-color 0.2s ease;
+    white-space: nowrap;
+}
+
+.btn-primary-cc {
+    background-color: #ffa63b;
+    color: white;
+    border: 1px solid transparent;
+}
+
+.btn-primary-cc:hover {
+    background-color: #f7931e;
+}
+
+.btn-secondary-cc {
+    background-color: white;
+    color: #888888;
+    border: 1px solid #dddddd;
+}
+
+.agent-link {
+    text-decoration: none;
+    color: orange;
+    font-size: 14px;
+    /* Tailwind orange-500 or your theme color */
+}
+
+.agent-link:hover {
+    text-decoration: underline;
+}
+
+.card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    width: 32%;
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+}
+
+.category {
+    color: #f28500;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.title {
+    font-size: 18px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.title i {
+    font-style: normal;
+    font-size: 12px;
+    color: #999;
+}
+
+.severity {
+    background: #ffebeb;
+    color: red;
+    font-size: 12px;
+    padding: 2px 10px;
+    border-radius: 12px;
+    float: right;
+    font-weight: bold;
+}
+
+.severity.medium {
+    background: #fff3d4;
+    color: #b27600;
+}
+
+.description {
+    margin: 10px 0;
+    color: #555;
+    font-size: 14px;
+}
+
+.recommendation {
+    background: #f5f5f7;
+    padding: 12px;
+    border-radius: 10px;
+    min-height: 80px;
+}
+
+.recommendation strong {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.recommendation::before {
+    /* content: "✔️"; */
+    margin-right: 6px;
+}
+
+.recommend-text {
+    white-space: nowrap;
+    overflow: hidden;
+    max-width: 242px;
+    /* or adjust based on layout */
+    display: inline-block;
+    vertical-align: bottom;
+}
+
+
+.card-container {
+    display: flex;
+    flex-wrap: wrap;
+    /* allows responsiveness */
+    gap: 20px;
+    padding: 20px;
+}
+
+.summary-container {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.summary-card {
+    border: 1px solid #eee;
+    border-radius: 10px;
+    padding: 16px;
+    width: 300px;
+    background: #fff;
+
+    h2 {
+        font-size: 1.2em;
+        margin: 0;
+    }
+
+    .badge {
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 0.8em;
+        color: white;
+    }
+
+    &.high .badge {
+        background: #FF6F61;
+    }
+
+    &.medium .badge {
+        background: #FFD54F;
+    }
+
+    .recommendation {
+        background: #f6f3f5;
+        padding: 10px;
+        margin-top: 10px;
+        border-radius: 8px;
+    }
+}
+
+.chart-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 24px;
+    padding: 16px;
+
+    canvas {
+        width: 100%;
+        height: 300px;
+    }
+}
+
+.w-50 {
+    width: 47% !important;
+}
+
+.desc-wrap {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.custom-info-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    margin-left: 8px;
+    font-size: 12px;
+    font-weight: bold;
+    border: 2px solid #f4a261;
+    /* soft orange border */
+    color: #f4a261;
+    border-radius: 50%;
+    line-height: 1;
+    font-family: Arial, sans-serif;
+}
+
+/* .chart-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 40px;
+} */
+
+.chart-card {
+    min-height: 400px;
+    /* same baseline height */
+    max-height: 400px;
+    /* prevent doughnut from overflowing */
+    display: flex;
+    flex-direction: column;
+}
+
+.chart-card canvas {
+    flex: 1;
+    width: 100% !important;
+    height: 100% !important;
+    /* forces all charts to match parent size */
+}
+
+/* Make all controls the same height and adjust widths as required */
+.custom-filter-height {
+    height: 42px !important;
+    /* Same as Bootstrap form-select default */
+    min-height: 42px !important;
+    padding-top: 2px;
+    padding-bottom: 2px;
+    font-size: 1rem;
+    box-sizing: border-box;
+}
+
+.custom-filter-width {
+    width: 100%;
+}
+
+.custom-bg-width {
+    width: 100%;
+}
+
+.custom-dropdown-width {
+    width: 300px !important;
+    /* Adjust width as needed */
+    min-width: 300px !important;
+}
+
+/* Further style the ng-multiselect-dropdown's internal input and panel if needed */
+::ng-deep ng-multiselect-dropdown .dropdown-btn {
+    min-height: 42px !important;
+    height: 42px !important;
+    font-size: 1rem;
+    align-items: center;
+}
+
+::ng-deep ng-multiselect-dropdown .dropdown-list {
+    min-width: 260px !important;
+    width: 260px !important;
+}
+
+.gap-2 {
+    gap: 12px;
+}
+
+/* Optional: for spacing between controls */
+
+.kg-dropdown-height {
+    width: 222px;
+}
+
+.filter-h300 {
+    height: 63%;
+    position: absolute;
+    bottom: 18%;
+    right: 28%;
+}
+
+.day-night {
+    z-index: 1040;
+    background-color: #fff;
+    border: solid 1px #e2e2e2 !important;
+    border-radius: 40px !important;
+    width: 36px;
+    height: 37px;
+    box-shadow: 0 0 2px #bdbdbd;
+}
+
+.node-relation-filter {
+    z-index: 1040;
+    background-color: #fff;
+    border: solid 1px #e2e2e2 !important;
+    border-radius: 40px !important;
+    width: 36px;
+    height: 37px;
+    box-shadow: 0 0 2px #bdbdbd;
+}
+
+.node-relation-filter.active {
+    background: orange !important;
+}
+
+.day-night.night {
+    background: #232323;
+    border: 1px solid #444 !important;
+}
+
+.night-icon {
+    color: #161515;
+}
+
+.day-icon {
+    color: #FFA726;
+}
+
+.night-mode {
+    background-color: #000 !important;
+    border-color: #000 !important;
+    color: black !important;
+}
+
+.night-dropdown {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    border: 1.5px solid #fff !important;
+}
+
+.night-dropdown option {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+}
+
+.search-input {
+    height: 38px;
+    padding: 6px 12px;
+}
+
+.search-input:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25) !important;
+    border-color: #80bdff !important;
+}
+
+/* Night mode support */
+.night-dropdown ~ .search-input {
+    border-color: #777 !important;
+}
+
+.graph-zoom-controls {
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  user-select: none;
+  transition: box-shadow 0.2s;
+}
+
+.graph-zoom-controls:hover {
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+}
+
+.zoom-btn {
+  width: 40px;
+  height: 40px;
+  margin: 4px 0;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #ddd;
+  background: white;
+  border-radius: 6px;
+}
+
+.zoom-btn:hover {
+  background: #f0f0f0;
+}
+
+.zoom-btn:last-child {
+    margin-bottom: 0;
+}
+
+.tabsagent {
+  display: flex;
+  align-items: center;
+  gap: 26px;
+
+  padding-bottom: 5px;
+  max-width: 650px;
+}

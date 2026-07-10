@@ -1,0 +1,188 @@
+<form
+  (ngSubmit)="onSubmit()"
+  [formGroup]="form"
+  class="workflow-element-form"
+  [hidden]="!nodeId()"
+>
+  <div class="title">
+    <span>Node Configuration</span>
+    <button type="button" (click)="handleClose()">
+      <i class="fa-solid fa-xmark"></i>
+    </button>
+  </div>
+
+  <div class="content">
+    @switch (type()) {
+    <!--  -->
+    @case ('agent') {
+    <div class="agent" [classList]="">
+      <div class="mb-3">
+        <label for="agent" class="form-label"
+          >Selected Agent <span class="text-danger">*</span></label
+        >
+        <app-select
+          [options]="agentOptions"
+          placeholder="Select Agent"
+          formControlName="agent"
+        />
+        <form-error
+          [messages]="{
+            required: 'Agent is required',
+          }"
+          controlName="agent"
+        />
+      </div>
+
+      <div class="mb-3">
+        <label for="Input" class="form-label"
+          >Input <span class="text-danger">*</span></label
+        >
+        <input
+          type="text"
+          formControlName="input"
+          class="form-control"
+          id="input"
+          placeholder="Enter Inputs.."
+        />
+        <form-error
+          [messages]="{
+            required: 'Input is required',
+          }"
+          controlName="input"
+        />
+      </div>
+    </div>
+    }
+    <!--  -->
+    @case ('api') {
+    <div class="api">
+      <p class="d-flex align-items-center gap-2 fw-medium">
+        <img src="assets/img/globe.svg" alt="globe"/> API Configuration
+      </p>
+
+      @if (connectedAgent()) {
+      <div class="connected-agents-card section-card mb-3">
+        <p class="title">Connected Agents</p>
+        <p class="fw-normal fs-14 mb-1">1 agent connected to this API node</p>
+        <p class="fs-14 fw-medium text-orange">Test Designer</p>
+
+        <button type="button" (click)="configureMapping($event)">
+          <img src="assets/img/cog-1.svg" alt="Agent" />
+          Configure Mapping
+        </button>
+      </div>
+      }
+
+      <div class="section-card mb-3">
+        <p class="title">Endpoint Configuration</p>
+
+        <div class="mt-3 mb-2">
+          <label for="api_url" class="form-label"
+            >Api URL <span class="text-danger">*</span></label
+          >
+          <input
+            type="text"
+            formControlName="api_url"
+            class="form-control"
+            id="api_url"
+            placeholder="https://example.com/api"
+          />
+          <form-error
+            [messages]="{
+            required: 'Api URL is required',
+          }"
+            controlName="api_url"
+          />
+        </div>
+
+        <div class="mb-2">
+          <label for="http_method" class="form-label"
+            >HTTP Method <span class="text-danger">*</span></label
+          >
+          <select
+            id="http_method"
+            formControlName="http_method"
+            class="form-select"
+          >
+            <option value="">Select HTTP Method</option>
+            @for (item of httpMethodOptions; track $index) {
+            <option [value]="item">{{ item | uppercase }}</option>
+            }
+          </select>
+          <form-error
+            [messages]="{
+            required: 'HTTP Method is required',
+          }"
+            controlName="http_method"
+          />
+        </div>
+      </div>
+
+      <div class="section-card mb-3">
+        <div class="title-2"><span>Headers</span> <button>ADD</button></div>
+
+        <p class="no-data">No Headers configured</p>
+      </div>
+
+      <div class="section-card">
+        <div class="title-2">
+          <span>Query Parameters</span> <button>ADD</button>
+        </div>
+
+        <p class="no-data">No query parameters configured</p>
+      </div>
+    </div>
+    }
+
+    <!--  -->
+    @case ('iterative') {
+    <div class="ietrative">
+      <div class="mb-3">
+        <label for="loop_condition" class="form-label">Loop Condition</label>
+        <textarea
+          type="text"
+          formControlName="loop_condition"
+          class="form-control"
+          id="loop_condition"
+          placeholder="Enter Loop Condition"
+        ></textarea>
+        <form-error
+          [messages]="{
+            required: 'Loop condition is required',
+          }"
+          controlName="loop_condition"
+        />
+      </div>
+    </div>
+    }
+
+    <!--  -->
+    @case ('condition') {
+    <div class="ietrative">
+      <div class="mb-3">
+        <label for="loop_condition" class="form-label">Condition</label>
+        <textarea
+          type="text"
+          formControlName="condition"
+          class="form-control"
+          id="condition"
+          placeholder="Enter Boolean Condition"
+        ></textarea>
+        <form-error
+          [messages]="{
+            required: 'Condition is required',
+          }"
+          controlName="condition"
+        />
+      </div>
+    </div>
+    } }
+  </div>
+
+  <div class="footer">
+    <button type="button" class="btn delete bg-white" [disabled]="IsBaseWorkflow()" (click)="deleteNode()">
+      <i class="fa-solid fa-trash-can"></i>
+    </button>
+    <button class="btn action" type="submit" [disabled]="IsBaseWorkflow()">Save Changes</button>
+  </div>
+</form>

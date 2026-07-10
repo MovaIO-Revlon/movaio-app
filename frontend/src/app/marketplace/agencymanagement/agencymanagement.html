@@ -1,0 +1,702 @@
+<div class="d-flex">
+  <div class="row m-0 h-100 w-100">
+    <div class="col-md-12">
+      <div class="ht-98">
+
+        <div [class.d-none]="!isAgencyManage">
+          <div class="d-flex border-bottom">
+            <div class="tabsagent pt-2">
+              <div class="tabsagent2 activeagent" *ngFor="let item of agencyCountsList; index as i"
+                [ngClass]="{ activeagent: item.active }" (click)="setActiveAgencyTab(i)">
+                <span>{{ item.label }}</span>
+                <span class="badge-agent">{{ item.count }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="d-flex mt-2 h-100">
+
+            <div class="col-md-3 agencysidebarAgent sidebarAgency p-0 pe-0">
+              <div class="card h-95">
+                <div class="card-header bg-white d-flex">
+                  <div class="fw-semibold text-rotate">Agency Statistics</div>
+                  <i class="fa-solid fa-chevron-down ms-auto pt-1 toggleAgencyBtn"
+                    (click)="toggleSidePanel('left')"></i>
+                </div>
+                <div class="card-body h-91">
+                  <div class="d-block">
+                    <!---->
+                    <!-- The accordion class is kept for styling, but the parent linking is removed -->
+                    <div class="accordion" id="agentStatsAccordion">
+                      <!-- Accordion Item: By Teams -->
+                      <div class="accordion-item border rounded-2 mb-2">
+                        <h2 class="accordion-header">
+                          <button class="accordion-button bg-transparent box-shad p-2 fs-14 fw-semibold" type="button"
+                            data-bs-toggle="collapse" data-bs-target="#collapseRoleStats" aria-expanded="true"
+                            aria-controls="collapseRoleStats">
+                            By Teams
+                          </button>
+                        </h2>
+                        <!-- REMOVED data-bs-parent to allow independent collapsing -->
+                        <div id="collapseRoleStats" class="accordion-collapse collapse show">
+                          <div class="accordion-body">
+                            <div class="chart-container pb-3 mb-3">
+                              <div class="chart-wrapper">
+                                <canvas #donutCanvas id="donutChart" style="width:100%; height:100%;"></canvas>
+                                <div class="chart-center">
+                                  <h2 class="fw-bold">{{ agencyStats.totalAgencies || 0 }}</h2>
+                                  <span class="text-muted">Agencies</span>
+                                </div>
+                              </div>
+                              <div class="legend mt-3">
+                                <div class="legend-item d-flex align-items-center mb-1"
+                                  *ngFor="let item of agencyLegendData" (click)="toggleTeamFilter(item.label)"
+                                  [class.active-filter]="activeTeamFilter === item.label" style="cursor: pointer;">
+                                  <span class="legend-circle me-2"
+                                    [ngStyle]="{ 'background-color': item.color }"></span>
+                                  <span class="fs-14 text-dark">{{ item.label }} ({{ item.count }})</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div class="accordion-item border rounded-2 mb-2">
+                        <h2 class="accordion-header">
+                          <button class="accordion-button bg-transparent box-shad p-2 fs-14 fw-semibold" type="button"
+                            data-bs-toggle="collapse" data-bs-target="#collapseAgentStats" aria-expanded="true"
+                            aria-controls="collapseAgentStats">
+                            By Agents
+                          </button>
+                        </h2>
+                        <!-- REMOVED data-bs-parent to allow independent collapsing -->
+                        <div id="collapseAgentStats" class="accordion-collapse collapse show">
+                          <div class="accordion-body">
+                            <div class="chart-container pb-3 mb-3">
+                              <div class="chart-wrapper">
+                                <canvas #agentDonutCanvas id="agentDonutChart"
+                                  style="width:100%; height:100%;"></canvas>
+                                <div class="chart-center">
+                                  <h2 class="fw-bold">{{ agencyNameStats.totalAgents || 0 }}</h2>
+                                  <span class="text-muted">Agents</span>
+                                </div>
+                              </div>
+                              <div class="legend mt-3">
+                                <div class="legend-item d-flex align-items-center mb-1"
+                                  *ngFor="let item of agencyNameLegendData" (click)="toggleAgencyNameFilter(item.label)"
+                                  [class.active-filter]="activeAgencyNameFilter === item.label"
+                                  style="cursor: pointer;">
+                                  <span class="legend-circle me-2"
+                                    [ngStyle]="{ 'background-color': item.color }"></span>
+                                  <span class="fs-14 text-dark">{{ item.label }} ({{ item.count }})</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                  </div>
+
+                </div>
+              </div>
+            </div>
+
+            <div class="col-md ps-2 p-0" style="width:56%;">
+              <div class="card h-100">
+                <div class="card-header bg-white d-flex">
+                  <div class="fw-semibold me-auto">Agencies</div>
+                  <div class="position-relative me-2 w-50">
+                    <i class="fa-solid fa-magnifying-glass sear-1 fs-12"></i>
+                    <input type="text" class="form-control ps-6 fs-12" placeholder="Search"
+                      [(ngModel)]="agencySearchTerm" (input)="filterAgenciesBySearchTerm()" />
+
+                  </div>
+                  <button class="bg-white border rounded-2 ps-2 pe-2" data-bs-toggle="modal" data-bs-target="#filter">
+                    <i class="fa-solid fa-sliders"></i> Filters
+                  </button>
+                  <button class="btn ms-3 fs-12 text-white bg-orange border rounded-2 ps-3 pe-3"
+                    href="javascript:void(0)" [disabled]="!isPrivilegeEdit" (click)="NewAgency()">
+                    <i class="fa-regular fa-square-plus"></i> New Agency
+                  </button>
+                </div>
+
+                <div class="card-body p-2">
+                  <div class="h-60">
+                    <div class="row m-0">
+                      <!-- No Data Message for Agency Management -->
+                      <div *ngIf="filteredAgenciesWithAgents.length === 0" class="col-12">
+                        <div class="text-center py-4">
+                          <p class="text-muted fs-14 fw-semibold">Agency Management has no data available</p>
+                        </div>
+                      </div>
+                      <div class="col-md-4 p-0" *ngFor="let agency of filteredAgenciesWithAgents">
+                        <div class="card-agency" (click)="openAgencyModal(agency)">
+                          <div class="header-agency">
+                            <div class="title-section">
+                              <div class="logo-agency">
+                                <img [src]="agency.avatar || 'assets/img/agency-icon.png'" alt="Agency Icon" width="25"
+                                  height="25" loading="lazy" />
+                              </div>
+                              <div class="title-agency">{{ agency.agency_name }}</div>
+                            </div>
+                            <div class="fire-icon" *ngIf="agency.trending_agency === true">🔥</div>
+                          </div>
+
+                          <div class="d-flex">
+                            <div class="description mb-2">
+                              {{ agency.agency_desc || 'No description available.' }}
+                            </div>
+                            <i class="fa-solid fa-circle-info route-menu ms-2"
+                              [appTooltip]="agency.agency_desc || 'No description available.'"></i>
+                          </div>
+                          <div class="agents">
+                            <span class="agents-label">
+                              Task Agents ({{ agency.agent_type_counts?.['Task Agent'] || 0 }}),
+                              Insight Agents ({{ agency.agent_type_counts?.['Insight Agent'] || 0 }}),
+                              Workflows ({{ agency.agent_type_counts?.['Workflow Agent'] || 0 }}),
+                              Master Agents ({{ agency.agent_type_counts?.['Master Agent'] || 0 }}),
+                              Total Agents ({{
+                              (agency.agent_type_counts?.['Task Agent'] || 0) +
+                              (agency.agent_type_counts?.['Insight Agent'] || 0) +
+                              (agency.agent_type_counts?.['Master Agent'] || 0)
+                              }})
+                            </span>
+                          </div>
+                          <div class="usage-section">
+                            <span class="usage-text">Used {{ agency?.agency_run_count || 0 }} times</span>
+
+                          </div>
+                        </div>
+                      </div> <!-- /.row -->
+                    </div>
+                  </div> <!-- /.card-body -->
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <ng-container *ngIf="!isAgencyManage">
+          <div class="row h-100 pt-2">
+            <div class="col-md-12">
+              <!---->
+              <div class="card h-100">
+                <div class="card-header bg-white d-flex">
+                  <div class="fw-semibold me-auto"> {{AgncyPopupTitle}} </div>
+
+                  <button class="bg-white border fs-12 rounded-2 p-2 ps-3 pe-3" data-bs-toggle="modal"
+                    data-bs-target="#filt" (click)="clearAgencyForm()"> Cancel</button>
+                  <button class="ms-3 fs-12 text-white   btn btn-primary bg-orange border rounded-2 p-2 ps-3 pe-3"
+                    [disabled]="!isFormValid()" (click)="submitAgencyForm()">
+                    <i class="fa-regular fa-square-plus"></i> Save Agency
+                  </button>
+                </div>
+                <div class="card-body p-0">
+                  <div class="ht-80">
+                    <!---->
+                    <div class="steps">
+                      <div class="step-card" [class.open]="cardState.basicDetails.open">
+                        <div class="title">
+                          <span class="step-placeholder"></span>
+                          <span class="step-label">Basic details</span>
+                          <Button (click)="toggleCard('basicDetails')">
+                            <i class="fa-solid fa-chevron-right"></i>
+                          </Button>
+                        </div>
+
+                        <div class="step-content">
+                          <div class="mb-2">
+                            <label class="form-label fs-14">Agency Name <span class="text-danger">*</span></label>
+                            <input type="text" [(ngModel)]="formData.agency_name" name="agencyName"
+                              #agencyName="ngModel" required (ngModelChange)="onAgencyNameChange()"
+                              [disabled]="IsAgencyEditClose" class="form-control fs-14" placeholder="Agency"
+                              autocomplete="off">
+
+                            <!-- Validation message -->
+                            <div *ngIf="agencyName.invalid && agencyName.touched" class="text-danger fs-12">
+                              Agency Name is required.
+                            </div>
+                            <!-- Duplicate validation -->
+                            <div *ngIf="!IsAgencyEditClose && !agencyName.invalid && isDuplicateAgency"
+                              class="text-danger fs-12">
+                              This agency name already exists.
+                            </div>
+                          </div>
+
+                          <div class="mb-2">
+                            <label class="form-label fs-14">Team <span class="text-danger">*</span></label>
+                            <select class="form-select fs-14" [(ngModel)]="formData.team" name="team" #team="ngModel"
+                              required>
+                              <option value="" disabled>Select Team</option>
+                              <option *ngFor="let type of teamManagementData" [value]="type.TeamName">
+                                {{ type.TeamName }}
+                              </option>
+                            </select>
+                            <div *ngIf="team.invalid && team.touched" class="text-danger fs-12">
+                              Team is required.
+                            </div>
+                          </div>
+
+                          <div class="mb-2">
+                            <label class="form-label fs-14">Description <span class="text-danger">*</span></label>
+                            <textarea [(ngModel)]="formData.agency_desc" name="description" #description="ngModel"
+                              required rows="3" class="form-control fs-14" autocomplete="off"></textarea>
+                            <div *ngIf="description.invalid && description.touched" class="text-danger fs-12">
+                              Description is required.
+                            </div>
+                          </div>
+
+                          <div class="mb-2">
+                            <label class="form-label fs-14">Avatar</label>
+                            <input class="form-control fs-14" type="file" (change)="onFileChange($event)"
+                              accept="image/*" />
+                            <small *ngIf="fileError" class="text-danger">{{ fileError }}</small>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div class="step-card" [class.open]="cardState.nodes.open">
+                        <div class="title">
+                          <span class="step-placeholder"></span>
+                          <span class="step-label">List of Agents</span>
+                          <Button (click)="toggleCard('nodes')">
+                            <i class="fa-solid fa-chevron-right"></i>
+                          </Button>
+                        </div>
+
+                        <div class="step-content">
+                          <div class="position-relative me-2 w-100">
+                            <i class="fa-solid fa-magnifying-glass sear-1 fs-12"></i>
+                            <input type="text" class="form-control border-bottom border-0 rounded-0 ps-6 fs-12"
+                              placeholder="Search" [(ngModel)]="searchTerm" (input)="filteredAgentsDetail()" />
+                          </div>
+                          <div class="">
+                            <!-- Master Agents -->
+                            <div class="fs-14 fw-bold mt-2 mb-1 ms-2">Master Agents</div>
+                            <div class="scroll-section-master">
+                              <ng-container *ngIf="masterAgents.length > 0; else noMasterAgents">
+                                <div *ngFor="let agent of masterAgents"
+                                  class="d-flex border-bottom hover-loa ps-3 pe-3 p-2" [class.disabled]="masterSelected"
+                                  [style.pointer-events]="masterSelected ? 'none' : 'auto'"
+                                  (click)="addToComposition(agent)">
+                                  <div class="bg-loa">
+                                    <img src="assets/img/agency-icon.png" width="15" alt="agency-icon" />
+                                  </div>
+                                  <div class="d-flex flex-column ps-2">
+                                    <div class="fs-14 fw-semibold">{{ agent.name }}</div>
+                                    <div class="fs-14">{{ agent.role_name }}</div>
+                                  </div>
+                                </div>
+                              </ng-container>
+                              <ng-template #noMasterAgents>
+                                <div class="ps-3 pe-3 p-2 text-muted">No Master Agent Found</div>
+                              </ng-template>
+                            </div>
+
+                            <!-- Other Agents -->
+                            <div class="fs-14 fw-bold mt-3 mb-1 ms-2">Other Agents</div>
+                            <div class="scroll-section-others">
+                              <ng-container *ngIf="otherAgents.length > 0; else noOtherAgents">
+                                <div *ngFor="let agent of otherAgents"
+                                  class="d-flex border-bottom hover-loa ps-3 pe-3 p-2" [class.disabled]="othersSelected"
+                                  [style.pointer-events]="othersSelected ? 'none' : 'auto'"
+                                  (click)="addToComposition(agent)">
+                                  <div class="bg-loa">
+                                    <img src="assets/img/agency-icon.png" width="15" alt="agency-icon" />
+                                  </div>
+                                  <div class="d-flex flex-column ps-2">
+                                    <div class="fs-14 fw-semibold">{{ agent.name }}</div>
+                                    <div class="fs-14">{{ agent.role_name }}</div>
+                                  </div>
+                                </div>
+                              </ng-container>
+                              <ng-template #noOtherAgents>
+                                <div class="ps-3 pe-3 p-2 text-muted">No Other Agent Found</div>
+                              </ng-template>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div class="step-card" [class.open]="cardState.agentComposition.open" style="position: relative;">
+                        <div class="title">
+                          <span class="step-placeholder"></span>
+                          <span class="step-label"> Agent Composition</span>
+
+                          <Button (click)="toggleCard('agentComposition')">
+                            <i class="fa-solid fa-chevron-right"></i>
+                          </Button>
+                        </div>
+
+                        <div class="step-content">
+                          <div #zoomContainer class="zoom-wrapper">
+                            <div class="composition-container">
+                              <!-- SVG connection lines -->
+                              <svg class="connection-lines">
+                                <defs>
+                                  <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"
+                                    markerUnits="strokeWidth">
+                                    <path d="M0,0 L0,6 L9,3 z" fill="#3399ff"></path>
+                                  </marker>
+                                </defs>
+
+                                <ng-container *ngFor="let agent of compositionAgents">
+                                  <ng-container
+                                    *ngIf="agent.parentId && agent.x1 !== undefined && agent.y1 !== undefined && agent.x2 !== undefined && agent.y2 !== undefined">
+                                    <line [attr.x1]="agent.x1" [attr.y1]="agent.y1" [attr.x2]="agent.x2"
+                                      [attr.y2]="agent.y2" stroke="#3399ff" stroke-width="2" marker-end="url(#arrow)">
+                                    </line>
+
+                                    <circle [attr.cx]="agent.x1" [attr.cy]="agent.y1" r="5" fill="#fff" stroke="#3399ff"
+                                      stroke-width="2">
+                                    </circle>
+
+                                    <circle [attr.cx]="agent.x2" [attr.cy]="agent.y2" r="5" fill="#fff" stroke="#3399ff"
+                                      stroke-width="2">
+                                    </circle>
+                                  </ng-container>
+                                </ng-container>
+                              </svg>
+
+                              <!-- Agency Node -->
+                              <div *ngIf="agencyOnNode" [id]="agencyOnNode.nodeId" class="node-ac agency-node"
+                                [style.left.px]="agencyOnNode.x" [style.top.px]="agencyOnNode.y"
+                                [style.width.px]="agencyOnNode.width || 200"
+                                [style.height.px]="agencyOnNode.height || 80">
+
+                                <div class="settings-ac" title="Settings">⚙️</div>
+
+                                <div class="icon-ac" title="Agency">
+                                  <img src="assets/img/agency-icon.png" alt="agency-icon" />
+                                </div>
+
+                                <div class="node-info-ac fs-12">
+                                  <div class="node-title-ac">
+                                    {{ agencyOnNode.name }}
+                                  </div>
+                                </div>
+                              </div>
+
+                              <!-- Agent Nodes -->
+                              <ng-container *ngFor="let agent of compositionAgents">
+                                <div *ngIf="agent.nodeId !== agencyOnNode?.nodeId" [id]="agent.nodeId" class="node-ac"
+                                  [style.left.px]="agent.x" [style.top.px]="agent.y" [ngStyle]="getNodeStyle(agent)">
+
+                                  <div class="icon-ac" [title]="agent.name">
+                                    <img src="assets/img/bot-av.png" alt="bot-av" />
+                                  </div>
+
+                                  <div class="node-info-ac">
+                                    <div class="node-title-ac fw-semibold" [title]="agent.name">
+                                      {{ agent.name }}
+                                    </div>
+                                    <div class="node-role-ac">
+                                      {{ agent.role_name }}
+                                    </div>
+                                  </div>
+
+                                  <div *ngIf="agent.role_name" class="delete-ac" title="Delete" [class.disabled]="isDeleteDisabled(agent)"
+                                    (click)="!isDeleteDisabled(agent) && deleteAgent(agent)">
+                                    🗑️
+                                  </div>
+
+                                  <div class="settings-ac" title="Settings">⚙️</div>
+
+                                  <div class="badge-ac" *ngIf="agent.isPremium">
+                                    <img src="assets/img/crown.png" alt="crown" />
+                                  </div>
+                                </div>
+                              </ng-container>
+                            </div>
+
+                            <!-- Zoom Controls OUTSIDE composition-container -->
+                            <div class="zoom-controls">
+                              <button (click)="zoomIn('page')" title="Zoom In" aria-label="Zoom In">+</button>
+                              <button (click)="zoomOut('page')" title="Zoom Out" aria-label="Zoom Out">−</button>
+                              <button (click)="toggleFullscreen()" title="Fullscreen" aria-label="Fullscreen">⛶</button>
+                            </div>
+                          </div>
+
+                        </div>
+                      </div>
+
+                    </div>
+                  </div>
+
+                </div>
+                <!---->
+            </div>
+          </div>
+      </div>
+      </ng-container>
+    </div>
+  </div>
+</div>
+</div>
+<!-- Modal -->
+<div class="modal fade" #loadagencyPopup id="agency-pop" tabindex="-1" aria-labelledby="exampleModalLabel"
+  aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="title-section">
+          <div class="logo-agency2"><img src="assets/img/agency-icon.png" alt="agency-icon"></div>
+          <div class="d-flex flex-column">
+            <div class="title-agency"> {{ selectedAgency?.agency_name }} </div>
+
+            <div class="description">
+              {{ selectedAgency?.agency_desc || 'No description available.' }}
+            </div>
+            <div class="usage-section">
+              <span class="usage-text">Used {{ selectedAgency?.agency_run_count || 0 }} times</span>
+            </div>
+          </div>
+        </div>
+        <div class="ms-auto mb-auto d-flex ms-3">
+          <button class="btn btn-outline btn-delete" href="javascript:void(0)"
+            (click)="confirmDeleteAgency(selectedAgency)" [class.disabled]="!isPrivilegeDelete">Delete</button>
+          <button class="ms-2 btn btn-outline btn-edit" href="javascript:void(0)" (click)="editAngencyDetail()"
+            [class.disabled]="!isPrivilegeEdit">Edit</button>
+        </div>
+
+      </div>
+      <div class="modal-body ">
+        <div class="row">
+          <div class="col-md-4">
+            <div class="fs-20 fw-semibold pb-3"> Agency Overview </div>
+            <div class="border-bottom d-flex mb-2" *ngIf="selectedAgency?.agent_type_counts">
+              <img src="assets/img/agent.png" alt="Gear" class="pt-1" width="18" height="22" />
+              <div class="d-flex flex-column ps-2">
+                <div class="fs-14 fw-semibold pb-2">Agents</div>
+                <div *ngFor="let type of getAgentTypeGroups()">
+                  <div *ngFor="let agent of getAgentsGroupedByType(selectedAgency.agents)[type]">
+                    <div class="fs-14 pb-1">
+                      {{ type }}: {{ agent.name }}
+                    </div>
+                  </div>
+                </div>
+
+
+              </div>
+            </div>
+
+            <!-- Capabilities Section -->
+            <div class="border-bottom d-flex mb-2" *ngIf="selectedAgency?.agents?.length">
+              <img src="assets/img/capabilities.png" alt="Gear" class="pt-1" width="18" height="22" />
+              <div class="d-flex flex-column ps-2">
+                <div class="fs-14 fw-semibold pb-2">Capabilities</div>
+                <div class="fs-14 pb-2">
+                  <div *ngIf="selectedAgency.agents[0]?.mcp_connector_name">MCP Connector: {{
+                    selectedAgency.agents[0].mcp_connector_name }}</div>
+                  <div *ngIf="selectedAgency.agents[0]?.knowledge_store_name">Knowledge Store: {{
+                    selectedAgency.agents[0].knowledge_store_name }}</div>
+                  <div *ngIf="selectedAgency.agents[0]?.foundation_resp_ai">Responsible AI: {{
+                    selectedAgency.agents[0].foundation_resp_ai }}</div>
+                  <div *ngIf="selectedAgency.agents[0]?.foundation_ethic_ai">Ethical AI: {{
+                    selectedAgency.agents[0].foundation_ethic_ai }}</div>
+                  <div *ngIf="selectedAgency.agents[0]?.foundation_guardrails_ai">Guardrails AI: {{
+                    selectedAgency.agents[0].foundation_guardrails_ai }}</div>
+                  <div *ngIf="selectedAgency.agents[0]?.model">Model: {{ selectedAgency.agents[0].model }}</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="border-bottom d-flex mb-2" *ngIf="selectedAgency?.assigned_to">
+              <img src="assets/img/team.png" alt="Team" width="18" height="22" />
+              <div class="d-flex flex-column ps-2">
+                <div class="fs-14 fw-semibold pb-2">Team</div>
+                <div class="fs-14 pb-2">{{ selectedAgency.assigned_to }}</div>
+              </div>
+            </div>
+
+            <div class="border-bottom d-flex mb-2" *ngIf="selectedAgency?.created_by">
+              <img src="assets/img/createdBy.png" alt="Gear" class="pt-1" width="16" height="20" />
+              <div class="d-flex flex-column ps-2">
+                <div class="fs-14 fw-semibold pb-2"> Created By </div>
+                <div class="fs-14 pb-2">{{ selectedAgency.created_by }}</div>
+              </div>
+            </div>
+
+            <div class="d-flex" *ngIf="selectedAgency?.created_ts">
+              <img src="assets/img/createdOn.png" alt="Gear" class="pt-1" width="16" height="20" />
+              <div class="d-flex flex-column ps-2">
+                <div class="fs-14 fw-semibold pb-2"> Created On </div>
+                <div class="fs-14 pb-2">{{ selectedAgency.created_ts | date:'medium' }}</div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md">
+            <div class="card">
+              <div class="card-header fs-20 fw-semibold bg-white">
+                Agent Composition
+              </div>
+              <div class="card-body p-0">
+                <div #zoomContainer class="zoom-wrapper">
+                  <!-- Scrollable container -->
+                  <div class="agent-composition-wrapper">
+                    <div class="agent-composition position-relative" #zoomContainer role="region"
+                      aria-label="Agent Composition" [style.transform]=""
+                      style="transform-origin: top left; min-width: 100px; height: 400px;">
+
+                      <!-- SVG for connection lines -->
+                      <svg class="connection-lines"
+                        style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;">
+                        <defs>
+                          <marker id="arrow" markerWidth="10" markerHeight="10" refX="5" refY="3" orient="auto">
+                            <path d="M0,0 L0,6 L9,3 z" fill="#3399ff" />
+                          </marker>
+                        </defs>
+                        <ng-container *ngFor="let agent of compositionAgents">
+                          <!-- For straight line from agency (parentId == agencyViewNode.nodeId) to first agents -->
+                          <line
+                            *ngIf="agent.parentId === agencyViewNode.nodeId && agent.x1 !== undefined && agent.x2 !== undefined"
+                            [attr.x1]="agent.x1" [attr.y1]="agent.y1" [attr.x2]="agent.x2" [attr.y2]="agent.y2"
+                            stroke="#3399ff" stroke-width="2" marker-end="url(#arrow)" />
+
+                          <!-- For any other connection, use curved path (optional) -->
+                          <path
+                            *ngIf="agent.parentId !== agencyViewNode.nodeId && agent.x1 !== undefined && agent.x2 !== undefined"
+                            fill="none" stroke="#3399ff" stroke-width="2" marker-end="url(#arrow)" [attr.d]="'M ' + agent.x1 + ' ' + agent.y1 +
+                   ' C ' + (agent.x1 + 50) + ' ' + (agent.y1 + 30) + ', ' +
+                   (agent.x2 - 50) + ' ' + (agent.y2 - 30) + ', ' +
+                   agent.x2 + ' ' + agent.y2" />
+                          <!-- Optional: Circles at ends -->
+                          <circle *ngIf="agent.x1 !== undefined && agent.y1 !== undefined" [attr.cx]="agent.x1"
+                            [attr.cy]="agent.y1" r="5" fill="#fff" stroke="#3399ff" stroke-width="2" />
+                          <circle *ngIf="agent.x2 !== undefined && agent.y2 !== undefined" [attr.cx]="agent.x2"
+                            [attr.cy]="agent.y2" r="5" fill="#fff" stroke="#3399ff" stroke-width="2" />
+                        </ng-container>
+
+                      </svg>
+
+                      <!-- Render all nodes (parent + children) in one loop -->
+                      <div *ngFor="let agent of compositionAgents" [attr.id]="agent.nodeId" class="node"
+                        [ngClass]="{'node-top': !agent.parentId, 'node-child': !!agent.parentId}"
+                        [style.left.px]="agent.x" [style.top.px]="agent.y"
+                        style="position: absolute; width: 200px; height: 80px;">
+                        <div class="icon-node">{{ !agent.parentId ? '📄' : '🤖' }}</div>
+                        <div class="text-agent">
+                          <div class="name">{{ agent.name }}</div>
+                          <div class="role" *ngIf="agent.role_name">{{ agent.role_name }}</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <!-- Zoom Controls OUTSIDE composition-container -->
+                  <div class="zoom-controls-popup">
+                    <button (click)="zoomIn('popup')" title="Zoom In" aria-label="Zoom In">+</button>
+                    <button (click)="zoomOut('popup')" title="Zoom Out" aria-label="Zoom Out">−</button>
+                    <button (click)="toggleFullscreen()" title="Fullscreen" aria-label="Fullscreen">⛶</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn bg-white border fs-12" data-bs-dismiss="modal" href="javascript:void(0)"
+          (click)="closeAgnecyViewPopup()"> Close </button>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="deleteConfirmModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Confirm Delete</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        Are you sure you want to delete agency "{{agentToDelete?.agency_name}}"?
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn bg-orange" (click)="deleteAgencyConfirmed()">Delete</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="successToast" class="toast align-items-center text-white bg-success border-0 position-fixed top-0 end-0 m-4"
+  role="alert" aria-live="assertive" aria-atomic="true" data-bs-delay="4000" style="z-index: 1060;"
+  data-bs-autohide="true">
+  <div class="d-flex">
+    <div class="toast-body">
+      {{ toastMessage }}
+    </div>
+    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"
+      aria-label="Close"></button>
+  </div>
+</div>
+<!-- Error Toast -->
+<div id="errorToast" class="toast align-items-center text-white bg-danger border-0 position-fixed top-0 end-0 m-4"
+  role="alert" aria-live="assertive" aria-atomic="true" data-bs-delay="4000" style="z-index: 1060;"
+  data-bs-autohide="true">
+  <div class="d-flex">
+    <div class="toast-body">
+      {{ toastMessage }}
+    </div>
+    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"
+      aria-label="Close"></button>
+  </div>
+</div>
+
+<div class="modal fade" #loadalert id="loadalert" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true"
+  data-bs-backdrop="static" data-bs-keyboard="false">
+
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="modal-title fs-15" id="exampleModalLabel1" [innerHTML]="popupTitle">
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"
+          (click)="closealert()"></button>
+      </div>
+      <div class="modal-body">
+        <p class="mod-clr1"> {{Usermessage}} </p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary bg-color border-0 br-30 fs-13 pad-2" data-dismiss="modal"
+          href="javascript:void(0)" (click)="closealert()">OK</button>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal -->
+<div #filt class="modal fade" id="filter" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+  <div class="modal-dialog filter-cont">
+    <div class="modal-content h-100">
+      <div class="modal-header border-0">
+        <h1 class="modal-title fs-5 fw-semibold" id="exampleModalLabel">Filters</h1>
+        <button type="button" class="btn-close b-close" data-bs-dismiss="modal" aria-label="Close">
+          <i class="fa-solid fa-xmark "></i>
+        </button>
+      </div>
+
+      <div class="modal-body agent-overflow fs-14 fw-semibold" [formGroup]="filterForm">
+        <div class="mb-3">
+          <label class="form-label">Team</label>
+          <select class="form-select fs-14" formControlName="team_name">
+            <option value="">All Teams</option>
+            <option *ngFor="let team of getCurrentTeamNames()" [value]="team">{{ team }}</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="modal-footer border-0">
+        <button type="button" class="btn bg-white border fs-12" data-bs-dismiss="modal" (click)="clearFilters()">Clear
+          Filters</button>
+        <button type="button" class="btn btn-primary bg-orange border-0 fs-12" (click)="applyFilters()">Apply
+          Filters</button>
+      </div>
+    </div>
+  </div>
+</div>
