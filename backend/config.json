@@ -61,8 +61,8 @@
     "SecretKey": "",
     "ApiKey":""
   },
-  "SMTP_USERNAME": "AKIAQJ76KET4JXZIFBGN",
-  "SMTP_PASSWORD": "BLnxFB4sT+tNMd7i0BwVo1vVrbyIeY41cmcD/jcmOJoy",
+  "SMTP_USERNAME": "",
+  "SMTP_PASSWORD": "",
   "SMTP_HOST": "email-smtp.us-east-1.amazonaws.com",
   "SMTP_PORT": 587,
   "EMAIL_FROM": "cssautomation@cssautomationsolutions.com",
@@ -110,8 +110,8 @@
   "opensearch":{
     "host":"34.235.49.226",
     "port":9200,
-    "username":"admin",
-    "password":"MovateOpenSearch$123"
+    "username":"",
+    "password":""
   },
   "conditionAgent": {
     "Agent_api_url": "https://agent-prod.studio.lyzr.ai/v3/inference/chat/",
