@@ -57,9 +57,9 @@
   "Title" :"User Stories for KYC Application",
   "DomainURL": "https://propellabs.movatesolutions.com",
   "reCAPTCHA": {
-    "SiteKey": "6Ldh-nwrAAAAAFvDjbdcuXyWbiXj0ZlQ3zDLhP1E",
-    "SecretKey": "AIzaSyAPkrSsuADbnjYieqxRg208ckmLyU0_FMU",
-    "ApiKey":"AIzaSyAPkrSsuADbnjYieqxRg208ckmLyU0_FMU"
+    "SiteKey": "",
+    "SecretKey": "",
+    "ApiKey":""
   },
   "SMTP_USERNAME": "AKIAQJ76KET4JXZIFBGN",
   "SMTP_PASSWORD": "BLnxFB4sT+tNMd7i0BwVo1vVrbyIeY41cmcD/jcmOJoy",
