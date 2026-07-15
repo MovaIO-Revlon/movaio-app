@@ -1,0 +1,149 @@
+[{
+  "_id": {
+    "$oid": "69ce3f32599059f24f7d9bb5"
+  },
+  "module": "Command Center",
+  "page": "Chatbot",
+  "privileges": [
+    "view",
+    "execute"
+  ]
+},
+{
+  "_id": {
+    "$oid": "69ce3f45599059f24f7d9bb6"
+  },
+  "module": "Market Place",
+  "page": "Agent Management",
+  "privileges": [
+    "view",
+    "insert / edit",
+    "delete",
+    "refresh"
+  ]
+},
+{
+  "_id": {
+    "$oid": "69ce3f6a599059f24f7d9bb7"
+  },
+  "module": "Market Place",
+  "page": "Agency Management",
+  "privileges": [
+    "view",
+    "insert / edit",
+    "delete"
+  ]
+},
+{
+  "_id": {
+    "$oid": "69ce3f86599059f24f7d9bb9"
+  },
+  "module": "Market Place",
+  "page": "Workflow Management",
+  "privileges": [
+    "view",
+    "insert / edit",
+    "delete",
+    "refresh"
+  ]
+},
+{
+  "_id": {
+    "$oid": "69ce3f91599059f24f7d9bba"
+  },
+  "module": "Market Place",
+  "page": "Knowledge Store Management",
+  "privileges": [
+    "view",
+    "insert / edit",
+    "delete"
+  ]
+},
+{
+  "_id": {
+    "$oid": "69ce3fa7599059f24f7d9bbb"
+  },
+  "module": "Market Place",
+  "page": "MCP Connector Management",
+  "privileges": [
+    "view",
+    "insert / edit",
+    "delete",
+    "refresh"
+  ]
+},
+{
+  "_id": {
+    "$oid": "69d784bdfbdcb35a9a51f682"
+  },
+  "module": "Command Center",
+  "page": "Task",
+  "privileges": [
+    "view",
+    "execute"
+  ]
+},
+{
+  "_id": {
+    "$oid": "69d784f4fbdcb35a9a51f683"
+  },
+  "module": "Command Center",
+  "page": "Insights",
+  "privileges": [
+    "view",
+    "execute"
+  ]
+},
+{
+  "_id": {
+    "$oid": "69d7852cfbdcb35a9a51f684"
+  },
+  "module": "Command Center",
+  "page": "Trends",
+  "privileges": [
+    "view",
+    "execute"
+  ]
+},
+{
+  "_id": {
+    "$oid": "69d7855afbdcb35a9a51f685"
+  },
+  "module": "Command Center",
+  "page": "Knowledge Graph",
+  "privileges": [
+    "view"
+  ]
+},
+{
+  "_id": {
+    "$oid": "69d7858ffbdcb35a9a51f686"
+  },
+  "module": "Command Center",
+  "page": "Workflow",
+  "privileges": [
+    "view",
+    "execute"
+  ]
+},
+{
+  "_id": {
+    "$oid": "69dc7e8e0e7a4a7f9a654221"
+  },
+  "module": "Subscription",
+  "page": "Subscription",
+  "privileges": [
+    "view",
+    "refresh"
+  ]
+},
+{
+  "_id": {
+    "$oid": "69dc7e9e0e7a4a7f9a654222"
+  },
+  "module": "Logs",
+  "page": "Logs",
+  "privileges": [
+    "view"
+  ]
+}]
