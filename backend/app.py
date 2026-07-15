@@ -70,7 +70,24 @@ from trends_usecase import InsightsManager
 from voice_agent import start_session,end_session
 from agent_eval import AgentEval
 
-pypandoc.__pandoc_path = config_loader.pandac_path
+import shutil
+# pypandoc.__pandoc_path = config_loader.pandac_path
+pandoc_path = shutil.which('pandoc')
+if pandoc_path:
+    # prefer the system pandoc when available
+    pypandoc.__pandoc_path = pandoc_path
+else:
+    # prefer a valid path from config_loader if it exists (e.g. Windows dev/test)
+    cfg_path = getattr(config_loader, 'pandac_path', None)
+    if cfg_path and os.path.exists(cfg_path):
+        pypandoc.__pandoc_path = cfg_path
+    else:
+        # Fallback paths for common Linux installations
+        common_paths = ['/usr/bin/pandoc', '/usr/local/bin/pandoc', '/opt/pandoc/bin/pandoc']
+        for path in common_paths:
+            if os.path.exists(path):
+                pypandoc.__pandoc_path = path
+                break
 
 user_id = config_loader.USER_ID_LYZR
 api_key = config_loader.API_KEY_LYZR
