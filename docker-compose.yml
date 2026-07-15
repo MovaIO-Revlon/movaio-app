@@ -28,19 +28,7 @@ services:
         reservations:
           memory: 256M
 
- # Application Backend service
-  appbackend:
-    build: ./backend
-    container_name: app-backend
-    restart: unless-stopped
-    environment:
-      - MONGO_URI=mongodb://${MONGO_USERNAME}:${MONGO_USERNAME}@mongodb:27017/
-    ports:
-      - "5000:5000"
-    networks:
-      - opencon-network
-    depends_on:
-      - mongodb
+
 
 
   # Application Frontend service
@@ -58,7 +46,21 @@ services:
       - opencon-network
     depends_on:
       - appbackend
-
+      
+ # Application Backend service
+  appbackend:
+    build: ./backend
+    container_name: app-backend
+    restart: unless-stopped
+    environment:
+      - MONGO_URI=mongodb://${MONGO_USERNAME}:${MONGO_USERNAME}@mongodb:27017/
+    ports:
+      - "5000:5000"
+    networks:
+      - opencon-network
+    depends_on:
+      - mongodb
+      
 # Middleware Backend service
   backend:
     image: ghcr.io/${GITHUB_REPOSITORY:-lyzr/open-con}-backend:${IMAGE_TAG:-latest}
