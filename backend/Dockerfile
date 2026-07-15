@@ -16,7 +16,7 @@ ENV AZURE_CLIENT_SECRET=
  
 # Install pandoc
 
-RUN apt-get update && apt-get install -y pandoc && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && rm -rf /var/lib/apt/lists/*
  
 COPY requirements.txt .
 
