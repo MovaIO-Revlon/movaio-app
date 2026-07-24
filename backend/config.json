@@ -108,10 +108,10 @@
     "session_id":"696f758bb50537828e0b1ad0-hgwbis2a7ru"
   },
   "opensearch":{
-    "host":"",
+    "host":"10.254.43.84",
     "port":9200,
-    "username":"",
-    "password":""
+    "username":"admin",
+    "password":"MovateOpenSearch$$123"
   },
   "conditionAgent": {
     "Agent_api_url": "https://agent-prod.studio.lyzr.ai/v3/inference/chat/",
