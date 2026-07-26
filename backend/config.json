@@ -77,7 +77,13 @@
   "AZURE_CLIENT_SECRET": "${AZURE_CLIENT_SECRET}",
   "AZURE_ACS_ENDPOINT": "https://movateai-cservice.unitedstates.communication.azure.com",
   "AZURE_SENDER_ADDRESS": "",
-  
+  "Site_Url":"https://aisolutions.revlon.com/",
+  "MSAL": {
+    "TENANT_ID": "",
+    "CLIENT_ID": "",
+    "AUTHORITY": "https://login.microsoftonline.com/TENANT_ID"
+  }
+	
   "lyzrInternal": {
     "Agent_api_url": "https://agent-prod.studio.lyzr.ai/v3/inference/chat/",
     "x_api_key": "",
