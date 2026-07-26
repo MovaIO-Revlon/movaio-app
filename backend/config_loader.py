@@ -103,6 +103,12 @@ class ConfigLoader:
         # lyzr details
         self.LYZR_STREAMING_AGENT_URL = self.config.get("lyzrStreamin_api_url", "")
         self.LYZR_RAG_API_KEY = self.config.get("LYZR_RAG_API_KEY", "")
+
+          # MSAL / SSO
+        msal_cfg = self.config.get("MSAL", {})
+        self.MSAL_TENANT_ID = msal_cfg.get("TENANT_ID", "")
+        self.MSAL_CLIENT_ID = msal_cfg.get("CLIENT_ID", "")
+        self.MSAL_AUTHORITY = msal_cfg.get("AUTHORITY", "")
         
         return self
     
