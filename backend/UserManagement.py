@@ -2092,6 +2092,33 @@ class UserManager(DatabaseCollections):
             self._query_db('agent', {'type': 'insert_many', 'documents': new_agents}, user_type)
 
         return agents
+
+    def sso_login(self):
+        """SSO login via MSAL Bearer token - validates token, creates backend session."""
+        from session_manager import _validate_msal_token
+        email = ''
+        try:
+            auth_header = request.headers.get('Authorization', '')
+            if not auth_header.startswith('Bearer '):
+                return jsonify({"Success": False, "Message": "Missing Bearer token"}), 401
+            token = auth_header[7:]
+            claims = _validate_msal_token(token)
+            if not claims:
+                return jsonify({"Success": False, "Message": "Invalid or expired token"}), 401
+            email = claims.get('preferred_username') or claims.get('upn') or claims.get('email', '')
+            if not email:
+                return jsonify({"Success": False, "Message": "Email claim not found in token"}), 401
+            response = self.user_manager.sso_login(email)
+            if response.get("Success"):
+                session_id = session_manager.create_session(response)
+                response["SessionId"] = session_id
+            return jsonify(response), 200
+        except NotFoundError:
+            msg = f"Your account ({email}) is not registered in the system. Please contact your administrator." if email else "User not found. Please contact your administrator."
+            return jsonify({"Success": False, "Message": msg}), 403
+        except Exception as ex:
+            self.utils.log_error("Error in SsoLogin:")
+            return jsonify({"Success": False, "Message": str(ex)}), 500
     
 # # Global instance for backward compatibility
 # user_manager = UserManager()
