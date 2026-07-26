@@ -13790,4 +13790,4 @@ if __name__ == '__main__':
         port = port[0]  # extract first item
     
     flask_app = FlaskApp()        
-    flask_app.socketio.run(app=flask_app.app,host='0.0.0.0',port=int(port),debug=True,log_output=True,use_reloader=False)
+    flask_app.socketio.run(app=flask_app.app,host='0.0.0.0',port=int(port),debug=True,log_output=True,use_reloader=False,allow_unsafe_werkzeug=True)
