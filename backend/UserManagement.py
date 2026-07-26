@@ -2093,32 +2093,47 @@ class UserManager(DatabaseCollections):
 
         return agents
 
-    def sso_login(self):
-        """SSO login via MSAL Bearer token - validates token, creates backend session."""
-        from session_manager import _validate_msal_token
-        email = ''
-        try:
-            auth_header = request.headers.get('Authorization', '')
-            if not auth_header.startswith('Bearer '):
-                return jsonify({"Success": False, "Message": "Missing Bearer token"}), 401
-            token = auth_header[7:]
-            claims = _validate_msal_token(token)
-            if not claims:
-                return jsonify({"Success": False, "Message": "Invalid or expired token"}), 401
-            email = claims.get('preferred_username') or claims.get('upn') or claims.get('email', '')
-            if not email:
-                return jsonify({"Success": False, "Message": "Email claim not found in token"}), 401
-            response = self.user_manager.sso_login(email)
-            if response.get("Success"):
-                session_id = session_manager.create_session(response)
-                response["SessionId"] = session_id
-            return jsonify(response), 200
-        except NotFoundError:
-            msg = f"Your account ({email}) is not registered in the system. Please contact your administrator." if email else "User not found. Please contact your administrator."
-            return jsonify({"Success": False, "Message": msg}), 403
-        except Exception as ex:
-            self.utils.log_error("Error in SsoLogin:")
-            return jsonify({"Success": False, "Message": str(ex)}), 500
+    def sso_login(self, email: str) -> dict:
+        """Look up user by email for SSO login (no password check)."""
+        user_type = "master"
+        user_op = {
+            'type': 'find_one',
+            'filter': {
+                "Email": re.compile(f"^{re.escape(email)}$", re.IGNORECASE),
+                "IsActive": True,
+                "IsDelete": False
+            }
+        }
+        user_data = self._query_db('user', user_op, user_type)
+        if not user_data:
+            raise NotFoundError("User not found or is not active.")
+ 
+        user_data["_id"] = str(user_data["_id"])
+ 
+        roles_op = {'type': 'find', 'filter': {}}
+        roles_data = self._query_db('role', roles_op, user_type)
+        roles = {r["RoleId"]: r["RoleName"] for r in roles_data}
+        user_data["RoleName"] = roles.get(user_data.get("RoleId"), "Unknown")
+ 
+        teams_op = {'type': 'find', 'filter': {}}
+        teams_data = self._query_db('team', teams_op, user_type)
+        teams = {t["TeamId"]: t["TeamName"] for t in teams_data}
+        user_data["TeamName"] = teams.get(user_data.get("TeamId"), "Unknown")
+ 
+        full_name = f"{user_data['FirstName']} {user_data['LastName']}"
+        prj_details = user_data.get("PrjDetails", [])
+        role = user_data["RoleName"] if user_data["RoleName"].lower() != "unknown" else self.get_user_role(user_data)
+ 
+        return {
+            "Success": True,
+            "Email": user_data["Email"],
+            "UserName": full_name,
+            "Role": role,
+            "Team": user_data["TeamName"],
+            "Avatar": user_data.get("Avatar", ""),
+            "ActiveProject": user_data.get("ActiveProject", ""),
+            "ProjectDtl": prj_details
+        }
     
 # # Global instance for backward compatibility
 # user_manager = UserManager()
