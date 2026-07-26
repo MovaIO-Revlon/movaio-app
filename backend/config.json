@@ -79,8 +79,8 @@
   "AZURE_SENDER_ADDRESS": "",
   "Site_Url":"https://aisolutions.revlon.com/",
   "MSAL": {
-    "TENANT_ID": "",
-    "CLIENT_ID": "",
+    "TENANT_ID": "${AZURE_AUTH_TENANT_ID}",
+    "CLIENT_ID": ${AZURE_AUTH_CLIENT_ID}",
     "AUTHORITY": "https://login.microsoftonline.com/TENANT_ID"
   }
 	
