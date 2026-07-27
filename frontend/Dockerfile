@@ -13,6 +13,7 @@ RUN npm install --legacy-peer-deps
 RUN npm install -g @angular/cli@20
 RUN npm install @angular/animations d3-zoom d3-drag xlsx --force
 RUN npm install markdown-it --force
+RUN npm install crypto-randomuuid --force
  
 # Replace node.interface.d.ts file
 COPY node.interface.d.ts /app/node_modules/ngx-vflow/lib/vflow/interfaces/node.interface.d.ts
