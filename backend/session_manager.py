@@ -9,7 +9,7 @@ class SessionManager:
     def __init__(self):
         self.config = config_loader
         self.sessions = {}  # In-memory storage (use Redis for production)
-        self.session_timeout = 1200  # 2 hour in seconds
+        self.session_timeout = 7200  # 2 hour in seconds
     
     def create_session(self, user_data):
         """Create new session for user"""
