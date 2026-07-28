@@ -27,8 +27,8 @@ export class LoginService {
   // }
   
     UserLogin(params: any): Observable<any> {
-    return this._http.post<any>(`${this.baseURL}/DoLogin`, params, this.httpOptions); // Ensure correct path here
-  }
+      return this._http.post<any>('/DoLogin', params, this.httpOptions); // Ensure correct path here
+    }
   
   getReCaptchaConfig() {
     return this._http.get<
