@@ -2092,49 +2092,7 @@ class UserManager(DatabaseCollections):
             self._query_db('agent', {'type': 'insert_many', 'documents': new_agents}, user_type)
 
         return agents
-
-   ''' def sso_login(self, email: str) -> dict:
-        """Look up user by email for SSO login (no password check)."""
-        user_type = "master"
-        user_op = {
-            'type': 'find_one',
-            'filter': {
-                "Email": re.compile(f"^{re.escape(email)}$", re.IGNORECASE),
-                "IsActive": True,
-                "IsDelete": False
-            }
-        }
-        user_data = self._query_db('user', user_op, user_type)
-        if not user_data:
-            raise NotFoundError("User not found or is not active.")
- 
-        user_data["_id"] = str(user_data["_id"])
- 
-        roles_op = {'type': 'find', 'filter': {}}
-        roles_data = self._query_db('role', roles_op, user_type)
-        roles = {r["RoleId"]: r["RoleName"] for r in roles_data}
-        user_data["RoleName"] = roles.get(user_data.get("RoleId"), "Unknown")
- 
-        teams_op = {'type': 'find', 'filter': {}}
-        teams_data = self._query_db('team', teams_op, user_type)
-        teams = {t["TeamId"]: t["TeamName"] for t in teams_data}
-        user_data["TeamName"] = teams.get(user_data.get("TeamId"), "Unknown")
- 
-        full_name = f"{user_data['FirstName']} {user_data['LastName']}"
-        prj_details = user_data.get("PrjDetails", [])
-        role = user_data["RoleName"] if user_data["RoleName"].lower() != "unknown" else self.get_user_role(user_data)
- 
-        return {
-            "Success": True,
-            "Email": user_data["Email"],
-            "UserName": full_name,
-            "Role": role,
-            "Team": user_data["TeamName"],
-            "Avatar": user_data.get("Avatar", ""),
-            "ActiveProject": user_data.get("ActiveProject", ""),
-            "ProjectDtl": prj_details
-        }
-    '''
+    
 # # Global instance for backward compatibility
 # user_manager = UserManager()
 
