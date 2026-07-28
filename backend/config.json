@@ -82,7 +82,7 @@
     "TENANT_ID": "${AZURE_AUTH_TENANT_ID}",
     "CLIENT_ID": ${AZURE_AUTH_CLIENT_ID}",
     "AUTHORITY": "https://login.microsoftonline.com/TENANT_ID"
-  }
+  },
 	
   "lyzrInternal": {
     "Agent_api_url": "https://agent-prod.studio.lyzr.ai/v3/inference/chat/",
