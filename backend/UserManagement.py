@@ -2093,7 +2093,7 @@ class UserManager(DatabaseCollections):
 
         return agents
 
-    def sso_login(self, email: str) -> dict:
+   ''' def sso_login(self, email: str) -> dict:
         """Look up user by email for SSO login (no password check)."""
         user_type = "master"
         user_op = {
@@ -2134,7 +2134,7 @@ class UserManager(DatabaseCollections):
             "ActiveProject": user_data.get("ActiveProject", ""),
             "ProjectDtl": prj_details
         }
-    
+    '''
 # # Global instance for backward compatibility
 # user_manager = UserManager()
 
