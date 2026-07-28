@@ -1,6 +1,6 @@
 export const environment = {
   production: true,
-  apiUrl: 'https://movate-dev.revlon.com/api',
+  apiUrl: '/api',
   baseUrl: 'https://movate-dev.revlon.com/',
   WebSocketPath:'/api/socket.io',
   SessionTclsime: 30,
