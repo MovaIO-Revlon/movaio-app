@@ -2445,7 +2445,7 @@ class FlaskApp(DatabaseCollections):
         response = self.user_manager.perform_get_roles(payload)
         return buildResponse("Details fetched successfully", response, 200)
 
-    @require_session
+    '''@require_session
     def sso_login(self):
         """SSO login via MSAL Bearer token - validates token, creates backend session."""
         from session_manager import _validate_msal_token
@@ -2472,6 +2472,7 @@ class FlaskApp(DatabaseCollections):
         except Exception as ex:
             self.utils.log_error("Error in SsoLogin:")
             return jsonify({"Success": False, "Message": str(ex)}), 500
+            '''
     
     @require_session
     def get_mcp_statistics(self):
