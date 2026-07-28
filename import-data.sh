@@ -8,7 +8,7 @@ docker cp mongo_db_collections/. mongodb:/tmp/
 docker exec mongodb mongoimport \
   --host localhost:27017 \
   --username admin_user \
-  --password "Movate\$20261" \
+  --password "MovateiO\$20261" \
   --authenticationDatabase admin \
   --db movate_ai_infusion \
   --collection UserManagement \
@@ -18,7 +18,7 @@ docker exec mongodb mongoimport \
 docker exec mongodb mongoimport \
   --host localhost:27017 \
   --username admin_user \
-  --password "Movate\$20261" \
+  --password "MovateiO\$20261" \
   --authenticationDatabase admin \
   --db movate_ai_infusion \
   --collection RoleManagement \
@@ -28,7 +28,7 @@ docker exec mongodb mongoimport \
 docker exec mongodb mongoimport \
   --host localhost:27017 \
   --username admin_user \
-  --password "Movate\$20261" \
+  --password "MovateiO\$20261" \
   --authenticationDatabase admin \
   --db movate_ai_infusion \
   --collection RolePermissions \
@@ -38,7 +38,7 @@ docker exec mongodb mongoimport \
 docker exec mongodb mongoimport \
   --host localhost:27017 \
   --username admin_user \
-  --password "Movate\$20261" \
+  --password "MovateiO\$20261" \
   --authenticationDatabase admin \
   --db movate_ai_infusion \
   --collection TeamManagement \
@@ -48,7 +48,7 @@ docker exec mongodb mongoimport \
 docker exec mongodb mongoimport \
   --host localhost:27017 \
   --username admin_user \
-  --password "Movate\$20261" \
+  --password "MovateiO\$20261" \
   --authenticationDatabase admin \
   --db movate_ai_infusion \
   --collection AgentRoleMasterCollection \
@@ -58,7 +58,7 @@ docker exec mongodb mongoimport \
 docker exec mongodb mongoimport \
   --host localhost:27017 \
   --username admin_user \
-  --password "Movate\$20261" \
+  --password "MovateiO\$20261" \
   --authenticationDatabase admin \
   --db movate_ai_infusion \
   --collection AgentTypeMasterCollection \
@@ -68,7 +68,7 @@ docker exec mongodb mongoimport \
 docker exec mongodb mongoimport \
   --host localhost:27017 \
   --username admin_user \
-  --password "Movate\$20261" \
+  --password "MovateiO\$20261" \
   --authenticationDatabase admin \
   --db movate_ai_infusion \
   --collection ProjectManagement \
@@ -78,7 +78,7 @@ docker exec mongodb mongoimport \
 docker exec mongodb mongoimport \
   --host localhost:27017 \
   --username admin_user \
-  --password "Movate\$20261" \
+  --password "MovateiO\$20261" \
   --authenticationDatabase admin \
   --db movate_ai_infusion \
   --collection PageConfiguration \
