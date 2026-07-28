@@ -9,7 +9,7 @@
   "IsNewPort": false,
   "OTP_RECAPTCHA": false,
   "MONGODB_CONNECTION":"mongodb://localhost:27017/",
-  "MONGODB_COLLECTION_NAME_MASTER":"uat",
+  "MONGODB_COLLECTION_NAME_MASTER":"movate_ai_infusion",
   "MONGODB_COLLECTION_NAME_MASTERDB_NAME":"App Engineering",
   "MONGODB_USER_COLLECTION":"UserManagement",
   "MONGODB_ROLE_COLLECTION":"RoleManagement",
