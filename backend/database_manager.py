@@ -33,7 +33,23 @@ class DatabaseManager:
     def _setup_databases(self):
         # Setup MASTER database only - reuse existing connection if available
         if DatabaseType.MASTER not in self._clients:
-            self._clients[DatabaseType.MASTER] = MongoClient(self.config["MONGODB_CONNECTION"])
+        # 1. Get credentials (ideally from environment variables or secure config)
+            username = self.config.get("MONGODB_USER", "your_username")
+            password = self.config.get("MONGODB_PASSWORD", "your_password")
+            host = self.config.get("MONGODB_HOST", "localhost")
+            port = self.config.get("MONGODB_PORT", "27017")
+            auth_db = self.config.get("MONGODB_AUTH_DB", "admin") # Database where the user is created
+            
+            # 2. URL-encode credentials to handle special characters safely
+            safe_username = urllib.parse.quote_plus(username)
+            safe_password = urllib.parse.quote_plus(password)
+            
+            # 3. Construct the connection string
+            default_uri = f"mongodb://{safe_username}:{safe_password}@{host}:{port}/?authSource={auth_db}"
+            
+            # 4. Connect (uses config value if provided, otherwise falls back to default_uri)
+            print(f"Connecting to MongoDB with URI: {default_uri}")  # Debugging line
+            self._clients[DatabaseType.MASTER] = MongoClient(default_uri)
         master_client = self._clients[DatabaseType.MASTER]
         self._databases[DatabaseType.MASTER] = master_client[self.config["MONGODB_COLLECTION_NAME_MASTER"]]
         
@@ -91,7 +107,24 @@ class DatabaseManager:
         """Create dynamic database with its own connection if it doesn't exist"""
         if db_name not in self._databases:
             if db_name not in self._clients:
-                self._clients[db_name] = MongoClient(self.config["MONGODB_CONNECTION"])
+                 # 1. Get credentials (ideally from environment variables or secure config)
+                username = self.config.get("MONGODB_USER", "your_username")
+                password = self.config.get("MONGODB_PASSWORD", "your_password")
+                host = self.config.get("MONGODB_HOST", "localhost")
+                port = self.config.get("MONGODB_PORT", "27017")
+                auth_db = self.config.get("MONGODB_AUTH_DB", "admin") # Database where the user is created
+                
+                # 2. URL-encode credentials to handle special characters safely
+                safe_username = urllib.parse.quote_plus(username)
+                safe_password = urllib.parse.quote_plus(password)
+                
+                # 3. Construct the connection string
+                default_uri = f"mongodb://{safe_username}:{safe_password}@{host}:{port}/?authSource={auth_db}"
+                
+                # 4. Connect (uses config value if provided, otherwise falls back to default_uri)
+                print(f"Connecting to MongoDB with URI: {default_uri}")  # Debugging line
+                self.mongo_client = MongoClient(default_uri)
+                self._clients[db_name] = MongoClient(default_uri)
             client = self._clients[db_name]
             self._databases[db_name] = client[db_name]
             self._collections[db_name] = self._create_collections(self._databases[db_name])
