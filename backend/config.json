@@ -3,11 +3,11 @@
   "Encryption_key":"u3aJK7-b5lkPACwgpawqJAhb-d2kmqXnbtKgiR2NAdw=",
   "OTP_EXTERNAL_SERVICE": false,
   "IsServiceMode": false,
-  "AZ_MAIL_PWD": true,
+  "AZ_MAIL_PWD": false,
   "IS_PROD":true,
   "Is_UAT":true,
   "IsNewPort": false,
-  "OTP_RECAPTCHA": true,
+  "OTP_RECAPTCHA": false,
   "MONGODB_CONNECTION":"mongodb://localhost:27017/",
   "MONGODB_COLLECTION_NAME_MASTER":"uat",
   "MONGODB_COLLECTION_NAME_MASTERDB_NAME":"App Engineering",
@@ -77,13 +77,6 @@
   "AZURE_CLIENT_SECRET": "${AZURE_CLIENT_SECRET}",
   "AZURE_ACS_ENDPOINT": "https://movateai-cservice.unitedstates.communication.azure.com",
   "AZURE_SENDER_ADDRESS": "",
-  "Site_Url":"https://aisolutions.revlon.com/",
-  "MSAL": {
-    "TENANT_ID": "${AZURE_AUTH_TENANT_ID}",
-    "CLIENT_ID": ${AZURE_AUTH_CLIENT_ID}",
-    "AUTHORITY": "https://login.microsoftonline.com/TENANT_ID"
-  },
-	
   "lyzrInternal": {
     "Agent_api_url": "https://agent-prod.studio.lyzr.ai/v3/inference/chat/",
     "x_api_key": "",
