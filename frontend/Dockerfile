@@ -16,10 +16,10 @@ RUN npm install markdown-it --force
 RUN npm install crypto-randomuuid --force
  
 # Replace node.interface.d.ts file
---COPY node.interface.d.ts /app/node_modules/ngx-vflow/lib/vflow/interfaces/node.interface.d.ts
+#COPY node.interface.d.ts /app/node_modules/ngx-vflow/lib/vflow/interfaces/node.interface.d.ts
  
 # Copy jquery directory
---COPY jquery /app/node_modules/jquery
+#COPY jquery /app/node_modules/jquery
  
  
 # Copy the rest of the application
