@@ -2166,8 +2166,6 @@ class FlaskApp(DatabaseCollections):
         self.app.add_url_rule('/getProjectTeamsRoles', 'get_project_teams_roles_route', self.get_project_teams_roles_route, methods=['POST'])
         self.app.add_url_rule('/getTeamsByProject', 'get_teams_by_project', self.get_teams_by_project, methods=['POST'])
         self.app.add_url_rule('/getRolesByProjectAndTeam', 'get_roles_by_project_and_team', self.get_roles_by_project_and_team, methods=['POST'])
-        self.app.add_url_rule('/SsoLogin', 'sso_login', self.sso_login, methods=['POST'])
-        self.app.add_url_rule('/api/SsoLogin', 'sso_login', self.sso_login, methods=['POST'])
         
         # Role Management Routes
         self.app.add_url_rule('/roles', 'get_roles', self.get_roles, methods=['GET'])
