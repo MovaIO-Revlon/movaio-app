@@ -35,11 +35,11 @@ class DatabaseManager:
         # Setup MASTER database only - reuse existing connection if available
         if DatabaseType.MASTER not in self._clients:
         # 1. Get credentials (ideally from environment variables or secure config)
-            username = self.config.get("MONGODB_USER", "your_username")
-            password = self.config.get("MONGODB_PASSWORD", "your_password")
-            host = self.config.get("MONGODB_HOST", "localhost")
-            port = self.config.get("MONGODB_PORT", "27017")
-            auth_db = self.config.get("MONGODB_AUTH_DB", "admin") # Database where the user is created
+            username = self.config["MONGODB_USER"]
+            password = self.config["MONGODB_PASSWORD"]
+            host = self.config["MONGODB_HOST"]
+            port = self.config["MONGODB_PORT"]
+            auth_db = self.config["MONGODB_AUTH_DB"] # Database where the user is created
             
             # 2. URL-encode credentials to handle special characters safely
             safe_username = urllib.parse.quote_plus(username)
@@ -108,12 +108,12 @@ class DatabaseManager:
         """Create dynamic database with its own connection if it doesn't exist"""
         if db_name not in self._databases:
             if db_name not in self._clients:
-                 # 1. Get credentials (ideally from environment variables or secure config)
-                username = self.config.get("MONGODB_USER", "your_username")
-                password = self.config.get("MONGODB_PASSWORD", "your_password")
-                host = self.config.get("MONGODB_HOST", "localhost")
-                port = self.config.get("MONGODB_PORT", "27017")
-                auth_db = self.config.get("MONGODB_AUTH_DB", "admin") # Database where the user is created
+                # 1. Get credentials (ideally from environment variables or secure config)
+                username = self.config["MONGODB_USER"]
+                password = self.config["MONGODB_PASSWORD"]
+                host = self.config["MONGODB_HOST"]
+                port = self.config["MONGODB_PORT"]
+                auth_db = self.config["MONGODB_AUTH_DB"] # Database where the user is created
                 
                 # 2. URL-encode credentials to handle special characters safely
                 safe_username = urllib.parse.quote_plus(username)
