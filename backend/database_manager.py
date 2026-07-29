@@ -44,7 +44,10 @@ class DatabaseManager:
             # 2. URL-encode credentials to handle special characters safely
             #safe_username = urllib.parse.quote_plus(username)
             #safe_password = urllib.parse.quote_plus(password)
-            
+
+            print(f"UserName:{username}")
+            print(f"Password:{password}")
+
             # 3. Construct the connection string
             default_uri = f"mongodb://{username}:{password}@{host}:{port}/?authSource={auth_db}"
             
@@ -118,6 +121,9 @@ class DatabaseManager:
                 # 2. URL-encode credentials to handle special characters safely
                 #safe_username = urllib.parse.quote_plus(username)
                 #safe_password = urllib.parse.quote_plus(password)
+
+                print(f"UserName:{username}")
+                print(f"Password:{password}")
                 
                 # 3. Construct the connection string
                 default_uri = f"mongodb://{username}:{password}@{host}:{port}/?authSource={auth_db}"
