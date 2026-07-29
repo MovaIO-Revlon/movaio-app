@@ -1,4 +1,4 @@
-from urllib.parse import quote_plus2
+from urllib.parse import quote_plus
 import os
 from pymongo import MongoClient
 from bson import ObjectId
