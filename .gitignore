@@ -1,5 +1,8 @@
 # Byte-compiled / optimized / DLL files
 __pycache__/
+.env
+.env.local
+.env.*.local
 .tvenv/
 /frontend/.vscode/
 /backend/.pytest_cache/
