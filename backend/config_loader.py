@@ -14,27 +14,8 @@ class ConfigLoader:
         self._setup_paths()
         self._setup_mongo()
         self._setup_config_vars()
-
-        # 1. Get credentials (ideally from environment variables or secure config)
-        username = self.config.get("MONGODB_USER", "your_username")
-        password = self.config.get("MONGODB_PASSWORD", "your_password")
-        host = self.config.get("MONGODB_HOST", "localhost")
-        port = self.config.get("MONGODB_PORT", "27017")
-        auth_db = self.config.get("MONGODB_AUTH_DB", "admin") # Database where the user is created
         
-        # 2. URL-encode credentials to handle special characters safely
-        #safe_username = urllib.parse.quote_plus(username)
-        #safe_password = urllib.parse.quote_plus(password)
-        
-        # 3. Construct the connection string
-        default_uri = f"mongodb://{username}:{password}@{host}:{port}/?authSource={auth_db}"
-        
-        # 4. Connect (uses config value if provided, otherwise falls back to default_uri)
-        print(f"Connecting to MongoDB with URI: {default_uri}")  # Debugging line
-        self.mongo_client = MongoClient(default_uri)
-        print(f"MongoDB connection established successfully.:{self.mongo_client}")  # Debugging line
-        
-        #self.mongo_client = MongoClient(self.config.get("MONGODB_CONNECTION", "mongodb://localhost:27017/"))
+        self.mongo_client = MongoClient(self.config.get("MONGODB_CONNECTION", "mongodb://localhost:27017/"))
         self.main_db = self.mongo_client[self.config.get("MONGODB_COLLECTION_NAME_MASTER", "dev_qa")]
         self.encryption_key = self.config["Encryption_key"]
         self.IsServiceMode = self.config.get("IsServiceMode", False)
