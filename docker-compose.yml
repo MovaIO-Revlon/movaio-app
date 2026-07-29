@@ -53,7 +53,7 @@ services:
     container_name: app-backend
     restart: unless-stopped
     environment:
-      - MONGO_URI=mongodb://${MONGO_USERNAME}:${MONGO_USERNAME}@mongodb:27017/
+      - MONGO_URI=mongodb://admin_user:MovatiO20261@mongodb:27017/
     ports:
       - "5000:5000"
     networks:
