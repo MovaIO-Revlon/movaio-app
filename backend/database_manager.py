@@ -47,7 +47,7 @@ class DatabaseManager:
             musername = os.getenv('MONGO_USERNAME')
             mpassword = os.getenv('MONGO_PASSWORD')
 
-            default_uri = f"mongodb://admin_user:Movate%2420261@{host}:{port}/?authSource={auth_db}"
+            default_uri = f"mongodb://musername:mpassword@{host}:{port}/?authSource={auth_db}"
             
             # 4. Connect (uses config value if provided, otherwise falls back to default_uri)
             print(f"Connecting to MongoDB with URI: {default_uri}")  # Debugging line
