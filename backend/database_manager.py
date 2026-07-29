@@ -1,6 +1,7 @@
 #from urllib.parse import quote_plus
 import os
 from pymongo import MongoClient
+from pymongo.errors import PyMongoError
 from bson import ObjectId
 from enum import Enum
 
