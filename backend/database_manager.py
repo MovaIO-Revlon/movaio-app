@@ -66,7 +66,17 @@ class DatabaseManager:
             
             # 4. Connect (uses config value if provided, otherwise falls back to default_uri)
             print(f"Connecting to MongoDB with URI: {default_uri}")  # Debugging line
-            self._clients[DatabaseType.MASTER] = MongoClient(default_uri)
+            try:
+                print(f"Connecting to MongoDB with URI: {default_uri}")
+                self._clients[DatabaseType.MASTER] = MongoClient(default_uri,serverSelectionTimeoutMS=5000)
+                # Force connection test17    
+                self._clients[DatabaseType.MASTER].admin.command("ping")
+            except PyMongoError as e:
+                print(f"Connection failed using host '{host}': {e}")
+                print("Retrying with localhost...")
+                localhost_uri = (f"mongodb://admin_user:Movate%2420261@localhost:{port}/?authSource={auth_db}")
+                self._clients[DatabaseType.MASTER] = MongoClient(localhost_uri,serverSelectionTimeoutMS=5000)
+                self._clients[DatabaseType.MASTER].admin.command("ping")
         master_client = self._clients[DatabaseType.MASTER]
         self._databases[DatabaseType.MASTER] = master_client[self.config["MONGODB_COLLECTION_NAME_MASTER"]]
         
