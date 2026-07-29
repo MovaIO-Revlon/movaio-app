@@ -47,6 +47,10 @@ class DatabaseManager:
 
             print(f"UserName:{username}")
             print(f"Password:{password}")
+            print("MONGODB_USER =", repr(self.config["MONGODB_USER"]))
+            print("MONGODB_PASSWORD =", repr(self.config["MONGODB_PASSWORD"]))
+            print("ENV USER:", os.getenv("MONGO_USERNAME"))
+            print("ENV PASS EXISTS:", os.getenv("MONGO_PASSWORD") is not None)
 
             # 3. Construct the connection string
             default_uri = f"mongodb://{username}:{password}@{host}:{port}/?authSource={auth_db}"
@@ -124,6 +128,11 @@ class DatabaseManager:
 
                 print(f"UserName:{username}")
                 print(f"Password:{password}")
+                    
+                print("MONGODB_USER =", repr(self.config["MONGODB_USER"]))
+                print("MONGODB_PASSWORD =", repr(self.config["MONGODB_PASSWORD"]))
+                print("ENV USER:", os.getenv("MONGO_USERNAME"))
+                print("ENV PASS EXISTS:", os.getenv("MONGO_PASSWORD") is not None)
                 
                 # 3. Construct the connection string
                 default_uri = f"mongodb://{username}:{password}@{host}:{port}/?authSource={auth_db}"
