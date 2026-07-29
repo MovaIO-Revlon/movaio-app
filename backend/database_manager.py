@@ -1,5 +1,5 @@
 import urllib.parse
-import os2
+import os
 from pymongo import MongoClient
 from bson import ObjectId
 from enum import Enum
