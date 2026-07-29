@@ -117,27 +117,11 @@ class DatabaseManager:
                 host = self.config["MONGODB_HOST"]
                 port = self.config["MONGODB_PORT"]
                 auth_db = self.config["MONGODB_AUTH_DB"] # Database where the user is created
-                
-                # 2. URL-encode credentials to handle special characters safely
-                #safe_username = urllib.parse.quote_plus(username)
-                #safe_password = urllib.parse.quote_plus(password)
-
-                print(f"UserName:{username}")
-                print(f"Password:{password}")
-                    
-                print("MONGODB_USER =", repr(self.config["MONGODB_USER"]))
-                print("MONGODB_PASSWORD =", repr(self.config["MONGODB_PASSWORD"]))
-                print("ENV USER:", os.getenv("MONGO_USERNAME"))
-                print("ENV PASS EXISTS:", os.getenv("MONGO_PASSWORD") is not None)
-                
-                # 3. Construct the connection string
-                #default_uri = f"mongodb://{username}:{password}@{host}:{port}/?authSource={auth_db}"
-
                 musername = os.getenv('MONGO_USERNAME')
                 mpassword = os.getenv('MONGO_PASSWORD')
-                default_uri = f"mongodb://admin_user:Movate%2420261@{host}:{port}/?authSource={auth_db}"
+                default_uri = f"mongodb://musername:mpassword@{host}:{port}/?authSource={auth_db}"
                 
-                # 4. Connect (uses config value if provided, otherwise falls back to default_uri)
+                #2. Connect (uses config value if provided, otherwise falls back to default_uri)
                 print(f"Connecting to MongoDB with URI: {default_uri}")  # Debugging line
                 self.mongo_client = MongoClient(default_uri)
                 self._clients[db_name] = MongoClient(default_uri)
