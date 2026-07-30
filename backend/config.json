@@ -82,17 +82,17 @@
   "AZURE_CLIENT_SECRET": "${AZURE_CLIENT_SECRET}",
   "AZURE_ACS_ENDPOINT": "https://movateai-cservice.unitedstates.communication.azure.com",
   "AZURE_SENDER_ADDRESS": "",
-  "lyzrInternal": {
+   "lyzrInternal": {
     "Agent_api_url": "https://agent-prod.studio.lyzr.ai/v3/inference/chat/",
-    "x_api_key": "",
-    "user_id": "",
+    "x_api_key": "sk-default-k6X5y4G76crcjmc7FzWmyQ3qYkXiB90f",
+    "user_id": "meena.rahulmalu@movate.com",
     "agent_id":"688cf55d7958101741e1735b",
     "session_id":"688cf55d7958101741e1735b-qenczlwskhm"
   },
   "lyzrExternal": {
     "Agent_api_url": "https://agent-prod.studio.lyzr.ai/v3/inference/chat/",
-    "x_api_key": "",
-    "user_id": "",
+    "x_api_key": "sk-default-k6X5y4G76crcjmc7FzWmyQ3qYkXiB90f",
+    "user_id": "meena.rahulmalu@movate.com",
     "agent_id":"688cf55d7958101741e1735b",
     "session_id":"688cf55d7958101741e1735b-qenczlwskhm"
   },
