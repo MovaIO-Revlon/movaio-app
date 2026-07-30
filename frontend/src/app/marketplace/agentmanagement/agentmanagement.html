@@ -894,7 +894,7 @@
                     <div class="d-flex">
                       <select class="form-select me-3 fs-12" formControlName="model">
                         <option value="" disabled>Select AI Model</option>
-                        <option *ngFor="let model of providerModelsFromLyzr" [value]="model.model">{{ model.model }}</option>
+                        <option *ngFor="let model of providerModelsFromLyzr" [value]="model.model.name">{{ model.model.name }}</option>
                       </select>
                     </div>
                     <div
@@ -1558,7 +1558,7 @@
                     <div class="d-flex">
                       <select class="form-select me-3 fs-12" formControlName="model">
                         <option value="" disabled>Select AI Model</option>
-                        <option *ngFor="let model of providerModelsFromLyzr" [value]="model.model">{{ model.model }}</option>
+                        <option *ngFor="let model of providerModelsFromLyzr" [value]="model.model.name">{{ model.model.name }}</option>
                       </select>
                     </div>
                     <div
