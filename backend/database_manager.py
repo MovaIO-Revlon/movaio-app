@@ -37,23 +37,23 @@ class DatabaseManager:
         if DatabaseType.MASTER not in self._clients:
         # 1. Get credentials (ideally from environment variables or secure config)
 
-            host = self.config["MONGODB_HOST"]
-            port = self.config["MONGODB_PORT"]
-            auth_db = self.config["MONGODB_AUTH_DB"] # Database where the user is created
+            #host = self.config["MONGODB_HOST"]
+            #port = self.config["MONGODB_PORT"]
+            #auth_db = self.config["MONGODB_AUTH_DB"] # Database where the user is created
             
-            print("ENV USER:", os.getenv("MONGO_USERNAME"))
-            print("ENV PASS EXISTS:", os.getenv("MONGO_PASSWORD") is not None)
+            #print("ENV USER:", os.getenv("MONGO_USERNAME"))
+            #print("ENV PASS EXISTS:", os.getenv("MONGO_PASSWORD") is not None)
 
-            musername = os.getenv('MONGO_USERNAME')
-            mpassword = os.getenv('MONGO_PASSWORD')
+            #musername = os.getenv('MONGO_USERNAME')
+            #mpassword = os.getenv('MONGO_PASSWORD')
 
-            default_uri = f"mongodb://{musername}:{mpassword}@{host}:{port}/?authSource={auth_db}"
+            #default_uri = f"mongodb://{musername}:{mpassword}@{host}:{port}/?authSource={auth_db}"
             
             # 4. Connect (uses config value if provided, otherwise falls back to default_uri)
-            print(f"Connecting to MongoDB with URI: {default_uri}")  # Debugging line
+            #print(f"Connecting to MongoDB with URI: {default_uri}")  # Debugging line
             
-            print(f"Connecting to MongoDB with URI: {default_uri}")
-            self._clients[DatabaseType.MASTER] = MongoClient(default_uri)
+            print(f"Connecting to MongoDB with URI: {self.config["MONGODB_CONNECTION"]}")
+            self._clients[DatabaseType.MASTER] = MongoClient(self.config["MONGODB_CONNECTION"])
         master_client = self._clients[DatabaseType.MASTER]
         self._databases[DatabaseType.MASTER] = master_client[self.config["MONGODB_COLLECTION_NAME_MASTER"]]
         
@@ -112,19 +112,18 @@ class DatabaseManager:
         if db_name not in self._databases:
             if db_name not in self._clients:
                 # 1. Get credentials (ideally from environment variables or secure config)
-                username = self.config["MONGODB_USER"]
-                password = self.config["MONGODB_PASSWORD"]
-                host = self.config["MONGODB_HOST"]
-                port = self.config["MONGODB_PORT"]
-                auth_db = self.config["MONGODB_AUTH_DB"] # Database where the user is created
-                musername = os.getenv('MONGO_USERNAME')
-                mpassword = os.getenv('MONGO_PASSWORD')
-                default_uri = f"mongodb://{musername}:{mpassword}@{host}:{port}/?authSource={auth_db}"
+                #username = self.config["MONGODB_USER"]
+                #password = self.config["MONGODB_PASSWORD"]
+                #host = self.config["MONGODB_HOST"]
+                #port = self.config["MONGODB_PORT"]
+                #auth_db = self.config["MONGODB_AUTH_DB"] # Database where the user is created
+                #musername = os.getenv('MONGO_USERNAME')
+                #mpassword = os.getenv('MONGO_PASSWORD')
+                #default_uri = f"mongodb://{musername}:{mpassword}@{host}:{port}/?authSource={auth_db}"
                 
                 #2. Connect (uses config value if provided, otherwise falls back to default_uri)
-                print(f"Connecting to MongoDB with URI: {default_uri}")  # Debugging line
-                self.mongo_client = MongoClient(default_uri)
-                self._clients[db_name] = MongoClient(default_uri)
+                print(f"Connecting to MongoDB with URI: {self.config["MONGODB_CONNECTION"]}")  # Debugging line
+                self._clients[db_name] = MongoClient(self.config["MONGODB_CONNECTION"])
             client = self._clients[db_name]
             self._databases[db_name] = client[db_name]
             self._collections[db_name] = self._create_collections(self._databases[db_name])
