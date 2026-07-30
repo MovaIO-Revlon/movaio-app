@@ -28,7 +28,7 @@ class ConfigLoader:
         #default_uri = f"mongodb://{musername}:{mpassword}@{host}:{port}/?authSource={auth_db}"
             
         # 4. Connect (uses config value if provided, otherwise falls back to default_uri)
-        print(f"Connecting to MongoDB with URI: {default_uri}")  # Debugging line
+        #print(f"Connecting to MongoDB with URI: {default_uri}")  # Debugging line
         #self.mongo_client = MongoClient(default_uri)
         self.mongo_client = MongoClient(self.config.get("MONGODB_CONNECTION", "mongodb://localhost:27017/"))
         self.main_db = self.mongo_client[self.config.get("MONGODB_COLLECTION_NAME_MASTER", "dev_qa")]
