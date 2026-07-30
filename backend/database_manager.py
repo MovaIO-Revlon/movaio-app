@@ -53,7 +53,7 @@ class DatabaseManager:
             print(f"Connecting to MongoDB with URI: {default_uri}")  # Debugging line
             
             print(f"Connecting to MongoDB with URI: {default_uri}")
-            self._clients[DatabaseType.MASTER] = MongoClient(default_uri,serverSelectionTimeoutMS=5000)
+            self._clients[DatabaseType.MASTER] = MongoClient(default_uri)
         master_client = self._clients[DatabaseType.MASTER]
         self._databases[DatabaseType.MASTER] = master_client[self.config["MONGODB_COLLECTION_NAME_MASTER"]]
         
