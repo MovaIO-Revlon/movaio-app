@@ -928,6 +928,7 @@ class UserManager(DatabaseCollections):
         email = user_dtls.get("Email", "")
         full_name = f"{user_dtls.get('FirstName', '')} {user_dtls.get('LastName', '')}"
         generated_password = self.generate_password(10)
+        print(f"New User : {email} Password : {generated_password}")
         active_project = user_dtls.get("ActiveProject", "")
 
         prj_details = user_dtls.get("PrjDetails", [])
@@ -1028,7 +1029,7 @@ class UserManager(DatabaseCollections):
 
 
 
-            self.send_mail(email, full_name, generated_password, 'Welcome')
+            #self.send_mail(email, full_name, generated_password, 'Welcome')
 
         else:
             userdata = self.user_collection.find_one({"Email": re.compile(f"^{re.escape(email)}$", re.IGNORECASE),
