@@ -2150,6 +2150,7 @@ class FlaskApp(DatabaseCollections):
         
         # User Management Routes
         self.app.add_url_rule('/DoLogin', 'do_login', self.do_login, methods=['POST'])
+        self.app.add_url_rule('/api/DoLogin', 'do_login', self.do_login, methods=['POST'])
         self.app.add_url_rule('/GetReCaptchaConfig', 'get_recaptcha_config', self.get_recaptcha_config, methods=['GET'])
         self.app.add_url_rule('/OTPDetails', 'otp_details', self.otp_details, methods=['POST'])
         self.app.add_url_rule('/ValidateOTP', 'validate_otp', self.validate_otp, methods=['POST'])
