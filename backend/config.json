@@ -8,7 +8,7 @@
   "Is_UAT":true,
   "IsNewPort": false,
   "OTP_RECAPTCHA": false,
-  "MONGODB_CONNECTION":"mongodb://localhost:27017/",
+  "MONGODB_CONNECTION":"mongodb://admin_user:MovateiO20261@mongodb:27017/",
   "MONGODB_USER":"${MONGO_USERNAME}",
   "MONGODB_PASSWORD":"${MONGO_PASSWORD}",
   "MONGODB_HOST":"mongodb",
