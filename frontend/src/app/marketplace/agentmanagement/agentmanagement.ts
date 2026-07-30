@@ -1606,7 +1606,7 @@ fetchAgenciesWithAgents(): void {
                 providerModels.push({
                   "credential_id":provider.meta_data?.credential_id,
                   "provider_id":provider.provider_id,
-                  "model":model[0]
+                  "model":model
                 });
               });
             }
