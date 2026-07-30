@@ -51,8 +51,9 @@ class DatabaseManager:
             
             # 4. Connect (uses config value if provided, otherwise falls back to default_uri)
             #print(f"Connecting to MongoDB with URI: {default_uri}")  # Debugging line
+            ConnectionURL= self.config["MONGODB_CONNECTION"]
             
-            print(f"Connecting to MongoDB with URI: {self.config["MONGODB_CONNECTION"]}")
+            #print(f"Connecting to MongoDB with URI: {ConnectionURL}")
             self._clients[DatabaseType.MASTER] = MongoClient(self.config["MONGODB_CONNECTION"])
         master_client = self._clients[DatabaseType.MASTER]
         self._databases[DatabaseType.MASTER] = master_client[self.config["MONGODB_COLLECTION_NAME_MASTER"]]
@@ -120,9 +121,9 @@ class DatabaseManager:
                 #musername = os.getenv('MONGO_USERNAME')
                 #mpassword = os.getenv('MONGO_PASSWORD')
                 #default_uri = f"mongodb://{musername}:{mpassword}@{host}:{port}/?authSource={auth_db}"
-                
+                ConnectionURL= self.config["MONGODB_CONNECTION"]
                 #2. Connect (uses config value if provided, otherwise falls back to default_uri)
-                print(f"Connecting to MongoDB with URI: {self.config["MONGODB_CONNECTION"]}")  # Debugging line
+                print(f"Connecting to MongoDB with URI: {ConnectionURL}")  # Debugging line
                 self._clients[db_name] = MongoClient(self.config["MONGODB_CONNECTION"])
             client = self._clients[db_name]
             self._databases[db_name] = client[db_name]
