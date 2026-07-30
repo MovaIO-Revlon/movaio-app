@@ -15,22 +15,22 @@ class ConfigLoader:
         self._setup_mongo()
         self._setup_config_vars()
 
-        host = self.config["MONGODB_HOST"]
-        port = self.config["MONGODB_PORT"]
-        auth_db = self.config["MONGODB_AUTH_DB"] # Database where the user is created
+        #host = self.config["MONGODB_HOST"]
+        #port = self.config["MONGODB_PORT"]
+        #auth_db = self.config["MONGODB_AUTH_DB"] # Database where the user is created
             
-        print("ENV USER--Config:", os.getenv("MONGO_USERNAME"))
-        print("ENV PASS EXISTS--Config:", os.getenv("MONGO_PASSWORD") is not None)
+        #print("ENV USER--Config:", os.getenv("MONGO_USERNAME"))
+        #print("ENV PASS EXISTS--Config:", os.getenv("MONGO_PASSWORD") is not None)
 
-        musername = os.getenv('MONGO_USERNAME')
-        mpassword = os.getenv('MONGO_PASSWORD')
+        #musername = os.getenv('MONGO_USERNAME')
+        #mpassword = os.getenv('MONGO_PASSWORD')
 
-        default_uri = f"mongodb://{musername}:{mpassword}@{host}:{port}/?authSource={auth_db}"
+        #default_uri = f"mongodb://{musername}:{mpassword}@{host}:{port}/?authSource={auth_db}"
             
         # 4. Connect (uses config value if provided, otherwise falls back to default_uri)
         print(f"Connecting to MongoDB with URI: {default_uri}")  # Debugging line
-        self.mongo_client = MongoClient(default_uri)
-        #self.mongo_client = MongoClient(self.config.get("MONGODB_CONNECTION", "mongodb://localhost:27017/"))
+        #self.mongo_client = MongoClient(default_uri)
+        self.mongo_client = MongoClient(self.config.get("MONGODB_CONNECTION", "mongodb://localhost:27017/"))
         self.main_db = self.mongo_client[self.config.get("MONGODB_COLLECTION_NAME_MASTER", "dev_qa")]
         self.encryption_key = self.config["Encryption_key"]
         self.IsServiceMode = self.config.get("IsServiceMode", False)
