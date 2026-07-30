@@ -137,11 +137,10 @@
   "EMAIL_SUBJECT_APPROVAL_DELETE": "Approval Required for Agent Delete",
   "APPROVAL_TEMPLATE_NAME": "AgentApprovalemailtemplate.html",
   "EMAIL_APPROVAL_MANAGER":[
-		"PranavS.Pradyoth@movate.com",
-		"NaveenKumar.ReddyR@movate.com",
-		"Meena.RahulMalu@movate.com",
-		"MiteshwariRamlal.Pardeshi@movate.com",
-		"Chaitra.SiddaReddy@movate.com"
+		"Gobu.Durairasu@revlon.com",
+		"Mohamed.Luthufullah@revlon.com",
+		"ShantanuM.Athavale@revlon.com",
+	  "RohitKumar.JamunaSingh@revlon.com"
 	  ],
   "API_KEY_LYZR":"sk-default-k6X5y4G76crcjmc7FzWmyQ3qYkXiB90f",
   "USER_ID_LYZR":"meena.rahulmalu@movate.com",
