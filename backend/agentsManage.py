@@ -325,6 +325,12 @@ class AgentManager(DatabaseCollections):
         if not agent_id:
             raise ValidationError("Missing agent_id")
         
+        existing_agent_data = self.agent_collection.find_one({"agent_id": agent_id})
+        if existing_agent_data:
+            isDeleted = existing_agent_data.get("isDeleted", False)
+            if not isDeleted:
+                raise ValidationError("Agent with the same Agent ID already exists")
+        
         scheduler_time = None
         if payload.get("scheduleFrequency") and payload.get("schedulerTime"):
             scheduler_time = self.scheduler_validator.process_scheduler(
