@@ -10,7 +10,7 @@ from database_manager import select_database_by_user_type
 from utils import ValidationError
 from bson.objectid import ObjectId
 from UserManagement import UserManager
-
+from lyzr_api_management import LyzrAPIManagement
 # DatabaseManager is now replaced by DatabaseCollections in common_utils
 
 
@@ -89,6 +89,7 @@ class AgentManager(DatabaseCollections):
         self.config = ConfigLoader()        
         self.utils = CommonUtils()
         self.user_manager = UserManager()
+        self.lyzr_api_manager= LyzrAPIManagement()
     
     def _query_db(self, collection_name, operation, user_type=None):
         """Helper method to query database with user type"""
@@ -143,12 +144,18 @@ class AgentManager(DatabaseCollections):
                 "agent_instruction": agent_details.get("agent_prompt", "")
             }
             to_email = agent_details.get("approverEmail")
-            mail_result = self.user_manager.send_mail_approval(
-                to_email=to_email,
-                to_name="Pranav",
-                data=mail_data,
-                sourcefrom="Onboarding"
-            )
+            #mail_result = self.user_manager.send_mail_approval(
+            #    to_email=to_email,
+            #    to_name="Pranav",
+             #   data=mail_data,
+            #    sourcefrom="Onboarding"
+           # )
+             data = {
+                "agent_id": inserted_id,
+                "status": "Approved",
+                "sourcefrom": "Onboarding"
+            }
+            self.lyzr_api_manager.approval_api(data)
             return True
         else:
             agent_id = agent_details.get('agent_id')
@@ -177,12 +184,18 @@ class AgentManager(DatabaseCollections):
                 "agent_instruction": agent_details.get("agent_prompt", "")
             }
             to_email = agent_details.get("approverEmail")
-            mail_result = self.user_manager.send_mail_approval(
-                to_email=to_email,
-                to_name="Pranav",
-                data=mail_data,
-                sourcefrom="Update"
-            )
+            #mail_result = self.user_manager.send_mail_approval(
+             #   to_email=to_email,
+             #   to_name="Pranav",
+             #   data=mail_data,
+             #   sourcefrom="Update"
+           # )
+            data = {
+                "agent_id": agent_id,
+                "status": "Approved",
+                "sourcefrom": "Update"
+            }
+            self.lyzr_api_manager.approval_api(data)
             return True
     
     def onboard_agent_details(self, request):
@@ -234,8 +247,6 @@ class AgentManager(DatabaseCollections):
             )
         
         return names
-    
-    
     
     def get_all_dropdown_details(self):
         # MCP Connector (no status filter)
@@ -2321,12 +2332,20 @@ class AgentManager(DatabaseCollections):
             "deletion_description": data.get("reason","")
         }
         to_email = data.get("approver_email","")
-        mail_result = self.user_manager.send_mail_approval(
-            to_email=to_email,
-            to_name="Super Admin",
-            data=mail_data,
-            sourcefrom="Delete"
-        )
+        #mail_result = self.user_manager.send_mail_approval(
+            #to_email=to_email,
+           # to_name="Super Admin",
+          #  data=mail_data,
+         #   sourcefrom="Delete"
+        #)
+
+        
+        data = {
+            "agent_id": agent_id,
+            "status": "Approved",
+            "sourcefrom": "Delete"
+            }
+        self.lyzr_api_manager.approval_api(data)
         # else:
         #     knowledge_store= agent.get("knowledge_store", {})
         #     update_op = {
@@ -2384,12 +2403,19 @@ class AgentManager(DatabaseCollections):
                 data=mail_data,
                 sourcefrom="Delete"
             )
-            update_op = {
-                'type': 'update_one',
-                'filter': {"_id": ObjectId(agent_id)},
-                'update': {"$set": {"Approval_Status_Message": "Pending approval for deletion", "Approval_Status": "Pending Approval","deleted_request_email":to_email}}
-            }
-            self._query_db('agent', update_op)
+            #update_op = {
+             #   'type': 'update_one',
+              #  'filter': {"_id": ObjectId(agent_id)},
+               # 'update': {"$set": {"Approval_Status_Message": "Pending approval for deletion", "Approval_Status": "Pending Approval","deleted_request_email":to_email}}
+            #}
+            #self._query_db('agent', update_op)
+                
+            data = {
+                "agent_id": agent_id,
+                "status": "Approved",
+                "sourcefrom": "Delete"
+                }
+            self.lyzr_api_manager.approval_api(data)
             return "Agent deletion requested successfully"
 
 
