@@ -276,10 +276,16 @@
 
 .meta {
     display: flex;
-    justify-content: flex-start;
+    justify-content: flex-end;
     gap: 8px;
     align-items: center;
-    margin-bottom: 10px;
+    margin-top: 10px;
+    margin-bottom: 0;
+    font-size: 12px;
+    color: #64748b;
+}
+
+.meta span {
     font-size: 12px;
     color: #64748b;
 }
@@ -290,6 +296,46 @@
     cursor: pointer;
     font-size: 14px;
     color: var(--icon-color);
+}
+
+.message-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    position: relative;
+}
+
+.download-wrapper {
+    position: relative;
+}
+
+.download-menu {
+    position: absolute;
+    top: calc(100% + 6px);
+    /* right: 0; */
+    min-width: 120px;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    box-shadow: 0 12px 24px rgba(15, 23, 42, 0.12);
+    z-index: 20;
+    overflow: hidden;
+}
+
+.download-menu-item {
+    display: block;
+    width: 100%;
+    padding: 8px 10px;
+    border: 0;
+    background: #ffffff;
+    text-align: left;
+    font-size: 13px;
+    color: #0f172a;
+    cursor: pointer;
+}
+
+.download-menu-item:hover {
+    background: #f8fafc;
 }
 
 .content {
@@ -483,6 +529,11 @@
     background: transparent;
     display: flex;
     justify-content: flex-end;
+    position: absolute;
+    right: 20px;
+    bottom: 100px;
+    max-width: 67vw;
+    overflow: hidden;
 }
 
 .global-suggestions .suggestion-group {
@@ -496,7 +547,7 @@
 .global-suggestions .suggested.right.stacked {
     display: flex;
     flex-direction: row;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     gap: 10px;
     align-items: center;
     justify-content: flex-end;
@@ -811,6 +862,7 @@
         transform: translateY(0);
     }
 }
+
 /* Popular Query Section Styles */
 .popular-query-section {
     margin-top: 24px;
@@ -883,4 +935,3 @@
     color: #475569;
     line-height: 1.5;
 }
-

@@ -26,27 +26,93 @@
     <div class="tab-content tab-content--eval">
       <div class="form-section bg-white ms-3 mt-2">
 
-        <!-- Step 0: Select Agent -->
+       <!-- Step 0: Select Agent (Searchable) -->
         <div class="form-group form-group--full">
-          <label class="form-label" for="select-agent">
+          <label class="form-label">
             Select Agent <span class="required">*</span>
           </label>
-          <div class="select-wrapper">
-            <select
-              id="select-agent"
-              class="form-select"
-              [(ngModel)]="selectedAgent"
-              (ngModelChange)="onAgentChange()"
-            >
-              <option value="" disabled>Select Agent</option>
-              <option *ngFor="let agent of agents" [value]="agent.agent_id">
-                {{ agent.name }}
-              </option>
-            </select>
+          <div
+            class="searchable-select"
+            [class.searchable-select--open]="isAgentDropdownOpen()"
+          >
+            <div class="searchable-select__control" (click)="toggleAgentDropdown()">
+              <span
+                class="searchable-select__value"
+                [class.searchable-select__value--placeholder]="!selectedAgent()"
+              >
+                {{ selectedAgent() ? selectedAgentName() : 'Select Agent' }}
+              </span>
+              <span class="searchable-select__icon">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="6 9 12 15 18 9"/>
+                </svg>
+              </span>
+            </div>
+
+            @if (isAgentDropdownOpen()) {
+              <div class="searchable-select__backdrop" (click)="closeAgentDropdown()"></div>
+              <div class="searchable-select__dropdown">
+                <div class="searchable-select__search">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8"/>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                  </svg>
+                  <input
+                    #agentSearchInput
+                    class="searchable-select__search-input"
+                    placeholder="Search agents..."
+                    [value]="agentSearchText()"
+                    (input)="onAgentSearchInput($any($event.target).value)"
+                    (keydown.escape)="closeAgentDropdown()"
+                  />
+                  @if (agentSearchText()) {
+                    <button
+                      class="searchable-select__clear"
+                      type="button"
+                      (click)="clearAgentSearch(); $event.stopPropagation()"
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                      </svg>
+                    </button>
+                  }
+                </div>
+
+                <div class="searchable-select__list">
+  @if (isAgentsLoading()) {
+    <div class="searchable-select__loading">
+      <div class="agent-list-loader__spinner"></div>
+      <span class="agent-list-loader__text">Loading agents...</span>
+    </div>
+  } @else if (filteredAgents().length === 0) {
+    <div class="searchable-select__empty">No agents found</div>
+  } @else {
+    @for (agent of filteredAgents(); track agent.agent_id) {
+      <div
+        class="searchable-select__option"
+        [class.searchable-select__option--active]="selectedAgent() === agent.agent_id"
+        (click)="selectAgent(agent.agent_id); $event.stopPropagation()"
+      >
+        <div class="searchable-select__option-left">
+          <span [innerHTML]="getHighlightedName(agent.name)"></span>
+          <span class="searchable-select__run-count">{{ agent.run_count ?? 0 }} times used</span>
+        </div>
+        @if (selectedAgent() === agent.agent_id) {
+          <svg class="searchable-select__check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+        }
+      </div>
+    }
+  }
+</div>
+              </div>
+            }
           </div>
         </div>
 
-        <!-- Step 1: Evaluation Type + Data Set side by side -->
+               <!-- Step 1: Evaluation Type + Data Set side by side -->
         @if (showStep1()) {
           <div class="form-step-row">
             <div class="form-group form-group--type">
@@ -54,52 +120,335 @@
                 Evaluation Type <span class="required">*</span>
               </label>
               <div class="radio-group">
-                @for (type of evalTypes; track type.value) {
-                  <label
-                    class="radio-card"
-                    [class.radio-card--disabled]="type.value === 'online'"
-                  >
-                    <input
-                      type="radio"
-                      name="eval-type"
-                      [value]="type.value"
-                      [checked]="selectedEvalType() === type.value"
-                      [disabled]="type.value === 'online'"
-                      (change)="onEvalTypeChange(type.value)"
-                    />
-                    <span class="radio-card__indicator"></span>
-                    <span class="radio-card__label">{{ type.label }}</span>
-                  </label>
+@for (type of evalTypes; track type.value) {
+    <label class="radio-card">
+      <input
+        type="radio"
+        name="eval-type"
+        [value]="type.value"
+        [checked]="selectedEvalType() === type.value"
+        (change)="onEvalTypeChange(type.value)"
+      />
+      <span class="radio-card__indicator"></span>
+      <span class="radio-card__label">{{ type.label }}</span>
+      @if (evalTypeDescriptions[type.value]) {
+        <div
+          class="method-select__info-trigger"
+          (mouseenter)="showEvalTypeInfo($event, evalTypeDescriptions[type.value])"
+          (mouseleave)="hideEvalTypeInfo()"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="16" x2="12" y2="12"/>
+            <line x1="12" y1="8" x2="12.01" y2="8"/>
+          </svg>
+        </div>
+      }
+    </label>
                 }
+                <!-- Tooltip popup for eval type -->
+@if (evalTypeTooltip().visible) {
+  <div class="method-info-popup"
+    [style.left.px]="evalTypeTooltip().position.left"
+    [style.top.px]="evalTypeTooltip().position.top"
+    (mouseenter)="showEvalTypeInfo($event, evalTypeTooltip().text)"
+    (mouseleave)="hideEvalTypeInfo()"
+  >
+    <p>{{ evalTypeTooltip().text }}</p>
+  </div>
+}
               </div>
             </div>
 
-            @if (showStep2()) {
-              <div class="form-group form-group--dataset">
-                <label class="form-label" for="data-set">Data Set<span class="required">*</span></label>
-                <div class="select-wrapper">
-                  <select
-                    id="data-set"
-                    class="form-select"
-                    [(ngModel)]="selectedDataSet"
-                    (ngModelChange)="onDataSetChange()"
-                  >
-                    <option value="" disabled>Select Data Set</option>
-                    <option value="Input/Output Data">Input/Output Data</option>
-                    <option value="Trace Data">Trace Data</option>
-                  </select>
-                </div>
+           @if (showStep2()) {
+  @if (selectedEvalType() === 'Online') {
+    <div class="form-group form-group--method">
+      <label class="form-label">Evaluation Method <span class="required">*</span></label>
+      <div
+        class="method-select"
+        [class.method-select--open]="isMethodDropdownOpen()"
+      >
+        <div class="method-select__control" (click)="toggleMethodDropdown()">
+          <span
+            class="method-select__value"
+            [class.method-select__value--placeholder]="!selectedDataSet()"
+          >
+            {{ selectedDataSet() ? selectedMethodName() : 'Select Evaluation Method' }}
+          </span>
+          <span class="method-select__icon">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
+          </span>
+        </div>
+
+        @if (isMethodDropdownOpen()) {
+  <div class="method-select__backdrop" (click)="closeMethodDropdown()"></div>
+  <div class="method-select__dropdown">
+   <div class="method-select__dropdown-list">
+  @for (ds of datasetOptions(); track ds.value) {
+    <div
+      class="method-select__option"
+      [class.method-select__option--disabled]="isMethodOptionDisabled(ds.value)"
+      (click)="!isMethodOptionDisabled(ds.value) && selectMethod(ds.value); $event.stopPropagation()"
+    >
+      <span class="method-select__option-label">{{ ds.label }}</span>
+      <div class="method-select__option-right">
+        @if (getEvalMethodDescription(ds.value) && !isMethodOptionDisabled(ds.value)) {
+          <div class="method-select__info-trigger"
+            (mouseenter)="showMethodInfo($event, getEvalMethodDescription(ds.value))"
+            (mouseleave)="hideMethodInfo()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="12" y1="16" x2="12" y2="12"/>
+              <line x1="12" y1="8" x2="12.01" y2="8"/>
+            </svg>
+          </div>
+        }
+        @if (selectedDataSet() === ds.value) {
+          <svg class="method-select__check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+        }
+      </div>
+    </div>
+  }
+</div>
+  </div>
+}
+      </div>
+    </div>
+  } @else {
+    <div class="form-group form-group--dataset">
+      <label class="form-label" for="data-set">Data Set<span class="required">*</span></label>
+      <div class="select-wrapper">
+        <select
+          id="data-set"
+          class="form-select"
+          [(ngModel)]="selectedDataSet"
+          (ngModelChange)="onDataSetChange()"
+        >
+          <option value="" disabled>Select Data Set</option>
+          @for (ds of datasetOptions(); track ds.value) {
+            <option [value]="ds.value">{{ ds.label }}</option>
+          }
+        </select>
+      </div>
+    </div>
+  }
+}
+
+            <!-- ====== Date Range — same row, next to method ====== -->
+            @if (showDateFilter()) {
+              <div class="form-group form-group--date">
+                <label class="form-label">Date Range</label>
+                <app-datepicker
+                  [allowSingleDate]="false"
+                  [(value)]="dateRange"
+                  style="
+                    --label-font-size: 0.75rem;
+                    --label-min-width: 12rem;
+                    --label-min-height: auto;
+                  "
+                >
+                  <img icon src="/assets/img/calendar.svg" alt="calendar icon" />
+                </app-datepicker>
               </div>
             }
           </div>
         }
 
-        <!-- Step 2: Data Input Section — conditional on dataset type -->
+                <!-- Step 2: Data Input Section — conditional on dataset type -->
         @if (showStep3()) {
           <div class="form-step">
 
+           <!-- ==================== SIMULATION-BASED CONFIG ==================== -->
+@if (isSimulationBased()) {
+  <!-- Row 1: Goal & Max Turns side by side -->
+  <div class="sim-config-row">
+    <div class="form-group sim-config__col">
+      <label class="form-label" for="sim-scenarios">
+        Scenario <span class="required">*</span>
+      </label>
+      <input
+        id="sim-scenarios"
+        type="text"
+        class="form-input"
+        [class.form-input--invalid]="isFieldInvalid('sim-scenarios')"
+        [ngModel]="simScenarios()"
+        (ngModelChange)="simScenarios.set($event); validateSimTextField('sim-scenarios', $event)"
+        placeholder="Enter Scenarios"
+      />
+      @if (isFieldInvalid('sim-scenarios')) {
+        <div class="field-error">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="8" x2="12" y2="12"/>
+            <line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          <span>{{ getJsonError('sim-scenarios') }}</span>
+        </div>
+      }
+    </div>
+
+    <div class="form-group sim-config__col sim-config__col--narrow">
+      <label class="form-label" for="sim-turns">
+        Max Turns <span class="required">*</span>
+      </label>
+      <div class="number-stepper" [class.number-stepper--invalid]="isFieldInvalid('sim-turns')">
+        <button
+          type="button"
+          class="number-stepper__btn number-stepper__btn--minus"
+          [disabled]="simTurns() <= 1"
+          (click)="decrementTurns()"
+          aria-label="Decrease turns"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+        </button>
+        <input
+          id="sim-turns"
+          type="number"
+          class="number-stepper__input"
+          [ngModel]="simTurns()"
+          (ngModelChange)="onSimTurnsChange($event)"
+          min="1"
+          max="50"
+        />
+        <button
+          type="button"
+          class="number-stepper__btn number-stepper__btn--plus"
+          [disabled]="simTurns() >= 50"
+          (click)="incrementTurns()"
+          aria-label="Increase turns"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"/>
+            <line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+        </button>
+      </div>
+      @if (isFieldInvalid('sim-turns')) {
+        <div class="field-error">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="8" x2="12" y2="12"/>
+            <line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          <span>{{ getJsonError('sim-turns') }}</span>
+        </div>
+      }
+    </div>
+  </div>
+
+  <!-- Row 2: Persona (full width) -->
+  <div class="sim-personas-row">
+    <div class="form-group sim-personas-row__field">
+    <label class="form-label" for="sim-personas">
+    Persona <span class="required">*</span>
+  </label>
+  <input
+    id="sim-personas"
+    type="text"
+    class="form-input"
+    [class.form-input--invalid]="isFieldInvalid('sim-personas')"
+    [ngModel]="simPersonas()"
+    (ngModelChange)="simPersonas.set($event); validateSimTextField('sim-personas', $event)"
+    placeholder="Enter Personas"
+  />
+      @if (isFieldInvalid('sim-personas')) {
+        <div class="field-error">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="8" x2="12" y2="12"/>
+            <line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          <span>{{ getJsonError('sim-personas') }}</span>
+        </div>
+      }
+    </div>
+  </div>
+}
+
+              <!-- ========== SIMULATION EXPECTED OUTPUT ========== -->
+                            <!-- ========== SIMULATION EXPECTED OUTPUT ========== -->
+              <!-- @for (item of simExpectedOutputs(); track item.id) {
+                <div class="data-pair-block">
+                  <div class="form-group form-group--full sim-expected-field">
+                    <label class="form-label" for="sim-expected-{{ item.id }}">
+                      Expected Output
+                    </label>
+                    <textarea
+                      id="sim-expected-{{ item.id }}"
+                      class="form-textarea form-textarea--code"
+                      [class.form-textarea--invalid]="isFieldInvalid('sim-expected-' + item.id)"
+                      rows="8"
+                      [ngModel]="item.expectedOutput"
+                      (ngModelChange)="updateSimExpectedOutput(item.id, $event)"
+                      placeholder='Enter valid JSON:
+{
+  "Expectation": "add what is expected output"
+}'
+                    ></textarea>
+                    @if (isFieldInvalid('sim-expected-' + item.id)) {
+                      <div class="field-error">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                          <circle cx="12" cy="12" r="10"/>
+                          <line x1="12" y1="8" x2="12" y2="12"/>
+                          <line x1="12" y1="16" x2="12.01" y2="16"/>
+                        </svg>
+                        <span>{{ getJsonError('sim-expected-' + item.id) }}</span>
+                      </div>
+                    }
+                  </div>
+
+                  <div class="pair-actions pair-actions--io pair-actions--single">
+                    <div class="pair-actions__left">
+                      <label class="upload-btn">
+                        <input type="file" accept=".json,application/json" (change)="onSimExpectedFileUpload($event, item.id)" />
+                        @if (isUploading('sim-expected-' + item.id)) {
+                          <svg class="upload-spinner" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+                          </svg>
+                          <span>Uploading...</span>
+                        } @else {
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                            <polyline points="17 8 12 3 7 8"/>
+                            <line x1="12" y1="3" x2="12" y2="15"/>
+                          </svg>
+                          <span>Upload File</span>
+                        }
+                      </label>
+                    </div>
+                    <div class="pair-actions__right pair-actions__right--full">
+                      @if (simExpectedOutputs().length > 1) {
+                        <button class="delete-pair-btn" type="button" (click)="removeSimExpectedOutput(item.id)">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="3 6 5 6 21 6"/>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                            <line x1="10" y1="11" x2="10" y2="17"/>
+                            <line x1="14" y1="11" x2="14" y2="17"/>
+                          </svg>
+                          Delete
+                        </button>
+                      }
+                      <button class="add-pair-btn" type="button" (click)="addSimExpectedOutput()">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                          <line x1="12" y1="5" x2="12" y2="19"/>
+                          <line x1="5" y1="12" x2="19" y2="12"/>
+                        </svg>
+                        Add Expected Output
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              } -->
+        
+
             <!-- ==================== TRACE DATA UI ==================== -->
-            @if (isTraceData()) {
+            @if (needsDataInput() && isTraceData()) {
               @for (trace of traceDataList(); track trace.id) {
                 <div class="data-pair-block">
 
@@ -108,15 +457,11 @@
 
                     <!-- Trace Data Column -->
                     <div class="form-group data-pair__col">
-  <div class="label-with-btn">
-    <label class="form-label" for="trace-{{ trace.id }}">
-      Trace Data <span class="required">*</span>
-    </label>
-    <!-- <button type="button" class="btn btn-sm btn-outline-primary format-btn"
-            (click)="formatJsonField('trace-' + trace.id)">
-      <span>⟳</span> Format JSON
-    </button> -->
-  </div>
+                      <div class="label-with-btn">
+                        <label class="form-label" for="trace-{{ trace.id }}">
+                          Trace Data <span class="required">*</span>
+                        </label>
+                      </div>
                       <textarea
                         id="trace-{{ trace.id }}"
                         class="form-textarea form-textarea--code form-textarea--trace"
@@ -126,7 +471,6 @@
                         (ngModelChange)="updateTraceData(trace.id, $event)"
                         placeholder='Paste your trace JSON here, e.g. { "trace_id": "...", "span_count": 11, "spans": [...] }'
                       ></textarea>
-                   
                       @if (isFieldInvalid('trace-' + trace.id)) {
                         <div class="field-error">
                           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -141,15 +485,11 @@
 
                     <!-- Expected Output Column -->
                     <div class="form-group data-pair__col">
-  <div class="label-with-btn">
-    <label class="form-label" for="expected-trace-{{ trace.id }}">
-      Expected Output Data
-    </label>
-    <!-- <button type="button" class="btn btn-sm btn-outline-primary format-btn"
-            (click)="formatJsonField('expected-trace-' + trace.id)">
-      <span>⟳</span> Format JSON
-    </button> -->
-  </div>
+                      <div class="label-with-btn">
+                        <label class="form-label" for="expected-trace-{{ trace.id }}">
+                          Expected Output Data
+                        </label>
+                      </div>
                       <textarea
                         id="expected-trace-{{ trace.id }}"
                         class="form-textarea form-textarea--code"
@@ -162,7 +502,6 @@
   "Expectation": "add what is expected output after prompt or query execution"
 }'
                       ></textarea>
-                    
                       @if (isFieldInvalid('expected-trace-' + trace.id)) {
                         <div class="field-error">
                           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -196,7 +535,7 @@
                         }
                       </label>
                     </div>
-                                        <div class="pair-actions__center">
+                    <div class="pair-actions__center">
                       <label class="upload-btn">
                         <input type="file" accept=".json,application/json" (change)="onTraceExpectedFileUpload($event, trace.id)" />
                         @if (isUploading('expected-trace-' + trace.id)) {
@@ -240,55 +579,46 @@
             }
 
             <!-- ==================== INPUT/OUTPUT DATA UI ==================== -->
-            @if (!isTraceData()) {
-              @for (pair of dataPairs(); track pair.id) {
-                <div class="data-pair-block">
-                  <div class="data-pair">
-<div class="form-group data-pair__col">
-  <div class="label-with-btn">
-    <label class="form-label" for="input-{{ pair.id }}">
-      Input Data <span class="required">*</span>
-    </label>
-    <!-- <button type="button" class="btn btn-sm btn-outline-primary format-btn"
-            (click)="formatJsonField('input-' + pair.id)">
-      <span>⟳</span> Format JSON
-    </button> -->
-  </div>
-                      <textarea
-                        id="input-{{ pair.id }}"
-                        class="form-textarea form-textarea--code"
-                        [class.form-textarea--invalid]="isFieldInvalid('input-' + pair.id)"
-                        rows="8"
-                        [ngModel]="pair.input"
-                        (ngModelChange)="updateInput(pair.id, $event)"
-                        placeholder='Enter valid JSON:
+@if (needsDataInput() && !isTraceData()) {
+  @for (pair of dataPairs(); track pair.id) {
+    <div class="data-pair-block">
+      <div class="data-pair">
+        <div class="form-group data-pair__col">
+          <div class="label-with-btn">
+            <label class="form-label" for="input-{{ pair.id }}">
+              Input Data <span class="required">*</span>
+            </label>
+          </div>
+          <textarea
+            id="input-{{ pair.id }}"
+            class="form-textarea form-textarea--code"
+            [class.form-textarea--invalid]="isFieldInvalid('input-' + pair.id)"
+            rows="8"
+            [ngModel]="pair.input"
+            (ngModelChange)="updateInput(pair.id, $event)"
+            placeholder='Enter valid JSON:
 {
   "Input": "add agent prompt or query here",
-  "Expectation": "add what is expected output after prompt or query execution"
+  "Expectation": "add what is expected output after prompt or query execution (Optional)"
 }'
-                      ></textarea>
-                    
-                      @if (isFieldInvalid('input-' + pair.id)) {
-                        <div class="field-error">
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <circle cx="12" cy="12" r="10"/>
-                            <line x1="12" y1="8" x2="12" y2="12"/>
-                            <line x1="12" y1="16" x2="12.01" y2="16"/>
-                          </svg>
-                          <span>{{ getJsonError('input-' + pair.id) }}</span>
-                        </div>
-                      }
-                    </div>
-                  <div class="form-group data-pair__col">
-  <div class="label-with-btn">
-    <label class="form-label" for="output-{{ pair.id }}">
-      Output Data <span class="required">*</span>
-    </label>
-    <!-- <button type="button" class="btn btn-sm btn-outline-primary format-btn"
-            (click)="formatJsonField('output-' + pair.id)">
-      <span>⟳</span> Format JSON
-    </button> -->
-  </div>
+          ></textarea>
+          @if (isFieldInvalid('input-' + pair.id)) {
+            <div class="field-error">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="12" y1="8" x2="12" y2="12"/>
+                <line x1="12" y1="16" x2="12.01" y2="16"/>
+              </svg>
+              <span>{{ getJsonError('input-' + pair.id) }}</span>
+            </div>
+          }
+        </div>
+                    <div class="form-group data-pair__col">
+                      <div class="label-with-btn">
+                        <label class="form-label" for="output-{{ pair.id }}">
+                          Output Data <span class="required">*</span>
+                        </label>
+                      </div>
                       <textarea
                         id="output-{{ pair.id }}"
                         class="form-textarea form-textarea--code"
@@ -301,7 +631,6 @@
   "Output": "add query output or response here"
 }'
                       ></textarea>
-        
                       @if (isFieldInvalid('output-' + pair.id)) {
                         <div class="field-error">
                           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -379,32 +708,31 @@
             }
 
             <div class="action-bar">
-  <button
-    class="btn btn-primary bg-orange border-0 fs-14"
-    type="button"
-    [disabled]="hasInvalidFields() || !isSuperAdmin()"
-    [class.btn-disabled]="hasInvalidFields() || !isSuperAdmin()"
-    (click)="onEvaluate()"
-  >
-    @if (!isSuperAdmin()) {
-      Evaluate Agent
-    } @else if (hasInvalidFields()) {
-      Fix JSON Errors to Evaluate
-    } @else {
-      Evaluate Agent
-    }
-  </button>
-  @if (!isSuperAdmin()) {
-  } @else if (hasInvalidFields()) {
-    <span class="action-bar__hint">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="12" cy="12" r="10"/>
-        <line x1="12" y1="16" x2="12" y2="12"/>
-        <line x1="12" y1="8" x2="12.01" y2="8"/>
-      </svg>
-      One or more fields contain invalid JSON
-    </span>
- 
+              <button
+                class="btn btn-primary bg-orange border-0 fs-14"
+                type="button"
+                [disabled]="hasInvalidFields() || !isSuperAdmin()"
+                [class.btn-disabled]="hasInvalidFields() || !isSuperAdmin()"
+                (click)="onEvaluate()"
+              >
+                @if (!isSuperAdmin()) {
+                  Evaluate Agent
+                } @else if (hasInvalidFields()) {
+                  Fix JSON Errors to Evaluate
+                } @else {
+                  Evaluate Agent
+                }
+              </button>
+              @if (!isSuperAdmin()) {
+              } @else if (hasInvalidFields()) {
+                <span class="action-bar__hint">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="12" y1="16" x2="12" y2="12"/>
+                    <line x1="12" y1="8" x2="12.01" y2="8"/>
+                  </svg>
+                  One or more fields contain invalid JSON
+                </span>
               }
             </div>
           </div>
@@ -429,8 +757,8 @@
         </div>
       }
 
-            <!-- Date-grouped Accordion -->
-      @if (isEvaluating() || showResults()) {
+      <!-- Date-grouped Accordion -->
+      @if (isEvaluating() || showResults() || noTracesError()) {
         <div class="eval-runs-container bg-white ms-3 mt-2" #evalResultsContainer>
 
           <!-- Header -->
@@ -465,11 +793,14 @@
                           <th class="col-conciseness"><span class="th-label">Conciseness</span></th>
                           <th class="col-safety"><span class="th-label">Safety</span></th>
                           <th class="col-average"><span class="th-label">Average</span></th>
+                          <th class="col-analysis" *ngIf="isConfigIoScenario() || isConfigTraceScenario()">
+                            <span class="th-label">Analysis</span>
+                          </th>
                         </tr>
                       </thead>
                       <tbody>
                         <tr class="eval-loading-row">
-                          <td colspan="11">
+                          <td [attr.colspan]="(isConfigIoScenario() || isConfigTraceScenario() )? 12 : 11">
                             <div class="eval-row-loader">
                               <div class="eval-row-loader__spinner"></div>
                               <span class="eval-row-loader__text">Evaluating Agent Results...</span>
@@ -482,6 +813,17 @@
                 </div>
               </div>
             }
+
+              <!-- ==================== NO TRACES FOUND ERROR MESSAGE ==================== -->
+
+              @if (noTracesError() && !isEvaluating() && isEvaluateAction()) {
+                <div class="no-traces-error">
+                  <div class="no-traces-error__content">
+                    <p class="no-traces-error__message">{{ noTracesError() }}</p>
+                    <p class="no-traces-error__hint">Please ensure the agent has been executed at least once in the given range, then try evaluating again.</p>
+                  </div>
+                </div>
+              }
 
             <!-- Existing date-grouped results -->
             @for (group of dateGroups(); track group.dateKey) {
@@ -496,27 +838,33 @@
                       <div class="eval-run-time">{{ getDateGroupSummary(group).latestTime }}</div>
                     </div>
                     <div class="eval-run-stats">
-                      <span class="stat-badge">{{ getDateGroupSummary(group).total }} Runs</span>
-                      <span class="pass-count">
-                        <span class="pass-count__dot"></span>
-                        {{ getDateGroupSummary(group).passed }} / {{ getDateGroupSummary(group).total }}
-                      </span>
-                    </div>
+  <span class="stat-badge">{{ getDateGroupSummary(group).total }} Runs</span>
+  <span
+    class="pass-count"
+    [appTooltip]="getPassCountTooltip(getDateGroupSummary(group))"
+  >
+    <span class="pass-count__dot"></span>
+    {{ getDateGroupSummary(group).passed }} / {{ getDateGroupSummary(group).total }}
+  </span>
+</div>
                   </div>
 
                   <div class="eval-run-right">
-                    <div class="circular-progress">
-                      <svg viewBox="0 0 36 36" class="circular-chart">
-                        <path class="circle-bg"
-                          d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                        <path class="circle"
-                          [class.circle--medium]="getDateGroupSummary(group).passRate >= 50 && getDateGroupSummary(group).passRate < 80"
-                          [class.circle--low]="getDateGroupSummary(group).passRate < 50"
-                          [attr.stroke-dasharray]="getDateGroupSummary(group).passRate + ', 100'"
-                          d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                        <text x="18" y="18" class="percentage">{{ getDateGroupSummary(group).passRate }}%</text>
-                      </svg>
-                    </div>
+                   <div
+  class="circular-progress"
+  [appTooltip]="getPassRateTooltip(getDateGroupSummary(group))"
+>
+  <svg viewBox="0 0 36 36" class="circular-chart">
+    <path class="circle-bg"
+      d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+    <path class="circle"
+      [class.circle--medium]="getDateGroupSummary(group).passRate >= 50 && getDateGroupSummary(group).passRate < 80"
+      [class.circle--low]="getDateGroupSummary(group).passRate < 50"
+      [attr.stroke-dasharray]="getDateGroupSummary(group).passRate + ', 100'"
+      d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+    <text x="18" y="18" class="percentage">{{ getDateGroupSummary(group).passRate }}%</text>
+  </svg>
+</div>
 
                     <div class="score-info-trigger">
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -591,13 +939,16 @@
                             <th class="col-average" [appTooltip]="getMetricDefinition('average')">
                               <span class="th-label">Average</span>
                             </th>
+                            <th class="col-analysis" *ngIf="isConfigIoScenario() || isConfigTraceScenario()">
+                              <span class="th-label">Analysis</span>
+                            </th>
                           </tr>
                         </thead>
                         <tbody>
                           <!-- Loading row — first row inside the existing table -->
                           @if (isEvaluating()) {
                             <tr class="eval-loading-row">
-                              <td colspan="11">
+                             <td [attr.colspan]="(isConfigIoScenario()|| isConfigTraceScenario()) ? 12 : 11">
                                 <div class="eval-row-loader">
                                   <div class="eval-row-loader__spinner"></div>
                                   <span class="eval-row-loader__text">Evaluating Agent results...</span>
@@ -609,36 +960,51 @@
                           @for (result of group.results; track result.runId + result.testCaseId) {
                             <tr>
                               <td class="col-id">{{ result.testCaseId }}</td>
-                              <td class="col-input">
-                                <div class="cell-text-block" [class.cell-text-block--expanded]="isCellExpanded(result.runId + '-' + result.testCaseId + '-input')">
-                                  <span class="cell-text-content" [title]="result.input">{{ result.input }}</span>
-                                  @if (result.input && result.input.length > 80) {
-                                    <button class="see-more-btn" type="button" (click)="toggleCellExpand(result.runId + '-' + result.testCaseId + '-input')">
-                                      {{ isCellExpanded(result.runId + '-' + result.testCaseId + '-input') ? 'See Less' : 'See More' }}
-                                    </button>
-                                  }
-                                </div>
-                              </td>
-                              <td class="col-expected">
-                                <div class="cell-text-block" [class.cell-text-block--expanded]="isCellExpanded(result.runId + '-' + result.testCaseId + '-expected')">
-                                  <span class="cell-text-content" [title]="result.expectedOutput">{{ result.expectedOutput }}</span>
-                                  @if (result.expectedOutput && result.expectedOutput.length > 80) {
-                                    <button class="see-more-btn" type="button" (click)="toggleCellExpand(result.runId + '-' + result.testCaseId + '-expected')">
-                                      {{ isCellExpanded(result.runId + '-' + result.testCaseId + '-expected') ? 'See Less' : 'See More' }}
-                                    </button>
-                                  }
-                                </div>
-                              </td>
-                              <td class="col-actual">
-                                <div class="cell-text-block" [class.cell-text-block--expanded]="isCellExpanded(result.runId + '-' + result.testCaseId + '-actual')">
-                                  <span class="cell-text-content" [title]="result.actualOutput">{{ result.actualOutput }}</span>
-                                  @if (result.actualOutput && result.actualOutput.length > 80) {
-                                    <button class="see-more-btn" type="button" (click)="toggleCellExpand(result.runId + '-' + result.testCaseId + '-actual')">
-                                      {{ isCellExpanded(result.runId + '-' + result.testCaseId + '-actual') ? 'See Less' : 'See More' }}
-                                    </button>
-                                  }
-                                </div>
-                              </td>
+                             <td class="col-input">
+  <div class="cell-text-block" [class.cell-text-block--expanded]="isCellExpanded(result.runId + '-' + result.testCaseId + '-input')">
+    <span
+      class="cell-text-content"
+      [class.cell-hoverable]="result.input && result.input.length > 80"
+      (mouseenter)="showCellTooltip($event, result.input)"
+      (mouseleave)="hideCellTooltip()"
+    >{{ result.input }}</span>
+    @if (result.input && result.input.length > 80) {
+      <button class="see-more-btn" type="button" (click)="toggleCellExpand(result.runId + '-' + result.testCaseId + '-input')">
+        {{ isCellExpanded(result.runId + '-' + result.testCaseId + '-input') ? 'See Less' : 'See More' }}
+      </button>
+    }
+  </div>
+</td>
+                      <td class="col-expected">
+  <div class="cell-text-block" [class.cell-text-block--expanded]="isCellExpanded(result.runId + '-' + result.testCaseId + '-expected')">
+    <span
+      class="cell-text-content"
+      [class.cell-hoverable]="result.expectedOutput && result.expectedOutput.length > 80"
+      (mouseenter)="showCellTooltip($event, result.expectedOutput)"
+      (mouseleave)="hideCellTooltip()"
+    >{{ result.expectedOutput }}</span>
+    @if (result.expectedOutput && result.expectedOutput.length > 80) {
+      <button class="see-more-btn" type="button" (click)="toggleCellExpand(result.runId + '-' + result.testCaseId + '-expected')">
+        {{ isCellExpanded(result.runId + '-' + result.testCaseId + '-expected') ? 'See Less' : 'See More' }}
+      </button>
+    }
+  </div>
+</td>
+                   <td class="col-actual">
+  <div class="cell-text-block" [class.cell-text-block--expanded]="isCellExpanded(result.runId + '-' + result.testCaseId + '-actual')">
+    <span
+      class="cell-text-content"
+      [class.cell-hoverable]="result.actualOutput && result.actualOutput.length > 80"
+      (mouseenter)="showCellTooltip($event, result.actualOutput)"
+      (mouseleave)="hideCellTooltip()"
+    >{{ result.actualOutput }}</span>
+    @if (result.actualOutput && result.actualOutput.length > 80) {
+      <button class="see-more-btn" type="button" (click)="toggleCellExpand(result.runId + '-' + result.testCaseId + '-actual')">
+        {{ isCellExpanded(result.runId + '-' + result.testCaseId + '-actual') ? 'See Less' : 'See More' }}
+      </button>
+    }
+  </div>
+</td>
                               <td class="col-status">
                                 <span class="status-badge" [appTooltip]="getRationaleTooltip(result.statusRationale)" [class]="getStatusClass(result.status)">{{ result.status }}</span>
                               </td>
@@ -659,6 +1025,13 @@
                               </td>
                               <td class="col-average" [appTooltip]="getAverageTooltip(result)">
                                 <span [class]="getScoreBadgeClass(result.average)" style="font-weight: 700;">{{ result.average }}</span>
+                              </td>
+                              <td class="col-analysis" *ngIf="isConfigIoScenario()|| isConfigTraceScenario()">
+                                <button 
+                                  class="btn btn-sm btn-orange" 
+                                  (click)="showAnalysisModal(result)">
+                                  View
+                                </button>
                               </td>
                             </tr>
                           }
@@ -712,6 +1085,30 @@
     </div>
   }
 
+@if (cellTooltip.visible) {
+  <div
+    class="cell-tooltip-popup"
+    [style.left.px]="cellTooltip.position.left"
+    [style.top.px]="cellTooltip.position.top"
+    [style.width.px]="cellTooltipSizing.width"
+    [style.maxHeight.px]="cellTooltipSizing.maxHeight"
+    (mouseenter)="onCellTooltipEnter()"
+    (mouseleave)="onCellTooltipLeave()"
+  >
+    {{ cellTooltip.text }}
+  </div>
+}
+@if (methodInfoTooltip().visible) {
+  <div
+    class="method-info-popup"
+    [style.left.px]="methodInfoTooltip().position.left"
+    [style.top.px]="methodInfoTooltip().position.top"
+    (mouseleave)="hideMethodInfo()"
+  >
+    <p>{{ methodInfoTooltip().text }}</p>
+  </div>
+}
+
 </div>
 
 
@@ -738,5 +1135,69 @@
     </div>
     <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"
       aria-label="Close"></button>
+  </div>
+</div>
+
+
+<!-- Analysis Modal -->
+<div class="modal fade" id="analysisModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Agent Configuration Evaluation</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+     <div class="modal-body" *ngIf="selectedAnalysis()">
+  <h6 class="text-orange">{{ selectedAnalysis()?.testCaseId }}</h6>
+  
+  <div class="analysis-section">
+    <strong>Problem</strong>
+    <p>{{ selectedAnalysis()?.problem }}</p>
+  </div>
+
+  <div class="analysis-section">
+    <strong>Impact on Output</strong>
+    <p>{{ selectedAnalysis()?.impact || 'No impact details available.' }}</p>
+  </div>
+
+  <div class="analysis-section">
+  <strong>Severity</strong>
+  <p>
+    <span >
+      {{ selectedAnalysis()?.severity}} - {{selectedAnalysis()?.severityRationale }}
+    </span>
+  </p>
+</div>
+
+<div class="analysis-section">
+  <strong>Root Cause</strong>
+  <ul class="analysis-list">
+    <li *ngFor="let cause of selectedAnalysis()?.rootCauses; let i = index" 
+        class="root-cause-item"
+        (click)="toggleConfigHighlight(i)">
+      
+      <span>{{ cause }}</span>
+      <span class="expand-icon" 
+            [class.expanded]="expandedCauses().has(i)">▼</span>
+      
+      <div class="config-content" 
+           *ngIf="expandedCauses().has(i) && selectedAnalysis()?.configHighlights?.[cause]">
+        <pre>{{ selectedAnalysis()?.configHighlights?.[cause] }}</pre>
+      </div>
+    </li>
+  </ul>
+</div>
+
+  <div class="analysis-section">
+    <strong>Suggested Fix</strong>
+    <ul>
+      <li *ngFor="let fix of selectedAnalysis()?.suggestedFixes">{{ fix }}</li>
+    </ul>
+  </div>
+</div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
   </div>
 </div>

@@ -32,6 +32,7 @@
                         <option *ngFor="let agent of filteredAgents; trackBy: trackByAgent" [ngValue]="agent.agent_id">{{ agent.name }}</option>
                     </select>
                 </div>
+                
                 <!-- Popular Query Section -->
                 <div class="popular-query-section" *ngIf="selectedAgent">
                     <div class="popular-query-header">
@@ -95,9 +96,19 @@
                         <div *ngFor="let a of m.attachments" class="attachment">📎 {{ a.name }}</div>
                     </div>
                     <!-- <div *ngIf="m.role === 'assistant' && m.showThinking" class="thinking">Thinking<span class="dots">...</span></div> -->
-                    <div *ngIf="m.role==='assistant' && !m.showThinking" class="d-flex" >
+                    <div *ngIf="m.role==='assistant'" class="d-flex flex-column" >
                         <div [innerHTML]="m.html" class="bg-eee p-1 rounded text-wrap streamed-response"></div>
+                        <div *ngIf="m.json?.actions?.length" class="actions-container mt-2 d-flex flex-wrap gap-2">
+                            <div *ngFor="let action of m.json?.actions" class="action">
+                                <button class="btn btn-sm btn-outline-primary" (click)="executeAction(action)">
+                                    {{ action }}
+                                </button>
+                            </div>
+                        </div>
                     </div>
+                </div>
+                <div class="meta" *ngIf="m.timestamp">
+                    <span>{{ m.timestamp }}</span>
                 </div>
             </div>
             <!-- actions placed outside the bubble, below the message -->
@@ -109,13 +120,20 @@
                             <rect x="9" y="9" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.5"/>
                         </svg>
                     </button>
-                    <button class="icon download" *ngIf="m.role === 'assistant' && !m.showThinking" (click)="downloadResponse(m)" aria-label="Download response" title="Download response">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M12 3v12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                            <path d="M8 11l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                            <path d="M4 19h16" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                    </button>
+                    <div class="download-wrapper" *ngIf="m.role === 'assistant' && !m.showThinking">
+                        <button class="icon download download-trigger" type="button" (click)="toggleDownloadMenu($event, m)" aria-label="Download response" title="Download response">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M12 3v12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path d="M8 11l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path d="M4 19h16" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                        <div class="download-menu" *ngIf="isDownloadMenuOpen && activeDownloadMessageId === m.id">
+                            <button class="download-menu-item" type="button" (click)="downloadResponse(m, 'md')">Markdown</button>
+                            <button class="download-menu-item" type="button" (click)="downloadResponse(m, 'pdf')">PDF</button>
+                            <!-- <button class="download-menu-item" type="button" (click)="downloadResponse(m, 'docx')">DOCX</button> -->
+                        </div>
+                    </div>
                     <button class="icon regen" *ngIf="m.role === 'assistant' && !m.showThinking" (click)="regenerate(m)" aria-label="Regenerate"
                         title="Regenerate">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -132,15 +150,15 @@
     
     <div class="composer-div">
          <!-- global suggested actions (right aligned above input) -->
-        <!-- <div class="global-suggestions" *ngIf="suggestions?.length"> -->
-            <!-- <div class="suggestion-group"> -->
-                <!-- <div class="suggested right stacked"> -->
-                    <!-- <button type="button" *ngFor="let s of suggestions" title="{{ s }}" (click)="selectSuggestion(s)"> -->
-                        <!-- <span>{{ truncateSuggestion(s, 62) }}</span> -->
-                    <!-- </button> -->
-                <!-- </div> -->
-            <!-- </div> -->
-        <!-- </div> -->
+        <div class="global-suggestions" *ngIf="suggestions?.length">
+            <div class="suggestion-group">
+                <div class="suggested right stacked">
+                    <button type="button" *ngFor="let s of suggestions" title="{{ s }}" (click)="selectSuggestion(s)">
+                        <span>{{ truncateSuggestion(s, 62) }}</span>
+                    </button>
+                </div>
+            </div>
+        </div>
         <div class="composer">
             <div class="composer-inner">
                 <div class="left-controls">
@@ -179,4 +197,31 @@
     </div>
     </section>
     </div>
+</div>
+
+
+
+<!-- Success Toast -->
+<div id="successToast" class="toast align-items-center text-white bg-success border-0 position-fixed top-0 end-0 m-4"
+  role="alert" aria-live="assertive" aria-atomic="true" data-bs-delay="4000" style="z-index: 1060;"
+  data-bs-autohide="true">
+  <div class="d-flex">
+    <div class="toast-body">
+      {{ toastMessage }}
+    </div>
+    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"
+      aria-label="Close"></button>
+  </div>
+</div>
+<!-- Error Toast -->
+<div id="errorToast" class="toast align-items-center text-white bg-danger border-0 position-fixed top-0 end-0 m-4"
+  role="alert" aria-live="assertive" aria-atomic="true" data-bs-delay="4000" style="z-index: 1060;"
+  data-bs-autohide="true">
+  <div class="d-flex">
+    <div class="toast-body">
+      {{ toastMessage }}
+    </div>
+    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"
+      aria-label="Close"></button>
+  </div>
 </div>

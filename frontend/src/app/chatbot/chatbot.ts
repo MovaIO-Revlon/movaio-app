@@ -1758,7 +1758,7 @@ private parseAndFilterAgentBlocks(fullText: string): { key: string; value: strin
 
   this._marketService.GetAgentAndOrder2Agents(payload).subscribe({
     next: (res) => {
-      this.secondaryAgents = res.data?.order_2_agents || [];
+      this.secondaryAgents = (res.data?.order_2_agents || []).filter(item => !["CONVERSATIONAL", "VOICE_AGENT"].includes(item.agent_typeid));
       this.cdRef.detectChanges();
 
       if (shouldAutoExecute === true) {
@@ -5669,7 +5669,7 @@ getRecentchat(agent: any, IsSuggestionQuery: boolean) {
     this._marketService.GetAgentAndOrder2Agents(payload).subscribe({
       next: (res) => {
         if (res?.success) {
-          this.secondaryAgents = res.data.order_2_agents || [];
+          this.secondaryAgents = (res.data.order_2_agents || []).filter(item => !["CONVERSATIONAL", "VOICE_AGENT"].includes(item.agent_typeid));
 
           if (!IsSuggestionQuery) {
             // Load recent data for this specific master agent
@@ -6483,7 +6483,7 @@ submitQuery(agentId: string) {
   // Use a getter for better Angular performance
   get isWorkflowDisabled(): boolean {
     let details = this.workflowDetails;
-    let userMessage = details?.flow_data?.tasks?.[0]?.params?.user_message?.value;
+    let userMessage = details?.flow_data?.tasks?.[0]?.params?.user_message?.value ?? details?.flow_data?.tasks?.[0]?.user_input;
 
     // If user_message is missing, disable the button (return true)
     if (!userMessage) {
@@ -9603,7 +9603,7 @@ formatWorkflowResponse(text) {
     this._marketService.GetAgentAndOrder2Agents(payload).subscribe({
       next: (res) => {
           // this.selectedAgent = res.main_agent;
-          this.secondaryAgents = res.data.order_2_agents || [];
+          this.secondaryAgents = (res.data.order_2_agents || []).filter(item => !["CONVERSATIONAL", "VOICE_AGENT"].includes(item.agent_typeid));
           this.cdRef.detectChanges();
           console.log("order2agents:", this.secondaryAgents)
           this.loadRecentData(agent.agent_id); // Load recent data for the selected agent
@@ -9654,7 +9654,7 @@ formatWorkflowResponse(text) {
     this._marketService.GetAgentAndOrder2Agents(payload).subscribe({
       next: (res) => {
           // this.selectedAgent = res.main_agent;
-          this.secondaryAgents = res.data.order_2_agents || [];
+          this.secondaryAgents = (res.data.order_2_agents || []).filter(item => !["CONVERSATIONAL", "VOICE_AGENT"].includes(item.agent_typeid));
           this.cdRef.detectChanges();
           console.log("order2agents:", this.secondaryAgents)
           this.loadRecentData(agent.agent_id);
@@ -10030,7 +10030,8 @@ closeSaveToRepoModal() {
     user_query: userQuery,
     prompt_output: promptText,
     event_id: currentRes.event_id || '',
-    map_id: mapId
+    map_id: mapId,
+    created_by: this.loggedUser?.Email || this.Email || ''
   };
 
   console.log("Final Save Payload (Recent/Old Chat):", payload);
@@ -10448,22 +10449,36 @@ onNodeClick(node: any) {
 		}
       this.cdRef.detectChanges();
     } else {
-      const nodeData = this.nodes.find(n => n.id === node.id);
+      let val = "";
+      if (!this.isWorkFlowExternal) {
+        val = this.nodesFormState[node.id];
 
-      // @ts-expect-error Condition_false missing type definition
-      if (nodeData?.Condition_false) {
-        this.selectedNodeData = {
-          agent_response: {
-            agent_name: this.conditionExecutionDetails.agent_name,
-            status: this.conditionExecutionDetails.status
-          },
-          elapsedTime: 0,
-        };
+        const nodeData = this.nodes.find(n => n.id === node.id);
+
+        nodeData.agent_response = val.loop_condition || val.condition;
+
+        this.selectedNodeData = nodeData;
         this.cdRef.detectChanges();
       }
       else {
-        this.selectedNodeData = null;
-        this.cdRef.detectChanges();
+
+        const nodeData = this.nodes.find(n => n.id === node.id);
+
+        // @ts-expect-error Condition_false missing type definition
+        if (nodeData?.Condition_false) {
+          this.selectedNodeData = {
+            agent_response: {
+              agent_name: this.conditionExecutionDetails.agent_name,
+              status: this.conditionExecutionDetails.status
+            },
+            elapsedTime: 0,
+          };
+          this.cdRef.detectChanges();
+        }
+        else {
+          this.selectedNodeData = null;
+          this.cdRef.detectChanges();
+        }
       }
     }
   }
@@ -10494,9 +10509,13 @@ onNodeClick(node: any) {
     }
     }
 	
-	 if(!IsExternal){
-      let agentName = details.flow_data?.tasks?.find((task: Task) => task.name.replace(/^agent-/, "") === this.selectedNodeData?.id)?.params?.config?.agent_name;
-      if(agentName) return agentName;
+	if (!IsExternal) {
+
+      const task = details.flow_data?.tasks?.find((t: Task) => t.name.replace(/^[^-]+-/, "") === this.selectedNodeData?.id || t.name === this.selectedNodeData?.id);
+
+      const name = task?.name.startsWith("agent-") ? task.params?.config?.agent_name : task?.name.split("-")[0]; // Returns 'iterative', 'condition', etc.
+
+      if (name) return name;
       return 'Agent';
     }
 

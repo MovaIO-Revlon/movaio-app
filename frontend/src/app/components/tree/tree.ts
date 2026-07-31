@@ -1,4 +1,14 @@
-import { Component, input, output, computed, signal } from '@angular/core';
+import {
+  Component,
+  input,
+  output,
+  computed,
+  signal,
+  ViewChild,
+  ElementRef,
+  AfterViewInit,
+  OnDestroy,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 export interface TreeNode {
@@ -20,8 +30,12 @@ interface FlatRow {
   standalone: true,
   imports: [CommonModule],
   template: `
-    <ul class="tn-list" [style]="'--max-rows:' + (showMax() + 1)">
-      @for (row of visibleRows(); track row.node.id) {
+    <ul
+      #listRef
+      class="tn-list"
+      [style.overflow]="!hasOverflow() || showMore() ? 'auto' : 'hidden'"
+    >
+      @for (row of flatRows(); track row.node.id) {
         <li
           class="tn-row"
           [class.tn-row-active]="row.node.id === activeId()"
@@ -42,7 +56,7 @@ interface FlatRow {
         </li>
       }
 
-      @if (showMax() < flatRows().length) {
+      @if (hasOverflow()) {
         <li
           class="tn-row position-sticky bg-white"
           style="bottom: -1px"
@@ -69,7 +83,8 @@ interface FlatRow {
       --font-size: 14px;
       --gap: 8px;
       --transition-duration: 150ms;
-      display: block;
+      display: flex;
+      flex-direction: column;
       font-size: var(--font-size);
       color: var(--text-color);
     }
@@ -77,8 +92,6 @@ interface FlatRow {
       list-style: none;
       margin: 0;
       padding: 0;
-      max-height: calc(var(--row-height) * var(--max-rows) + 1rem);
-      overflow: auto;
     }
     .tn-row {
       display: flex;
@@ -132,15 +145,17 @@ interface FlatRow {
     }
   `,
 })
-export class TreeComponent {
+export class TreeComponent implements AfterViewInit, OnDestroy {
+  @ViewChild('listRef') listRef!: ElementRef<HTMLUListElement>;
+
   nodes = input.required<TreeNode[]>();
   activeId = input<string | null>(null);
-  showMax = input<number>(5);
 
   nodeClick = output<TreeNode>();
 
   private expandedIds = signal<Set<string>>(new Set());
   showMore = signal<boolean>(false);
+  hasOverflow = signal<boolean>(false);
 
   flatRows = computed<FlatRow[]>(() => {
     const result: FlatRow[] = [];
@@ -157,11 +172,30 @@ export class TreeComponent {
     return result;
   });
 
-  visibleRows = computed(() =>
-    this.showMore()
-      ? this.flatRows()
-      : this.flatRows().slice(0, this.showMax()),
-  );
+  private resizeObserver?: ResizeObserver;
+
+  ngAfterViewInit(): void {
+    this.checkOverflow();
+
+    this.resizeObserver = new ResizeObserver(() => {
+      this.checkOverflow();
+    });
+
+    if (this.listRef?.nativeElement) {
+      this.resizeObserver.observe(this.listRef.nativeElement);
+    }
+  }
+
+  ngOnDestroy(): void {
+    this.resizeObserver?.disconnect();
+  }
+
+  private checkOverflow() {
+    if (!this.listRef?.nativeElement) return;
+
+    const { scrollHeight, clientHeight } = this.listRef.nativeElement;
+    this.hasOverflow.set(scrollHeight > clientHeight);
+  }
 
   isExpanded(id: string): boolean {
     return this.expandedIds().has(id);

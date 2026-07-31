@@ -2232,4 +2232,22 @@ getAgentQueryCount(agent: Agent): number {
   return agent?.queries?.length || 0;
 }
 
+// Get rationale for a specific assessment from query's detailed_results
+getAssessmentRationale(query: any, assessmentName: string): string {
+  if (!query?.detailed_results?.length) return '';
+  
+  for (const result of query.detailed_results) {
+    if (result.assessments?.length) {
+      const assessment = result.assessments.find(
+        (a: any) => a.assessment_name === assessmentName
+      );
+      if (assessment?.rationale) {
+        return assessment.rationale;
+      }
+    }
+  }
+  
+  return '';
+}
+
 }

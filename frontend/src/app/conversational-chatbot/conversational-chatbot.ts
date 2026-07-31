@@ -1,4 +1,4 @@
-import { Component, ElementRef, NgZone, ViewChild, AfterViewChecked, OnDestroy, OnInit, ChangeDetectorRef } from '@angular/core';
+import { Component, ElementRef, NgZone, ViewChild, AfterViewChecked, OnDestroy, OnInit, ChangeDetectorRef, HostListener } from '@angular/core';
 import { CommonModule, Location } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
@@ -15,9 +15,12 @@ interface Message {
   plain?: string;
   html?: string;
   thinking?: boolean;
+  timestamp?: string;
   attachments?: { name: string }[];
   suggested?: string[];
 }
+
+declare var bootstrap: any;
 
 @Component({
   selector: 'app-conversational-chatbot',
@@ -64,6 +67,9 @@ export class ConversationalChatbot implements OnInit, AfterViewChecked, OnDestro
   isProcessingCompleted: boolean = false;
   completionMessageReceived: boolean = false;
   isLoading = false;
+  toastMessage: string = '';
+  activeDownloadMessageId: string | null = null;
+  isDownloadMenuOpen = false;
 
   private recognition: any = null;
   private lastUserMessage: Message | null = null;
@@ -122,6 +128,7 @@ export class ConversationalChatbot implements OnInit, AfterViewChecked, OnDestro
   get selectedAgent() {
     return this.filteredAgents.find(agent => agent.agent_id == this.selectedAgentId);
   }
+
   selectRecentQuery(): void {
     if (this.selectedAgent?.recent_query) {
       this.draft = this.selectedAgent.recent_query;
@@ -214,6 +221,7 @@ export class ConversationalChatbot implements OnInit, AfterViewChecked, OnDestro
         role: 'assistant',
         text: welcomeText,
         html: `<div class="streamed-response">${welcomeText}</div>`,
+        timestamp: this.formatTimestamp(),
         showThinking: false,
         suggested: ['Show docs', 'Upload a file', 'Give me an example']
       });
@@ -239,10 +247,10 @@ export class ConversationalChatbot implements OnInit, AfterViewChecked, OnDestro
 
     const attachments = this.pendingAttachments.map(a => ({ name: a.name }));
 
-    const userMsg: Message = { id: this.id(), role: 'user', text: text || (attachments.length ? `Sent ${attachments.length} file(s)` : ''), attachments };
+    const userMsg: Message = { id: this.id(), role: 'user', text: text || (attachments.length ? `Sent ${attachments.length} file(s)` : ''), attachments, timestamp: this.formatTimestamp() };
     this.messages.push(userMsg);
     this.chatResponses.push({
-       id: this.id(), role: 'user', text: text || (attachments.length ? `Sent ${attachments.length} file(s)` : ''), attachments 
+       id: this.id(), role: 'user', text: text || (attachments.length ? `Sent ${attachments.length} file(s)` : ''), attachments, timestamp: userMsg.timestamp 
     })
     this.lastUserMessage = userMsg;
     this.draft = '';
@@ -271,28 +279,151 @@ export class ConversationalChatbot implements OnInit, AfterViewChecked, OnDestro
 
     if (navigator.clipboard) {
       navigator.clipboard.writeText(text).catch(() => { });
+      this.showToast('success', 'Message copied to clipboard');
     }
   }
 
-  downloadResponse(m: Message): void {
-    let text = m.markdown || m.text || '';
-    if (!text && m.plain) {
-      text = m.plain;
+  @HostListener('document:click')
+  onDocumentClick(): void {
+    if (this.isDownloadMenuOpen) {
+      this.closeDownloadMenu();
     }
-    if (!text && m.html) {
-      text = m.html.replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+  }
+
+  toggleDownloadMenu(event: Event, message: Message): void {
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (this.activeDownloadMessageId === message.id) {
+      this.closeDownloadMenu();
+      return;
     }
+
+    this.activeDownloadMessageId = message.id;
+    this.isDownloadMenuOpen = true;
+  }
+
+  closeDownloadMenu(): void {
+    this.activeDownloadMessageId = null;
+    this.isDownloadMenuOpen = false;
+  }
+
+  downloadResponse(message: Message, format: 'md' | 'pdf' | 'docx' = 'md'): void {
+    const text = this.getMessageText(message);
     if (!text) return;
 
-    const blob = new Blob([text], { type: 'text/markdown;charset=utf-8' });
+    const safeName = 'assistant-response';
+    const fileName = `${safeName}-${Date.now()}`;
+
+    switch (format) {
+      case 'pdf':
+        this.triggerDownload(this.createPdfBlob(text), `${fileName}.pdf`, 'application/pdf');
+        break;
+      case 'docx':
+        this.triggerDownload(this.createDocxBlob(text), `${fileName}.docx`, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+        break;
+      default:
+        this.triggerDownload(new Blob([text], { type: 'text/markdown;charset=utf-8' }), `${fileName}.md`, 'text/markdown;charset=utf-8');
+    }
+
+    this.closeDownloadMenu();
+  }
+
+  private getMessageText(message: Message): string {
+    let text = message.markdown || message.text || '';
+    if (!text && message.plain) {
+      text = message.plain;
+    }
+    if (!text && message.html) {
+      text = message.html.replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    }
+    return text;
+  }
+
+  private triggerDownload(blob: Blob, fileName: string, mimeType: string): void {
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
     anchor.href = url;
-    anchor.download = `assistant-response-${Date.now()}.md`;
+    anchor.download = fileName;
+    anchor.type = mimeType;
     document.body.appendChild(anchor);
     anchor.click();
     anchor.remove();
     URL.revokeObjectURL(url);
+  }
+
+  private createPdfBlob(text: string): Blob {
+    const lines = text.split(/\r?\n/).slice(0, 40);
+    const content = lines
+      .map((line, index) => {
+        const escapedLine = this.escapePdfText(line || ' ');
+        const y = 760 - index * 14;
+        return `BT /F1 10 Tf 50 ${y} Td (${escapedLine}) Tj ET`;
+      })
+      .join('\n');
+
+    const stream = content || 'BT /F1 10 Tf 50 760 Td (No content) Tj ET';
+    const objects = [
+      '1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n',
+      '2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n',
+      '3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>\nendobj\n',
+      `4 0 obj\n<< /Length ${stream.length} >>\nstream\n${stream}\nendstream\nendobj\n`,
+      '5 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n'
+    ];
+
+    const pdfParts: string[] = ['%PDF-1.4\n'];
+    const offsets: number[] = [];
+    objects.forEach((object) => {
+      offsets.push(pdfParts.join('').length);
+      pdfParts.push(object);
+    });
+
+    const xrefOffset = pdfParts.join('').length;
+    pdfParts.push(`xref\n0 ${objects.length + 1}\n`);
+    pdfParts.push('0000000000 65535 f \n');
+    offsets.forEach((value) => {
+      pdfParts.push(`${String(value).padStart(10, '0')} 00000 n \n`);
+    });
+    pdfParts.push('trailer\n');
+    pdfParts.push(`<< /Size ${objects.length + 1} /Root 1 0 R >>\n`);
+    pdfParts.push(`startxref\n${xrefOffset}\n%%EOF`);
+
+    return new Blob([pdfParts.join('')], { type: 'application/pdf' });
+  }
+
+  private createDocxBlob(text: string): Blob {
+    const paragraphs = text
+      .split(/\r?\n/)
+      .map((line) => `<w:p><w:r><w:t xml:space="preserve">${this.escapeXml(line || ' ')}</w:t></w:r></w:p>`)
+      .join('');
+
+    const documentXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:body>
+    ${paragraphs}
+    <w:sectPr/>
+  </w:body>
+</w:document>`;
+
+    return new Blob([documentXml], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+  }
+
+  private escapePdfText(value: string): string {
+    return value.replace(/\\/g, '\\\\').replace(/\(/g, '\\(').replace(/\)/g, '\\)');
+  }
+
+  private escapeXml(value: string): string {
+    return value
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&apos;');
+  }
+
+  executeAction(action: any): void {
+    const seed : Message = { text: action, role: 'user', id: this.id(), timestamp: this.formatTimestamp() };
+    this.askAssistant(seed, true);
   }
 
   regenerate(m: Message): void {
@@ -497,6 +628,16 @@ export class ConversationalChatbot implements OnInit, AfterViewChecked, OnDestro
       const el = this.messagesList?.nativeElement;
       if (el) el.scrollTop = el.scrollHeight;
     } catch (error) { console.warn('scrollToBottom failed', error); }
+  }
+
+  private formatTimestamp(date: Date = new Date()): string {
+    const pad = (value: number) => String(value).padStart(2, '0');
+    const hours = pad(date.getHours());
+    const minutes = pad(date.getMinutes());
+    const day = pad(date.getDate());
+    const month = pad(date.getMonth() + 1);
+    const year = date.getFullYear();
+    return `${hours}:${minutes} ${day}-${month}-${year}`;
   }
 
   private id(): string {
@@ -983,6 +1124,7 @@ extractTitleFromResponse(text:any, agentName?: string) {
 
     // Track this session to prevent updates if agency/agent changes
     this.currentSessionId_tracker = sessionId;
+    this.suggestions = []; // Clear suggestions on new query
 
     const query = text.trim();
     if (!query) {
@@ -1008,6 +1150,7 @@ extractTitleFromResponse(text:any, agentName?: string) {
     this.isThinkingCollapsed = false;   
 
     const streamIndex = this.chatResponses.push({
+      id: this.id(),
       isLoading: true,
       title: 'Generating...',
       html: 'Thinking<span class="dots">...</span>',
@@ -1016,7 +1159,7 @@ extractTitleFromResponse(text:any, agentName?: string) {
       table: { headers: [], rows: [] },
       explanation: '',
       thinking: false,
-      showThinking: false,
+      showThinking: true,
       isThinkingBoxCollapsed: true,
       traceDetails: null,
       logDetails: [],
@@ -1025,7 +1168,8 @@ extractTitleFromResponse(text:any, agentName?: string) {
       activeTab: 'trace',
       isLoadingExplanation: true,
       explanationDataLoaded: false,
-      role: 'assistant'
+      role: 'assistant',
+      timestamp: this.formatTimestamp()
     }) - 1;
     this.cdRef.detectChanges();
 
@@ -1143,8 +1287,37 @@ extractTitleFromResponse(text:any, agentName?: string) {
       .replace(/```\s*psv[\s\S]*?```/gi, '')
       .replace(/\n\s*\n\s*\n/g, '\n\n')
       .trim();
+    
+      let outputDisplay = cleanedDisplay;
 
-    const markdownHtml = this.markdownParser.render(cleanedDisplay);
+    if (cleanedDisplay.includes('{\\"actions\\"')){
+      console.log('Detected JSON actions in the response. Extracting output display before JSON.');
+      const jsonStartIndex = cleanedDisplay.indexOf('{\\"actions\\"');
+      const outputDisplay = cleanedDisplay.substring(0, jsonStartIndex).trim();
+    }
+
+    let jsonToDisplay : any ={};
+    const match = cleanedDisplay.match(/\{\\"actions\\"[\s\S]*$/);
+    if (match) {
+      outputDisplay = cleanedDisplay.substring(0, match.index).trim();
+      console.log('Detected JSON actions in the response. Extracted output display before JSON:', outputDisplay);
+      let jsonPart = match[0];
+      try {
+      jsonToDisplay = JSON.parse(jsonPart.replace(/\\"/g, '"'));
+      console.log('Extracted JSON part:', jsonToDisplay);
+      } catch (error) {
+        console.error('Failed to parse extracted JSON part:', error);
+      }
+      console.log('Detected JSON actions in the response. Extracted JSON part:', match[0]);
+    }
+
+
+
+
+
+    console.log('Rendering cleaned display:', cleanedDisplay , 'Output display:', outputDisplay);
+
+    const markdownHtml = this.markdownParser.render(outputDisplay);
     const plainText = markdownHtml
       .replace(/<[^>]+>/g, ' ')
       .replace(/\s+/g, ' ')
@@ -1157,7 +1330,7 @@ extractTitleFromResponse(text:any, agentName?: string) {
       isLoading: !hasText,
       event_id: eventId,
       map_id: mapId,
-      markdown: cleanedDisplay,
+      markdown: outputDisplay,
       plain: hasText ? plainText : this.chatResponses[streamIndex].plain || '',
       text: hasText ? plainText : this.chatResponses[streamIndex].text || '',
       html: hasText ? `<div class="streamed-response">${markdownHtml}</div>` : this.chatResponses[streamIndex].html || '',
@@ -1172,6 +1345,16 @@ extractTitleFromResponse(text:any, agentName?: string) {
     };
     if (hasText) {
       hasRenderedResponse = true;
+    }
+    if (jsonToDisplay?.actions?.length > 0) {
+
+      this.chatResponses[streamIndex].json = jsonToDisplay;
+      // this.suggestions = jsonToDisplay?.recommended_prompts? jsonToDisplay.recommended_prompts : [];
+      // console.log('Updated suggestions from JSON:', this.suggestions);
+    }
+    if (jsonToDisplay?.recommended_prompts && Array.isArray(jsonToDisplay.recommended_prompts)) {
+      this.suggestions = jsonToDisplay.recommended_prompts;
+      console.log('Updated suggestions from JSON:', this.suggestions);
     }
     this.cdRef.detectChanges();
     // console.log('Updated chatResponses[streamIndex]:', this.chatResponses);
@@ -1293,4 +1476,14 @@ extractTitleFromResponse(text:any, agentName?: string) {
 //           }
 //       }
 //   }
+
+  showToast(type: 'success' | 'error', message: string): void {
+      this.toastMessage = message;
+      const toastId = type === 'success' ? '#successToast' : '#errorToast';
+      const toastEl = document.querySelector(toastId);
+      if (toastEl) {
+        const toast = new bootstrap.Toast(toastEl);
+        toast.show();
+      }
+    }
 }

@@ -55,12 +55,20 @@ interface LogEvent {
 
     <main>
       <div class="bg-white border-end">
-        <sidebar [(isOpen)]="sidebarOpen" mode="overlay" trigger="hover">
-          <div class="d-flex flex-column gap-1 px-2">
+        <sidebar
+          [(isOpen)]="sidebarOpen"
+          mode="overlay"
+          trigger="hover"
+          style="--header-offset: 5rem"
+        >
+          <div
+            class="d-flex flex-column gap-1 px-2"
+            style="flex: 1; min-height: 0; max-height: 95%"
+          >
             <strong class="fs-14 text-muted">Agencies</strong>
             <app-tree
               [nodes]="agencyTreeData()"
-              style="--font-size: 0.7rem; --icon-size: 0.8rem; --row-height: 1.7rem;"
+              style="--font-size: 0.7rem; --icon-size: 0.8rem; --row-height: 1.7rem; flex: 1; min-height: 0"
               (nodeClick)="switchAgency($event.id)"
               [activeId]="activeAgencyId()"
             />
@@ -306,7 +314,7 @@ interface LogEvent {
       height: calc(100% - 5rem);
       margin-top: 4.063rem;
       display: grid;
-      grid-template-columns: auto 1fr;
+      grid-template-columns: max-content 1fr;
     }
 
     .root {
@@ -567,6 +575,8 @@ export class VoiceChat implements OnInit, AfterViewInit, OnDestroy {
     private _stateService: AIInfuseStateService,
   ) {
     effect(() => {
+      if (!this.activeAgencyId() || !this.activeAgentId()) return;
+
       const state = this.voice.state();
       this.log(`State transition: ${state}`, 'info');
 
@@ -638,6 +648,7 @@ export class VoiceChat implements OnInit, AfterViewInit, OnDestroy {
 
     this.activeAgencyId.set(agencyId);
     this.activeAgentId.set('');
+    this.clear();
     this.sidebarOpen.set(false);
   }
 
@@ -667,6 +678,7 @@ export class VoiceChat implements OnInit, AfterViewInit, OnDestroy {
   clear() {
     this.eventLog.set([]);
     this.latestUser = '';
+    this.latestAgent = '';
     this.voice.interimAgentText.set('');
     this.voice.interimUserText.set('');
   }
@@ -689,6 +701,8 @@ export class VoiceChat implements OnInit, AfterViewInit, OnDestroy {
   }
 
   get HintText() {
+    if (!this.activeAgencyId() || !this.activeAgentId())
+      return 'Select valid agency and voice agent to continue.';
     if (!this.voice.connected())
       return 'Click Start call — the agent greets you, then just talk. Click again to hang up.';
     if (this.voice.micPermission() === 'denied')

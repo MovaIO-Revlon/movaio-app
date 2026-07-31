@@ -386,8 +386,19 @@ chatbotAgentStream(payload: any): Observable<string> {
   }
 
   getRecentData(params: any) {
-    return this._http.post<ApiResponse<unknown[]>>(`/getRecentData`, params);
-  }
+    return this._http.post('/getRecentData', params, {
+      responseType: 'text'   
+    }).pipe(
+      map((text: string) => {
+        let sanitized = text.replace(/\bNaN\b/g, 'null')
+                            .replace(/\bInfinity\b/g, 'null')
+                            .replace(/\b-Infinity\b/g, 'null');
+        
+        return JSON.parse(sanitized);
+      })
+    );
+}
+
 
   getRecentDataAgent(params: any) {
     return this._http.post<ApiResponse<unknown[]>>(`/getRecentDataAgent`, params);

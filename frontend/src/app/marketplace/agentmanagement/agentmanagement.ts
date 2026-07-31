@@ -1884,7 +1884,7 @@ fetchAgenciesWithAgents(): void {
       ref_output: formValue.ref_output,
       example: formValue.example,
       model: formValue.model_enabled ? formValue.model : null,
-      model_data: this.providerModelsFromLyzr.find((m:any) => m.model === formValue.model)? this.providerModelsFromLyzr.find((m:any) => m.model === formValue.model) : null,
+      model_data: this.providerModelsFromLyzr.find((m:any) => m.model?.name === formValue.model)? this.providerModelsFromLyzr.find((m:any) => m.model?.name === formValue.model) : null,
       mcp_connector_id: formValue.mcp_connector_enabled
         ? formValue.mcp_connector_value
         : null,
@@ -2051,7 +2051,7 @@ fetchAgenciesWithAgents(): void {
       ref_output: form.ref_output,
       example: form.example,
       model: form.model_enabled ? form.model : null,
-      model_data: this.providerModelsFromLyzr.find((m:any) => m.model === form.model)? this.providerModelsFromLyzr.find((m:any) => m.model === form.model) : null,
+      model_data: this.providerModelsFromLyzr.find((m:any) => m.model?.name === form.model)? this.providerModelsFromLyzr.find((m:any) => m.model?.name === form.model) : null,
       mcp_connector_id: form.mcp_connector_enabled
         ? form.mcp_connector_value
         : null,
@@ -4632,6 +4632,10 @@ deleteAgent(): void {
     return this.agentForm.get('actions') as FormArray;
   }
 
+  get createNewActions(): FormArray {
+    return this.createAgentForm.get('actions') as FormArray;
+  }
+
   createAction(): FormGroup {
     return this.fb.group(
       {
@@ -4841,12 +4845,92 @@ editingIndex: number | null = null;
   this.newActionForm.updateValueAndValidity();
 }
 
+
+addActionCreateNew(): void {
+  const nameControl = this.newActionForm.get('name');
+  const percentageControl = this.newActionForm.get('percentage');
+
+  nameControl?.markAsTouched();
+  percentageControl?.markAsTouched();
+  this.newActionForm.updateValueAndValidity();
+
+  const nameValue = nameControl?.value?.trim();
+  const percentageValue = percentageControl?.value;
+
+  if (!nameValue || percentageValue === '' || percentageValue === null || percentageValue === undefined) {
+    this.showToast('error', 'Please fill out both action name and percentage.');
+    return;
+  }
+
+  if (!this.newActionForm.valid) {
+    this.showToast('error', 'Please fill out both action name and percentage correctly.');
+    return;
+  }
+
+  const newAction = {
+    name: nameValue,
+    percentage: Number(percentageValue)
+  };
+
+  if (this.isEditing && this.editingIndex !== null) {
+    // UPDATE existing action
+    this.createNewActions.at(this.editingIndex).patchValue(newAction);
+    this.isEditing = false;
+    this.editingIndex = null;
+  } else {
+    // ADD new action
+    this.createNewActions.push(
+      this.fb.group({
+        name: [newAction.name, Validators.required],
+        percentage: [
+          newAction.percentage,
+          [Validators.required, Validators.min(0), Validators.max(100)]
+        ]
+      })
+    );
+  }
+
+  
+
+  this.newActionForm.reset({ name: '', percentage: '' });
+  this.calculateTotalCreateNew();
+  this.cdRef.detectChanges();
+}
+  removeActionCreateNew(index: number) {
+    this.createNewActions.removeAt(index);
+    this.calculateTotalCreateNew();
+  }
+
+ editActionCreateNew(index: number): void {
+  const action = this.createNewActions.at(index).value;
+  
+  this.newActionForm.setValue({
+    name: action.name || '',
+    percentage: action.percentage || '',
+  });
+
+  this.isEditing = true;
+  this.editingIndex = index;
+
+  this.newActionForm.markAsDirty();
+  this.newActionForm.markAsTouched();
+  this.newActionForm.updateValueAndValidity();
+}
+
   calculateTotal() {
     this.totalPercentage = this.actions.value.reduce(
       (sum: number, action: any) => sum + Number(action.percentage),
       0
     );
   }
+
+  calculateTotalCreateNew() {
+    this.totalPercentage = this.createNewActions.value.reduce(
+      (sum: number, action: any) => sum + Number(action.percentage),
+      0
+    );
+  }
+
 
   validateTotal: ValidatorFn = (
     control: AbstractControl
@@ -6331,7 +6415,10 @@ editingIndex: number | null = null;
       // Schedule step: optional, allow proceeding to Actions
       return true;
     } else if (step === 3) {
-      const controlsToCheck = ['approverEmail'];
+      let controlsToCheck = ['approverEmail'];
+      if (this.createAgentForm.get('agent_type_id')?.value?.toLowerCase() === 'type_master' && this.totalPercentage!=100) {
+        return false;  
+      }
       return controlsToCheck.every((controlName) => {
         const control = this.createAgentForm.get(controlName);
         return control?.valid || control?.disabled;
@@ -6344,6 +6431,7 @@ editingIndex: number | null = null;
 
   submitCreateAgentForm(): void {
     this._loadingService.show();
+    console.log('Submitting Create Agent Form:', this.createAgentForm);
 
     const formValue = this.prepareFormData(this.createAgentForm);
     this.agentForm.patchValue({
@@ -6377,7 +6465,7 @@ editingIndex: number | null = null;
       ref_output: formValue.ref_output,
       example: formValue.example,
       model: formValue.model_enabled ? formValue.model : null,
-      model_data: this.providerModelsFromLyzr.find((m:any) => m.model === formValue.model)? this.providerModelsFromLyzr.find((m:any) => m.model === formValue.model) : null,
+      model_data: this.providerModelsFromLyzr.find((m:any) => m.model?.name === formValue.model)? this.providerModelsFromLyzr.find((m:any) => m.model?.name === formValue.model) : null,
       mcp_connector_id: formValue.mcp_connector_enabled
         ? formValue.mcp_connector_value
         : null,
@@ -6545,7 +6633,34 @@ editingIndex: number | null = null;
     this.configuredMemoryDetails = agent.memory_value || '';
     this.configuredContextDetails = agent.context_value || '';
 
+    this.createNewActions.clear();
+    if (agent.agent_type_id==='TYPE_MASTER') {
+      if (agent.actions && agent.actions.length > 0) {
+        agent.actions.forEach((a: any) => {
+          const actionGroup = this.fb.group(
+            {
+              name: [a.name || '', Validators.required],
+              percentage: [
+                Number(a.percentage) || 0,
+                [Validators.required, Validators.min(0), Validators.max(100)],
+              ],
+            },
+            { validators: this.requireBothIfOneFilled }
+          );
+          this.createNewActions.push(actionGroup);
+        });
+      } else {
+        this.createNewActions.push(this.createAction());
+      }
+      this.calculateTotal();
+      this.createNewActions.updateValueAndValidity();
+    }
+
     const modal = bootstrap.Modal.getOrCreateInstance(this.createAgentModal.nativeElement);
     modal.show();
+  }
+
+  getAvatarUrl(d: unknown) {
+    return (d && typeof d === 'string')  ? d : 'assets/img/Agent_Profile_Icon.svg'
   }
 }

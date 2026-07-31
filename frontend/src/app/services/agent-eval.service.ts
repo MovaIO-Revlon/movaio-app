@@ -6,16 +6,26 @@ import { ApiResponse } from '../types/common';
 export interface AgentEvalRequest {
   agent_id: string;
   evaluation_type: 'offline' | 'online';
-  data_set: 'input-output' | 'trace';
+  data_set: string;
   input_data: (string | object)[];
   output_data?: (string | object)[];
   trace_data?: (string | object)[];
+  // Simulation-based
+  goal?: string;
+  persona?: string;
+  max_turns?: number;
+  //Online evaluations
+  evaluation_method?: string; 
+  agent_api_key?: string;      
+  created_by?: string;        
 }
 
 export interface FetchEvalRequest {
   agent_id: string;
   evaluation_type: string;
-  data_set: 'Input/Output Data' | 'Trace Data';
+  data_set: string;
+  date_from?: string; 
+  date_to?: string;  
 }
 
 export interface FetchEvalResult {

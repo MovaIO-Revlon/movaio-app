@@ -376,38 +376,38 @@
     <div class="metrics-section pt-1">
       <label class="form-label fw-semibold ms-2">AI Scores</label>
       
-      <div class="scores-grid" *ngIf="getPromptMetrics(query) as metrics">
-        
-        <div class="score-item">
-            <img src="assets/img/correctness.png" alt="Correctness" class="metric-icon">
-          <span class="score-label">Correctness: {{ metrics.correctness | number:'1.2-2' }}</span>
-        </div>
-        
-        <div class="score-item">
-          <img src="assets/img/coherence.png" alt="Coherence" class="metric-icon">
-          <span class="score-label">Coherence: {{ metrics.coherence | number:'1.2-2' }}</span>
-        </div>
-        
-        <div class="score-item">
-          <img src="assets/img/relevance.png" alt="Relevance" class="metric-icon">
-          <span class="score-label">Relevance: {{ metrics.relevance | number:'1.2-2' }}</span>
-        </div>
-        
-        <div class="score-item">
-          <img src="assets/img/conciseness.png" alt="Conciseness" class="metric-icon">
-          <span class="score-label">Conciseness: {{ metrics.conciseness | number:'1.2-2' }}</span>
-        </div>
-        
-        <div class="score-item">
-          <img src="assets/img/safety.png" alt="Safety" class="metric-icon">
-          <span class="score-label">Safety: {{ metrics.safety | number:'1.2-2' }}</span>
-        </div>
-        
-        <div class="score-item">
-          <img src="assets/img/accuracy.png" alt="Accuracy" class="metric-icon">
-          <span class="score-label">Accuracy: {{ metrics.accuracy | number:'1.0-0' }}%</span>
-        </div>
-      </div>
+     <div class="scores-grid" *ngIf="getPromptMetrics(query) as metrics">
+  
+  <div class="score-item" [appTooltip]="getAssessmentRationale(query, 'correctness')">
+    <img src="assets/img/correctness.png" alt="Correctness" class="metric-icon">
+    <span class="score-label">Correctness: {{ metrics.correctness | number:'1.2-2' }}</span>
+  </div>
+  
+  <div class="score-item" [appTooltip]="getAssessmentRationale(query, 'coherence')">
+    <img src="assets/img/coherence.png" alt="Coherence" class="metric-icon">
+    <span class="score-label">Coherence: {{ metrics.coherence | number:'1.2-2' }}</span>
+  </div>
+  
+  <div class="score-item" [appTooltip]="getAssessmentRationale(query, 'relevance')">
+    <img src="assets/img/relevance.png" alt="Relevance" class="metric-icon">
+    <span class="score-label">Relevance: {{ metrics.relevance | number:'1.2-2' }}</span>
+  </div>
+  
+  <div class="score-item" [appTooltip]="getAssessmentRationale(query, 'conciseness')">
+    <img src="assets/img/conciseness.png" alt="Conciseness" class="metric-icon">
+    <span class="score-label">Conciseness: {{ metrics.conciseness | number:'1.2-2' }}</span>
+  </div>
+  
+  <div class="score-item" [appTooltip]="getAssessmentRationale(query, 'safety')">
+    <img src="assets/img/safety.png" alt="Safety" class="metric-icon">
+    <span class="score-label">Safety: {{ metrics.safety | number:'1.2-2' }}</span>
+  </div>
+  
+  <div class="score-item" [appTooltip]="getAssessmentRationale(query, 'accuracy')">
+    <img src="assets/img/accuracy.png" alt="Accuracy" class="metric-icon">
+    <span class="score-label">Accuracy: {{ metrics.accuracy | number:'1.0-0' }}%</span>
+  </div>
+</div>
 
       <!-- Latency -->
       <div class="latency-row pt-3 border-top" *ngIf="getPromptMetrics(query) as metrics">

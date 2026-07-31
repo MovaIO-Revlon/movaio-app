@@ -2109,3 +2109,10 @@ popover:has(div[popover]:popover-open) .anchor {
 popover:has(div[popover]:popover-open) .trigger {
   border-top-right-radius: 0 !important;
 }
+
+.gap-agent{
+  gap: 36px;
+  width: 81%;
+  overflow: auto;
+  max-height: 55vh;
+}

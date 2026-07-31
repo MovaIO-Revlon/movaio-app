@@ -8,6 +8,9 @@ import {
 } from '../../services/agent-eval.service';
 import { TooltipDirective } from '../../custom-tooltip/tooltip.directive';
 import { AIInfuseStateService } from '../../services/aiinfuse-state.service';
+import { forkJoin } from 'rxjs';
+import { ChangeDetectorRef } from '@angular/core';
+import { DatePicker } from '../../components/datepicker/datepicker';
 
 type TabType = 'eval' | 'definition' | 'execution';
 declare var bootstrap: any;
@@ -74,6 +77,8 @@ export interface EvalResult {
   safetyRationale: string;
   averageRationale: string;
   statusRationale: string;
+  detailed_results?: any[];
+  agentConfig?: any;
 }
 
 export interface DataPair {
@@ -88,9 +93,21 @@ export interface TraceData {
   expectedOutput: string;
 }
 
+export interface AnalysisData {
+  testCaseId: string;
+  problem: string;
+  rootCauses: string[];
+  suggestedFixes: string[];
+  impact?: string;     
+  severity?: string;
+  severityRationale?: string;
+  agentConfig?: any;           
+  configHighlights?: Record<string, string>;
+}
+
 @Component({
   selector: 'app-agent-eval',
-  imports: [CommonModule, FormsModule, TooltipDirective],
+  imports: [CommonModule, FormsModule, TooltipDirective, DatePicker],
   templateUrl: './agent-eval.html',
   styleUrl: './agent-eval.css',
 })
@@ -99,6 +116,7 @@ export class AgentEval {
     private _marketService: SemarketplaceService,
     private _evalService: AgentEvalService,
     private _stateService: AIInfuseStateService,
+     private cdr: ChangeDetectorRef,
   ) {}
 
   readonly tabs: TabOption[] = [
@@ -109,8 +127,57 @@ export class AgentEval {
 
   readonly evalTypes: EvalTypeOption[] = [
     { value: 'offline', label: 'Offline' },
-    { value: 'online', label: 'Online' },
+    { value: 'Online', label: 'Online' },
   ];
+
+  readonly onlineDatasetOptions: { value: string; label: string }[] = [
+    { value: 'Simulation Data', label: 'Simulation-based' },
+    { value: 'I/O Dataset Evaluation', label: 'I/O Dataset Evaluation' },
+    { value: 'Trace-Based Evaluation', label: 'Trace-based Evaluation' },
+    { value: 'Config + I/O Dataset', label: 'Config + I/O Dataset' },
+    { value: 'Config + Trace Data', label: 'Config + Trace Data' },
+    { value: 'Configuration Only', label: 'Configuration Only' },
+  ];
+
+  isMethodOptionDisabled(optionValue: string): boolean {
+    if (this.selectedEvalType() === 'Online') {
+      return ['Config + Trace Data', 'Configuration Only'].includes(optionValue);
+    }
+    return false;
+  }
+
+  datasetOptions = computed(() => {
+    if (this.selectedEvalType() === 'Online') {
+      return this.onlineDatasetOptions;
+    }
+    return [
+      { value: 'Input/Output Data', label: 'Input/Output Data' },
+      { value: 'Trace Data', label: 'Trace Data' },
+    ];
+  });
+
+  simExpectedOutputs = signal<{ id: string; expectedOutput: string }[]>([
+  { id: this.generateId(), expectedOutput: '' },
+]);
+
+  needsDataInput = computed(() => {
+  if (this.selectedEvalType() === 'Online') {
+    const ds = this.selectedDataSet();
+    
+    // Do NOT show Input/Output fields for Online I/O Dataset Evaluation
+    if (['I/O Dataset Evaluation', 'Config + I/O Dataset'].includes(ds)) {
+        return false;  
+      }
+    
+    // No data input for trace-based scenarios
+    if (['Trace-Based Evaluation', 'Config + Trace Data'].includes(ds)) {
+      return false;
+    }
+    
+    return ['Config + I/O Dataset'].includes(ds); // Only show for config+io
+  }
+  return true; // Offline scenarios
+});
 
   readonly METRIC_KEYS = [
     'correctness',
@@ -127,8 +194,9 @@ export class AgentEval {
     'status',
   ] as const;
 
-  agents: any;
-
+  agents = signal<any[]>([]);
+  agentSearchText = signal<string>('');
+  isAgentDropdownOpen = signal<boolean>(false);
   activeTab = signal<TabType>('eval');
   selectedAgent = signal<string>('');
   selectedEvalType = signal<string>('');
@@ -162,7 +230,82 @@ export class AgentEval {
   showStep1 = computed(() => this.selectedAgent().length > 0);
   showStep2 = computed(() => this.showStep1() && this.selectedEvalType().length > 0);
   showStep3 = computed(() => this.showStep2() && this.selectedDataSet().length > 0);
-  isTraceData = computed(() => this.selectedDataSet() === 'Trace Data');
+  isTraceData = computed(() => {
+  if (this.selectedEvalType() === 'Online') {
+    return ['Trace-Based Evaluation', 'Config + Trace Data'].includes(this.selectedDataSet());
+  }
+  return this.selectedDataSet() === 'Trace Data';
+});
+  simScenarios = signal<string>('');
+  simPersonas = signal<string>('');
+  simTurns = signal<number>(1);
+
+  isSimulationBased = computed(() =>
+    this.selectedEvalType() === 'Online' && this.selectedDataSet() === 'Simulation Data'
+  );
+  selectedAgentObj = signal<any>(null);
+  selectedAnalysis = signal<AnalysisData | null>(null);
+  isOnlineEvaluation = computed(() => this.selectedEvalType() === 'Online');
+  isConfigIoScenario = computed(() => {
+    return this.selectedEvalType() === 'Online' && 
+          this.selectedDataSet() === 'Config + I/O Dataset';
+  });
+  isConfigTraceScenario = computed(() => {
+    return this.selectedEvalType() === 'Online' && 
+          this.selectedDataSet() === 'Config + Trace Data';
+  });
+  readonly evalMethodDescriptions: Record<string, string> = {
+  'Simulation Data': 'The system generates synthetic inputs, actual outputs and expected outputs, then evaluates the agent’s performance.',
+  'I/O Dataset Evaluation': 'Evaluates the agent using predefined input-output datasets to measure accuracy and consistency against expected results.',
+  'Trace-Based Evaluation': 'Uses past execution traces (logs of previous runs) to analyze agent behavior and performance.',
+  'Config + I/O Dataset': 'Combines agent configuration with input–output datasets to evaluate how configuration changes impact expected outputs.',
+  'Config + Trace Data': 'Uses configuration settings along with historical trace data to assess behavior under real-world execution scenarios.',
+  'config-only': 'Evaluates the agent based solely on its configuration, without using input data or execution traces.',
+};
+  isMethodDropdownOpen = signal<boolean>(false);
+  cellTooltip: {
+  visible: boolean;
+  position: { left: number; top: number };
+  text: string;
+  } = {
+    visible: false,
+    position: { left: 0, top: 0 },
+    text: ''
+  };
+  cellTooltipTimeout: any = null;
+  isCellTooltipHovered: boolean = false;
+  cellTooltipSizing: { width: number; maxHeight: number } = { width: 280, maxHeight: 180 };
+  isAgentsLoading = signal<boolean>(false);
+  noTracesError = signal<string | null>(null);
+  methodInfoTooltip = signal({
+    visible: false,
+    text: '',
+    position: { left: 0, top: 0 }
+  });
+  dateRange = signal<Date[]>([]);
+  showDateFilter = computed(() => {
+    if (!this.showStep3()) return false;
+    if (this.selectedEvalType() === 'offline') {
+    return false;
+  }
+    const ds = this.selectedDataSet();
+    const traceBased = ['Trace Data', 'Trace-Based Evaluation', 'Config + Trace Data'].includes(ds);
+    const ioBased = ['Input/Output Data', 'I/O Dataset Evaluation', 'Config + I/O Dataset'].includes(ds);
+    return traceBased || ioBased;
+  });
+  isEvaluateAction = signal<boolean>(false);
+  expandedCauses = signal<Set<number>>(new Set());
+  readonly evalTypeDescriptions: Record<string, string> = {
+    offline: 'Evaluate the agent using input/output or trace data without connecting to a live agent endpoint.',
+    Online: 'Connects to a live agent endpoint to run evaluations using simulation, I/O datasets, trace data, or configuration-only analysis.',
+  };
+
+  evalTypeTooltip = signal({
+    visible: false,
+    text: '',
+    position: { left: 0, top: 0 }
+  });
+
 
   ngOnInit(): void {
     this.loadAgents();
@@ -173,15 +316,189 @@ export class AgentEval {
     this.activeTab.set(tab);
   }
 
+  apiAgentId = computed<string>(() => {
+    const agent = this.selectedAgentObj();
+    if (!agent) return '';
+    return  agent.agent_id || '';
+  });
+
   loadAgents(): void {
+    this.isAgentsLoading.set(true);
+
     this._marketService.getAgentDetails().subscribe({
       next: (res) => {
+        this.isAgentsLoading.set(false);
         if (res.success) {
-          this.agents = res.data;
+          const filtered = (res.data || []).filter(
+            (a: any) => a.agent_type_id == 'TYPE_MASTER' && a.status === 'active'
+          );
+          this.agents.set(filtered);
         }
       },
-      error: (err) => console.error('Error:', err),
+      error: (err) => {
+        this.isAgentsLoading.set(false);
+        console.error('Error:', err);
+      },
     });
+  }
+
+  selectedAgentName = computed(() => {
+    if (!this.selectedAgent()) return '';
+    const agent = this.agents().find((a: any) =>
+      a.agent_id === this.selectedAgent() 
+    );
+    if (!agent) return '';
+    const runCount = agent.run_count ?? 0;
+    return runCount > 0 ? `${agent.name}` : agent.name;
+  });
+
+  filteredAgents = computed(() => {
+    const list = this.agents();
+    if (!list || list.length === 0) return [];
+    const term = this.agentSearchText().toLowerCase().trim();
+    if (!term) return list;
+    return list.filter((a: any) =>
+      (a.name || '').toLowerCase().includes(term) ||
+      (a.agent_id || '').toLowerCase().includes(term)
+    );
+  });
+
+  @ViewChild('agentSearchInput') agentSearchInputRef?: ElementRef;
+
+  openAgentDropdown() {
+    this.isAgentDropdownOpen.set(true);
+    this.agentSearchText.set('');
+    setTimeout(() => {
+      this.agentSearchInputRef?.nativeElement?.focus();
+    }, 50);
+  }
+
+  closeAgentDropdown() {
+    this.isAgentDropdownOpen.set(false);
+    this.agentSearchText.set('');
+  }
+
+  toggleAgentDropdown() {
+    if (this.isAgentDropdownOpen()) {
+      this.closeAgentDropdown();
+    } else {
+      this.openAgentDropdown();
+    }
+  }
+
+  onAgentSearchInput(value: string) {
+    this.agentSearchText.set(value);
+  }
+
+  clearAgentSearch() {
+    this.agentSearchText.set('');
+    this.agentSearchInputRef?.nativeElement?.focus();
+  }
+
+  selectAgent(agentId: string) {
+    this.selectedAgent.set(agentId);
+    const agent = this.agents().find((a: any) =>
+      a.agent_id === agentId
+    );
+    this.selectedAgentObj.set(agent || null);
+    this.closeAgentDropdown();
+    this.onAgentChange();
+  }
+
+  getHighlightedName(name: string): string {
+    const term = this.agentSearchText().trim();
+    if (!term || !name) return name;
+    const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(`(${escaped})`, 'gi');
+    return name.replace(regex, '<mark>$1</mark>');
+  }
+
+  validateSimTextField(fieldKey: string, value: string) {
+  if (value.trim() === '') {
+    this.addInvalid(fieldKey, 'This field is required.');
+  } else {
+    this.removeFromInvalid(fieldKey);
+  }
+}
+
+  validateSimField(fieldKey: string, value: string) {
+    const trimmed = value.trim();
+    if (trimmed === '') {
+      this.removeFromInvalid(fieldKey);
+      return;
+    }
+
+    let parsed: any;
+    try {
+      parsed = JSON.parse(trimmed);
+    } catch (e) {
+      const msg = (e as Error).message;
+      let errorMsg = 'Invalid JSON format';
+      if (msg.includes('Unexpected token')) {
+        const match = msg.match(/position (\d+)/);
+        errorMsg = match ? `Unexpected token at position ${match[1]}` : 'Unexpected token found';
+      } else if (msg.includes('Expected')) {
+        errorMsg = msg.length > 60 ? msg.substring(0, 60) + '...' : msg;
+      }
+      this.addInvalid(fieldKey, errorMsg);
+      return;
+    }
+
+    if (!Array.isArray(parsed)) {
+      this.addInvalid(fieldKey, 'JSON must be an array of objects.');
+      return;
+    }
+
+    if (parsed.length === 0) {
+      this.addInvalid(fieldKey, 'Array must contain at least one object.');
+      return;
+    }
+
+    this.removeFromInvalid(fieldKey);
+  }
+
+  onSimTurnsChange(value: any) {
+    // Allow empty without error
+    if (value === '' || value === null || value === undefined) {
+      this.removeFromInvalid('sim-turns');
+      this.simTurns.set(0);
+      return;
+    }
+    const num = Number(value);
+    if (isNaN(num) || num < 0 || num > 50 || !Number.isInteger(num)) {
+      this.addInvalid('sim-turns', 'Must be a whole number between 0 and 50.');
+      this.simTurns.set(num);          // store parsed so buttons still work
+    } else {
+      this.removeFromInvalid('sim-turns');
+      this.simTurns.set(num);
+    }
+  }
+
+  incrementTurns() {
+    const current = parseInt(String(this.simTurns()), 10) || 0;
+    if (current < 50) {
+      const next = current + 1;
+      this.simTurns.set(next);
+      this.removeFromInvalid('sim-turns');
+      this.syncTurnsInput(next);
+    }
+  }
+
+  decrementTurns() {
+    const current = parseInt(String(this.simTurns()), 10) || 0;
+    if (current > 0) {
+      const next = current - 1;
+      this.simTurns.set(next);
+      this.removeFromInvalid('sim-turns');
+      this.syncTurnsInput(next);
+    }
+  }
+
+  syncTurnsInput(value: number) {
+    const input = document.getElementById('sim-turns') as HTMLInputElement;
+    if (input) {
+      input.value = String(value);
+    }
   }
 
   toDateKey(date: Date): string {
@@ -262,13 +579,14 @@ export class AgentEval {
     }
 
     const request: FetchEvalRequest = {
-      agent_id: this.selectedAgent(),
+      agent_id: this.apiAgentId(),
       evaluation_type: this.selectedEvalType(),
-      data_set: this.selectedDataSet() as 'Input/Output Data' | 'Trace Data',
+      data_set: this.selectedDataSet(),
     };
 
     this.isFetchingHistory.set(true);
     this.evalError.set(null);
+    this.noTracesError.set(null); 
 
     this._evalService.fetchEvaluationData(request).subscribe({
       next: (res) => {
@@ -284,12 +602,14 @@ export class AgentEval {
         } else {
           this.setSortedGroups([]);
           this.activeDateKey.set(null);
+          this.noTracesError.set(null);
         }
       },
       error: (err: any) => {
         this.isFetchingHistory.set(false);
         this.setSortedGroups([]);
         this.activeDateKey.set(null);
+        this.noTracesError.set(null);
         console.warn('Failed to fetch evaluation history:', err);
       },
     });
@@ -401,6 +721,15 @@ extractScore(row: any, key: string): number {
   mapFetchedToResults(data: any): EvalResult[] {
   let evaluations: any[] = [];
 
+  if (typeof data === 'object' && data !== null && !Array.isArray(data)) {
+    if (data.status === 'failed') {
+      if (this.isEvaluateAction() && data.error) {
+        this.noTracesError.set(data.error);
+      }
+      return [];
+    }
+  }
+
   if (Array.isArray(data)) {
     evaluations = data;
   } else if (data?.evaluations && Array.isArray(data.evaluations)) {
@@ -413,7 +742,9 @@ extractScore(row: any, key: string): number {
     }
   }
 
-  if (evaluations.length === 0) return [];
+  if (evaluations.length === 0) {
+    return [];
+  }
 
   // Reset definitions before re-building from history
   this.metricDefinitions.set({});
@@ -421,7 +752,12 @@ extractScore(row: any, key: string): number {
   const allResults: EvalResult[] = [];
 
   for (const evalData of evaluations) {
-    if (evalData.status === 'failed') continue;
+    if (evalData.status === 'failed') {
+      if (this.isEvaluateAction() && evalData.error) {
+        this.noTracesError.set(evalData.error);
+      }
+      continue;
+    }
 
     // ── Extract definitions from top-level metric_definitions field ──
     this.mergeDefinitions(this.extractDefinitionsFromTopLevel(evalData));
@@ -429,11 +765,9 @@ extractScore(row: any, key: string): number {
     // ── Extract definitions from individual_metrics ──
     const indivMetrics = evalData.individual_metrics || [];
     if (indivMetrics.length > 0) {
-      // From row.metrics (e.g. "fluency/mean": { definition: "..." })
       if (indivMetrics[0]?.metrics) {
         this.mergeDefinitions(this.extractDefinitionsFromMetrics(indivMetrics[0].metrics));
       }
-      // From detailed_results[0] if it has definition sub-objects
       const dr = indivMetrics[0]?.detailed_results;
       if (dr && Array.isArray(dr) && dr.length > 0) {
         this.mergeDefinitions(this.extractDefinitionsFromMetrics(dr[0]));
@@ -448,7 +782,6 @@ extractScore(row: any, key: string): number {
     const timestamp = evalDate.getTime();
     const runId = evalData.evaluation_id || this.generateId();
 
-    // ── Always use individual_metrics — no aggregate_metrics fallback ──
     if (indivMetrics.length > 0) {
       const individualResults = this.mapSingleEvalToResults(evalData).map((r) => ({
         ...r,
@@ -457,10 +790,11 @@ extractScore(row: any, key: string): number {
         dateStr,
         time,
         timestamp,
+        detailed_results: r.detailed_results || evalData.individual_metrics?.[0]?.detailed_results || [],
+        agentConfig: evalData.agent_config || {}
       }));
       allResults.push(...individualResults);
     }
-    // If no individual_metrics exist, this evaluation is skipped entirely
   }
 
   return allResults;
@@ -718,169 +1052,175 @@ private extractInputOutputFromTraceData(evalData: any, index: number): { input: 
   };
 }
 
-   private mapSingleEvalToResults(evalData: any): EvalResult[] {
-    const detailed =
-      evalData.individual_metrics ||
-      evalData.detailed_results ||
-      evalData.results ||
-      [];
+  private mapSingleEvalToResults(evalData: any): EvalResult[] {
+  const detailed =
+    evalData.individual_metrics ||
+    evalData.detailed_results ||
+    evalData.results ||
+    [];
 
-    if (!detailed || detailed.length === 0) return [];
+  if (!detailed || detailed.length === 0) return [];
 
-    return detailed.map((row: any, index: number) => {
-      // All scores now come from individual_metrics row via extractScore/extractStatusFromRow
-      const correctness = this.extractScore(row, 'correctness');
-      const coherence = this.extractScore(row, 'coherence');
-      const relevance = this.extractScore(row, 'relevance');
-      const conciseness = this.extractScore(row, 'conciseness');
-      const completeness = this.extractScore(row, 'completeness');
-      const fluency = this.extractScore(row, 'fluency');
-      const hallucinationRate = this.extractScore(row, 'hallucination_rate');
-      const toxicityScore = this.extractScore(row, 'toxicity_score');
-      const safety = this.extractScore(row, 'safety');
-      const average = this.extractScore(row, 'average');
+  return detailed.map((row: any, index: number) => {
+    // Scores (unchanged)
+    const correctness = this.extractScore(row, 'correctness');
+    const coherence = this.extractScore(row, 'coherence');
+    const relevance = this.extractScore(row, 'relevance');
+    const conciseness = this.extractScore(row, 'conciseness');
+    const completeness = this.extractScore(row, 'completeness');
+    const fluency = this.extractScore(row, 'fluency');
+    const hallucinationRate = this.extractScore(row, 'hallucination_rate');
+    const toxicityScore = this.extractScore(row, 'toxicity_score');
+    const safety = this.extractScore(row, 'safety');
+    const average = this.extractScore(row, 'average');
 
-      const status = this.extractStatusFromRow(row, 'status');
+    const status = this.extractStatusFromRow(row, 'status');
 
-      let inputRaw: any = '';
-      let expectedRaw: any = '';
-      let actualRaw: any = '';
+    let inputRaw: any = '';
+    let expectedRaw: any = '';
+    let actualRaw: any = '';
 
-      // Path 1: evalData.input_data / output_data (top-level arrays)
-      const inputItem = evalData.input_data?.[index];
-      const outputItem = evalData.output_data?.[index];
+    // ====================== ONLINE TRACE CASES (Unified) ======================
+    const isOnlineTrace = 
+      (evalData.evaluation_method === 'Config + Trace Data' ||
+       evalData.data_set === 'Config + Trace Data' ||
+       evalData.evaluation_method === 'Trace-Based Evaluation' ||
+       evalData.data_set === 'Trace-Based Evaluation') &&
+      evalData.evaluation_type === 'Online';
 
-      if (inputItem) {
-        inputRaw = this.extractFieldValue(inputItem, ['Input', 'input', 'inputs']);
-        expectedRaw = this.extractFieldValue(inputItem, ['Expectation', 'expectation', 'expectations']);
+    if (isOnlineTrace) {
+      // === INPUT: Prefer user_query from individual_metrics ===
+      if (row.input?.user_query) {
+        inputRaw = row.input.user_query;
+      } else if (row.input) {
+        inputRaw = row.input;
       }
 
-      if (outputItem) {
-        actualRaw = this.extractFieldValue(outputItem, ['Output', 'output', 'outputs']);
-      }
+      // === ACTUAL OUTPUT: Look for inference span ===
+      let fullTrace = row.input?.full_trace || 
+                     row.full_trace || row.input?.trace_data ||
+                     row.detailed_results?.[0]?.full_trace;
 
-      // Path 2: row.input / row.output (on individual_metrics row)
-      if (!inputRaw) {
-        inputRaw = row.input?.user_query?.input || row.input?.inputs || row.inputs?.user_query || row.inputs || '';
-      }
-      if (!expectedRaw) {
-        expectedRaw = row.input?.user_query?.expectation || row.input?.expectations || row.inputs?.prompt_output || '';
-      }
-      if (!actualRaw) {
-        actualRaw = row.output?.output || row.output?.outputs || row.outputs || '';
-      }
+      if (fullTrace?.spans && Array.isArray(fullTrace.spans)) {
+        const inferenceSpan = fullTrace.spans.find((span: any) => 
+          span.SpanName === 'inference' || 
+          span.span_name === 'inference' ||
+          span.SpanAttributes?.output
+        );
 
-      // Path 3: row.input.prompt_output for actual output
-      if (!actualRaw && row.input?.prompt_output?.output) {
-        actualRaw = row.input.prompt_output.output;
-      }
-
-      // Path 4: detailed_results[0].request / .response (new API format)
-      if ((!inputRaw || !expectedRaw) && row.detailed_results?.[0]?.request) {
-        const req = row.detailed_results[0].request;
-        if (!inputRaw) {
-          inputRaw = req.user_query?.input || req.user_query?.inputs || req.inputs || '';
-        }
-        if (!expectedRaw) {
-          expectedRaw = req.user_query?.expectation || req.user_query?.expectations || req.expectation || '';
+        if (inferenceSpan?.SpanAttributes) {
+          const attrs = inferenceSpan.SpanAttributes;
+          actualRaw = attrs.output || 
+                     attrs.llm_output || 
+                     attrs.response || 
+                     attrs.content || 
+                     '';
         }
       }
-      if (!actualRaw && row.detailed_results?.[0]?.response) {
-        actualRaw = row.detailed_results[0].response.output || '';
+
+      // Fallback if not found
+      if (!actualRaw && row.output) actualRaw = row.output;
+
+      // === EXPECTED OUTPUT ===
+      if (row.expected_output) {
+        expectedRaw = row.expected_output;
+      } else if (evalData.expected_output?.[index]) {
+        expectedRaw = evalData.expected_output[index];
       }
+    } 
+    // ====================== REGULAR / OFFLINE TRACE ======================
+    else if (evalData.trace_data) {
+      const traceResult = this.extractInputOutputFromTraceData(evalData, index);
+      inputRaw = traceResult.input || inputRaw;
+      actualRaw = traceResult.output || actualRaw;
 
-            // Path 5: evalData.expected_output (only for Input/Output data, NOT trace data)
-      if (!evalData.trace_data && !expectedRaw && evalData.expected_output?.[index]) {
-        const expItem = evalData.expected_output[index];
-        expectedRaw = this.extractFieldValue(expItem, ['Expectation', 'expectation', 'expectations']) || expItem || '';
+      if (row.expected_output) {
+        expectedRaw = row.expected_output;
+      } else if (evalData.expected_output?.[index]) {
+        expectedRaw = evalData.expected_output[index];
       }
+    } 
+    // ====================== SIMULATION & I/O ======================
+    else {
+      const isSimBased = 
+        evalData.evaluation_method === 'Simulation-Based' ||
+        evalData.data_set === 'Simulation Data';
 
-            // Path 6: Trace Data — extract input & actual output from the span
-      // that contains both agent_id and agent_name in SpanAttributes
-      if (evalData.trace_data) {
-        const traceResult = this.extractInputOutputFromTraceData(evalData, index);
-        if (traceResult.input) {
-          inputRaw = traceResult.input;
-        }
-        if (traceResult.output) {
-          actualRaw = traceResult.output;
-        }
+      if (isSimBased) {
+        const simResult = this.extractSimInputOutputFromSpans(row);
+        inputRaw = simResult.input || inputRaw;
+        actualRaw = simResult.output || actualRaw;
+        expectedRaw = simResult.expected || expectedRaw;
+      } else {
+        // Standard I/O fallback
+        const inputItem = evalData.input_data?.[index];
+        const outputItem = evalData.output_data?.[index];
 
-        // For trace data, expected output comes from TWO possible locations:
-        // Location A: row.expected_output (inside individual_metrics row) — most common
-        // Location B: evalData.expected_output[index] (top-level array)
-        let traceExpSource: any = null;
-
-        // Location A: row.expected_output
-        if (row.expected_output) {
-          traceExpSource = row.expected_output;
-        }
-        // Location B: evalData.expected_output[index] (fallback)
-        else if (evalData.expected_output?.[index]) {
-          traceExpSource = evalData.expected_output[index];
+        if (inputItem) {
+          inputRaw = this.extractFieldValue(inputItem, ['Input', 'input', 'inputs', 'user_query']);
+          expectedRaw = this.extractFieldValue(inputItem, ['Expectation', 'expectation', 'expectations']);
         }
 
-        if (traceExpSource) {
-          if (typeof traceExpSource === 'string') {
-            expectedRaw = traceExpSource;
-          } else if (traceExpSource && typeof traceExpSource === 'object') {
-            expectedRaw =
-              traceExpSource.Expectation ||
-              traceExpSource.expectation ||
-              traceExpSource.Expectation_Value ||
-              traceExpSource.expected_output ||
-              traceExpSource.ExpectedOutput ||
-              this.extractFieldValue(traceExpSource, [
-                'Expectation', 'expectation', 'expectations',
-                'Expectation_Value', 'expected_output', 'ExpectedOutput',
-              ]) ||
-              '';
+        if (outputItem) {
+          actualRaw = this.extractFieldValue(outputItem, ['Output', 'output', 'outputs']);
+        }
+
+        if (!inputRaw && row.input) {
+          if (typeof row.input === 'object' && row.input !== null && row.input.user_query) {
+            inputRaw = row.input.user_query;
+          } else {
+            inputRaw = row.input;
           }
         }
+        if (!actualRaw && row.output) actualRaw = row.output;
+        if (!expectedRaw && row.expected_output) expectedRaw = row.expected_output;
       }
+    }
 
-      // Extract rationales from assessments in individual_metrics row
-      const assessments = row.detailed_results?.[0]?.assessments || row.assessments || [];
-      const getRationale = (name: string): string => {
-        const a = assessments.find((x: any) => x.assessment_name === name);
-        return a?.rationale || '';
-      };
+    // Rationales (unchanged)
+    const assessments = row.detailed_results?.[0]?.assessments || row.assessments || [];
+    const getRationale = (name: string): string => {
+      const a = assessments.find((x: any) => x.assessment_name === name);
+      return a?.rationale || '';
+    };
 
-      return {
-        runId: '',
-        testCaseId: row.case_id || `${String(index + 1).padStart(3, '0')}`,
-        time: '',
-        dateStr: '',
-        timestamp: 0,
-        input: this.toDisplayString(inputRaw),
-        expectedOutput: this.toDisplayString(expectedRaw),
-        actualOutput: this.toDisplayString(actualRaw),
-        status,
-        correctness,
-        coherence,
-        relevance,
-        conciseness,
-        completeness,
-        fluency,
-        hallucinationRate,
-        toxicityScore,
-        safety,
-        average,
-        totalTests: 1,
-        correctnessRationale: getRationale('correctness'),
-        coherenceRationale: getRationale('coherence'),
-        relevanceRationale: getRationale('relevance'),
-        concisenessRationale: getRationale('conciseness'),
-        completenessRationale: getRationale('completeness'),
-        fluencyRationale: getRationale('fluency'),
-        hallucinationRateRationale: getRationale('hallucination_rate'),
-        toxicityScoreRationale: getRationale('toxicity_score'),
-        safetyRationale: getRationale('safety'),
-        averageRationale: getRationale('average'),
-        statusRationale: getRationale('status'),
-      };
-    });
-  }
+    return {
+      runId: '',
+      testCaseId: row.case_id || `${String(index + 1).padStart(3, '0')}`,
+      time: '',
+      dateStr: '',
+      timestamp: 0,
+      input: this.toDisplayString(inputRaw),
+      expectedOutput: this.toDisplayString(expectedRaw),
+      actualOutput: this.toDisplayString(actualRaw),
+      status,
+      correctness,
+      coherence,
+      relevance,
+      conciseness,
+      completeness,
+      fluency,
+      hallucinationRate,
+      toxicityScore,
+      safety,
+      average,
+      totalTests: 1,
+      correctnessRationale: getRationale('correctness'),
+      coherenceRationale: getRationale('coherence'),
+      relevanceRationale: getRationale('relevance'),
+      concisenessRationale: getRationale('conciseness'),
+      completenessRationale: getRationale('completeness'),
+      fluencyRationale: getRationale('fluency'),
+      hallucinationRateRationale: getRationale('hallucination_rate'),
+      toxicityScoreRationale: getRationale('toxicity_score'),
+      safetyRationale: getRationale('safety'),
+      averageRationale: getRationale('average'),
+      statusRationale: getRationale('status'),
+      detailed_results: row.detailed_results || [],
+      agentConfig: evalData.agent_config || {}
+    };
+  });
+}
 
   private addInvalid(key: string, message: string) {
     this.invalidFields.update((map) => {
@@ -941,13 +1281,14 @@ private forceValidateField(fieldId: string, value: string) {
   const id = parts.slice(1).join('-');
 
   if (type === 'input') {
-    this.validateJson(value, `input-${id}`, ['Input', 'Expectation']);
+    // "Input" is required, "Expectation" is optional
+    this.validateJson(value, `input-${id}`, ['Input'], false, undefined, ['Expectation']);
   } 
   else if (type === 'output') {
     this.validateJson(value, `output-${id}`, ['Output']);
   } 
   else if (type === 'expected-trace') {
-    this.validateJson(value, `expected-trace-${id}`, ['Expectation']);   // This was the problematic one
+    this.validateJson(value, `expected-trace-${id}`, ['Expectation']);
   } 
   else if (type === 'trace') {
     this.validateJson(value, `trace-${id}`, undefined, false, ['span_count']);
@@ -1034,159 +1375,178 @@ private fallbackFormat(content: string): string {
   }
 
     validateJson(
-    value: string,
-    fieldKey: string,
-    requiredKeys?: string[],
-    skipDuplicateCheck: boolean = false,
-    exactOneKeys?: string[]
-  ): boolean {
-    const trimmed = value.trim();
-    if (trimmed === '') {
-      this.removeFromInvalid(fieldKey);
-      return true;
-    }
-
-    // ── Duplicate key check ──
-    if (!skipDuplicateCheck) {
-      const keyRegex = /"([^"\\]*(?:\\.[^"\\]*)*)"\s*:/g;
-      const foundKeys: string[] = [];
-      let match;
-
-      while ((match = keyRegex.exec(trimmed)) !== null) {
-        foundKeys.push(match[1]);
-      }
-
-      // Check exactOneKeys — must appear exactly once
-      if (exactOneKeys && exactOneKeys.length > 0) {
-        for (const exactKey of exactOneKeys) {
-          const lowerExactKey = exactKey.toLowerCase();
-          const matches = foundKeys.filter((k) => k.toLowerCase() === lowerExactKey);
-
-          if (matches.length > 1) {
-            this.addInvalid(fieldKey, this.getMultipleDataMessage(fieldKey, exactKey));
-            return false;
-          }
-          if (matches.length === 0) {
-            this.addInvalid(fieldKey, `Missing required key: "${exactKey}"`);
-            return false;
-          }
-        }
-        // ── KEY CHANGE: When exactOneKeys is set, ONLY check those keys.
-        //    Skip checking all other keys for duplicates.
-        //    This ensures trace data only validates via span_count.
-      } else {
-        // No exactOneKeys — check requiredKeys for duplicates
-        if (requiredKeys && requiredKeys.length > 0) {
-          for (const reqKey of requiredKeys) {
-            const lowerReqKey = reqKey.toLowerCase();
-            const matches = foundKeys.filter((k) => k.toLowerCase() === lowerReqKey);
-            if (matches.length > 1) {
-              this.addInvalid(fieldKey, this.getMultipleDataMessage(fieldKey, reqKey));
-              return false;
-            }
-          }
-        }
-
-        // Check all other keys for duplicates (only when no exactOneKeys)
-        const keyCounts = new Map<string, number>();
-        for (const key of foundKeys) {
-          const lowerKey = key.toLowerCase();
-          keyCounts.set(lowerKey, (keyCounts.get(lowerKey) || 0) + 1);
-        }
-
-        for (const [lowerKey, count] of keyCounts) {
-          if (count > 1) {
-            const isRequired = requiredKeys?.some((k) => k.toLowerCase() === lowerKey);
-
-            if (!isRequired) {
-              const originalKey = foundKeys.find((k) => k.toLowerCase() === lowerKey) || lowerKey;
-              this.addInvalid(fieldKey, this.getMultipleDataMessage(fieldKey, originalKey));
-              return false;
-            }
-          }
-        }
-      }
-    }
-
-    // ── JSON parsing ──
-    let parsed: any;
-    try {
-      parsed = JSON.parse(trimmed);
-    } catch (e) {
-      const msg = (e as Error).message;
-      let errorMsg = 'Invalid JSON format';
-      if (msg.includes('Unexpected token')) {
-        const match = msg.match(/position (\d+)/);
-        errorMsg = match ? `Unexpected token at position ${match[1]}` : 'Unexpected token found';
-      } else if (msg.includes('Expected')) {
-        errorMsg = msg.length > 60 ? msg.substring(0, 60) + '...' : msg;
-      }
-      this.addInvalid(fieldKey, errorMsg);
-      return false;
-    }
-
-    // ── Array check ──
-    if (Array.isArray(parsed)) {
-      this.addInvalid(fieldKey, this.getArrayNotAllowedMessage(fieldKey));
-      return false;
-    }
-
-    // ── Validate requiredKeys (strict — no extra keys allowed) ──
-    if (requiredKeys && requiredKeys.length > 0) {
-      if (typeof parsed === 'object' && parsed !== null) {
-        const originalKeys = Object.keys(parsed);
-
-        for (const reqKey of requiredKeys) {
-          const lowerReqKey = reqKey.toLowerCase();
-          const matchingKeys = originalKeys.filter((k) => k.toLowerCase() === lowerReqKey);
-          if (matchingKeys.length === 0) {
-            this.addInvalid(fieldKey, `Missing required key: "${reqKey}"`);
-            return false;
-          }
-        }
-
-        const extraKeys = originalKeys.filter((k) => {
-          return !requiredKeys.some((reqKey) => reqKey.toLowerCase() === k.toLowerCase());
-        });
-
-        if (extraKeys.length > 0) {
-          const allowedKeysStr = requiredKeys.join('", "');
-          const extraKeysStr = extraKeys.join('", "');
-
-          if (extraKeys.length === 1) {
-            this.addInvalid(fieldKey, `Unexpected key "${extraKeys[0]}" found. Only "${allowedKeysStr}" are allowed.`);
-          } else {
-            this.addInvalid(fieldKey, `Unexpected keys "${extraKeysStr}" found. Only "${allowedKeysStr}" are allowed.`);
-          }
-          return false;
-        }
-      } else {
-        this.addInvalid(fieldKey, 'JSON must be an object containing the required keys.');
-        return false;
-      }
-    }
-
-    // ── Validate exactOneKeys exist at parsed level ──
-    if (exactOneKeys && exactOneKeys.length > 0) {
-      if (typeof parsed === 'object' && parsed !== null) {
-        const originalKeys = Object.keys(parsed);
-        for (const exactKey of exactOneKeys) {
-          const lowerExactKey = exactKey.toLowerCase();
-          const matchingKeys = originalKeys.filter((k) => k.toLowerCase() === lowerExactKey);
-          if (matchingKeys.length === 0) {
-            this.addInvalid(fieldKey, `Missing required key: "${exactKey}"`);
-            return false;
-          }
-        }
-      } else {
-        this.addInvalid(fieldKey, 'JSON must be an object containing the required keys.');
-        return false;
-      }
-    }
-
+  value: string,
+  fieldKey: string,
+  requiredKeys?: string[],
+  skipDuplicateCheck: boolean = false,
+  exactOneKeys?: string[],
+  optionalKeys?: string[]  // NEW PARAMETER
+): boolean {
+  const trimmed = value.trim();
+  if (trimmed === '') {
     this.removeFromInvalid(fieldKey);
     return true;
   }
+
+  // ── Duplicate key check ──
+  if (!skipDuplicateCheck) {
+    const keyRegex = /"([^"\\]*(?:\\.[^"\\]*)*)"\s*:/g;
+    const foundKeys: string[] = [];
+    let match;
+
+    while ((match = keyRegex.exec(trimmed)) !== null) {
+      foundKeys.push(match[1]);
+    }
+
+    // Check exactOneKeys — must appear exactly once
+    if (exactOneKeys && exactOneKeys.length > 0) {
+      for (const exactKey of exactOneKeys) {
+        const lowerExactKey = exactKey.toLowerCase();
+        const matches = foundKeys.filter((k) => k.toLowerCase() === lowerExactKey);
+
+        if (matches.length > 1) {
+          this.addInvalid(fieldKey, this.getMultipleDataMessage(fieldKey, exactKey));
+          return false;
+        }
+        if (matches.length === 0) {
+          this.addInvalid(fieldKey, `Missing required key: "${exactKey}"`);
+          return false;
+        }
+      }
+    } else {
+      // No exactOneKeys — check requiredKeys for duplicates
+      if (requiredKeys && requiredKeys.length > 0) {
+        for (const reqKey of requiredKeys) {
+          const lowerReqKey = reqKey.toLowerCase();
+          const matches = foundKeys.filter((k) => k.toLowerCase() === lowerReqKey);
+          if (matches.length > 1) {
+            this.addInvalid(fieldKey, this.getMultipleDataMessage(fieldKey, reqKey));
+            return false;
+          }
+        }
+        // Also check optional keys for duplicates
+        if (optionalKeys && optionalKeys.length > 0) {
+          for (const optKey of optionalKeys) {
+            const lowerOptKey = optKey.toLowerCase();
+            const matches = foundKeys.filter((k) => k.toLowerCase() === lowerOptKey);
+            if (matches.length > 1) {
+              this.addInvalid(fieldKey, this.getMultipleDataMessage(fieldKey, optKey));
+              return false;
+            }
+          }
+        }
+      }
+
+      // Check all other keys for duplicates (excluding required and optional)
+      const allowedKeys = [
+        ...(requiredKeys || []),
+        ...(optionalKeys || [])
+      ].map(k => k.toLowerCase());
+      
+      const keyCounts = new Map<string, number>();
+      for (const key of foundKeys) {
+        const lowerKey = key.toLowerCase();
+        keyCounts.set(lowerKey, (keyCounts.get(lowerKey) || 0) + 1);
+      }
+
+      for (const [lowerKey, count] of keyCounts) {
+        if (count > 1 && !allowedKeys.includes(lowerKey)) {
+          const originalKey = foundKeys.find((k) => k.toLowerCase() === lowerKey) || lowerKey;
+          this.addInvalid(fieldKey, this.getMultipleDataMessage(fieldKey, originalKey));
+          return false;
+        }
+      }
+    }
+  }
+
+  // ── JSON parsing ──
+  let parsed: any;
+  try {
+    parsed = JSON.parse(trimmed);
+  } catch (e) {
+    const msg = (e as Error).message;
+    let errorMsg = 'Invalid JSON format';
+    if (msg.includes('Unexpected token')) {
+      const match = msg.match(/position (\d+)/);
+      errorMsg = match ? `Unexpected token at position ${match[1]}` : 'Unexpected token found';
+    } else if (msg.includes('Expected')) {
+      errorMsg = msg.length > 60 ? msg.substring(0, 60) + '...' : msg;
+    }
+    this.addInvalid(fieldKey, errorMsg);
+    return false;
+  }
+
+  // ── Array check ──
+  if (Array.isArray(parsed)) {
+    this.addInvalid(fieldKey, this.getArrayNotAllowedMessage(fieldKey));
+    return false;
+  }
+
+  // ── Validate requiredKeys exist ──
+  if (requiredKeys && requiredKeys.length > 0) {
+    if (typeof parsed === 'object' && parsed !== null) {
+      const originalKeys = Object.keys(parsed);
+
+      for (const reqKey of requiredKeys) {
+        const lowerReqKey = reqKey.toLowerCase();
+        const matchingKeys = originalKeys.filter((k) => k.toLowerCase() === lowerReqKey);
+        if (matchingKeys.length === 0) {
+          this.addInvalid(fieldKey, `Missing required key: "${reqKey}"`);
+          return false;
+        }
+      }
+
+      // UPDATED: Check for unexpected keys (excluding optional keys)
+      const allowedKeysLower = [
+        ...(requiredKeys || []),
+        ...(optionalKeys || [])
+      ].map(k => k.toLowerCase());
+
+      const extraKeys = originalKeys.filter((k) => {
+        return !allowedKeysLower.includes(k.toLowerCase());
+      });
+
+      if (extraKeys.length > 0) {
+        const allowedKeysStr = [
+          ...requiredKeys,
+          ...(optionalKeys || []).map(k => `${k} (optional)`)
+        ].join('", "');
+        const extraKeysStr = extraKeys.join('", "');
+
+        if (extraKeys.length === 1) {
+          this.addInvalid(fieldKey, `Unexpected key "${extraKeys[0]}" found. Only "${allowedKeysStr}" are allowed.`);
+        } else {
+          this.addInvalid(fieldKey, `Unexpected keys "${extraKeysStr}" found. Only "${allowedKeysStr}" are allowed.`);
+        }
+        return false;
+      }
+    } else {
+      this.addInvalid(fieldKey, 'JSON must be an object containing the required keys.');
+      return false;
+    }
+  }
+
+  // ── Validate exactOneKeys exist at parsed level ──
+  if (exactOneKeys && exactOneKeys.length > 0) {
+    if (typeof parsed === 'object' && parsed !== null) {
+      const originalKeys = Object.keys(parsed);
+      for (const exactKey of exactOneKeys) {
+        const lowerExactKey = exactKey.toLowerCase();
+        const matchingKeys = originalKeys.filter((k) => k.toLowerCase() === lowerExactKey);
+        if (matchingKeys.length === 0) {
+          this.addInvalid(fieldKey, `Missing required key: "${exactKey}"`);
+          return false;
+        }
+      }
+    } else {
+      this.addInvalid(fieldKey, 'JSON must be an object containing the required keys.');
+      return false;
+    }
+  }
+
+  this.removeFromInvalid(fieldKey);
+  return true;
+}
 
   toggleCellExpand(key: string) {
     this.expandedCells.update((set) => {
@@ -1264,6 +1624,8 @@ private updateSortedGroups(updater: (groups: DateGroup[]) => DateGroup[]): void 
       this.selectedEvalType.set('');
       this.selectedDataSet.set('');
     }
+    this.isEvaluateAction.set(false);  
+    this.noTracesError.set(null);      
     this.evalError.set(null);
     this.invalidFields.set(new Map());
     this.setSortedGroups([]);
@@ -1272,7 +1634,7 @@ private updateSortedGroups(updater: (groups: DateGroup[]) => DateGroup[]): void 
 
     this.dataPairs.set([{ id: this.generateId(), input: '', output: '' }]);
     this.traceDataList.set([{ id: this.generateId(), content: '', expectedOutput: '' }]);
-
+    this.simExpectedOutputs.set([{ id: this.generateId(), expectedOutput: '' }]);
     // Re-fetch history for the new combination
     if (this.selectedAgent() && this.selectedEvalType() && this.selectedDataSet()) {
       this.fetchHistory();
@@ -1280,7 +1642,10 @@ private updateSortedGroups(updater: (groups: DateGroup[]) => DateGroup[]): void 
   }
 
   onEvalTypeChange(value: string) {
+    this.isEvaluateAction.set(false);  
+    this.noTracesError.set(null);      
     this.selectedEvalType.set(value);
+    this.selectedDataSet.set('');
     if (!value) {
       this.selectedDataSet.set('');
     }
@@ -1292,6 +1657,11 @@ private updateSortedGroups(updater: (groups: DateGroup[]) => DateGroup[]): void 
     // Reset any uploaded/typed input data
     this.dataPairs.set([{ id: this.generateId(), input: '', output: '' }]);
     this.traceDataList.set([{ id: this.generateId(), content: '', expectedOutput: '' }]);
+    this.simExpectedOutputs.set([{ id: this.generateId(), expectedOutput: '' }]);
+    
+    this.simScenarios.set('');
+    this.simPersonas.set('');
+    this.simTurns.set(1);
 
     // Re-fetch history for the new combination
     if (this.selectedAgent() && this.selectedEvalType() && this.selectedDataSet()) {
@@ -1300,6 +1670,8 @@ private updateSortedGroups(updater: (groups: DateGroup[]) => DateGroup[]): void 
   }
 
   onDataSetChange() {
+    this.isEvaluateAction.set(false);  
+    this.noTracesError.set(null);      
     this.evalError.set(null);
     this.invalidFields.set(new Map());
     this.setSortedGroups([]);
@@ -1308,12 +1680,75 @@ private updateSortedGroups(updater: (groups: DateGroup[]) => DateGroup[]): void 
 
     this.dataPairs.set([{ id: this.generateId(), input: '', output: '' }]);
     this.traceDataList.set([{ id: this.generateId(), content: '', expectedOutput: '' }]);
-
+    this.simExpectedOutputs.set([{ id: this.generateId(), expectedOutput: '' }]);
+    
     // Reset any uploaded/typed input data
     this.dataPairs.set([{ id: this.generateId(), input: '', output: '' }]);
     this.traceDataList.set([{ id: this.generateId(), content: '', expectedOutput: '' }]);
+    // Reset simulation fields
+    this.simScenarios.set('');
+    this.simPersonas.set('');
+    this.simTurns.set(1);
 
     this.fetchHistory();
+  }
+
+  addSimExpectedOutput() {
+    this.simExpectedOutputs.update((list) => [...list, { id: this.generateId(), expectedOutput: '' }]);
+  }
+
+  removeSimExpectedOutput(id: string) {
+    this.simExpectedOutputs.update((list) => {
+      if (list.length <= 1) return list;
+      return list.filter((t) => t.id !== id);
+    });
+    this.invalidFields.update((map) => {
+      const newMap = new Map(map);
+      newMap.delete(`sim-expected-${id}`);
+      return newMap;
+    });
+  }
+
+  updateSimExpectedOutput(id: string, value: string) {
+    this.simExpectedOutputs.update((list) =>
+      list.map((t) => (t.id === id ? { ...t, expectedOutput: value } : t))
+    );
+    this.validateJson(value, `sim-expected-${id}`, ['Expectation']);
+  }
+
+  onSimExpectedFileUpload(event: Event, id: string) {
+    const fileInput = event.target as HTMLInputElement;
+    const file = fileInput.files?.[0];
+    if (!file) return;
+
+    if (file.type !== 'application/json' && !file.name.endsWith('.json')) {
+      this.showToast('error', 'Please select a valid JSON file.');
+      fileInput.value = '';
+      return;
+    }
+
+    const fieldKey = `sim-expected-${id}`;
+    this.setUploading(fieldKey, true);
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const content = e.target?.result as string;
+      try {
+        JSON.parse(content);
+      } catch {
+        this.setUploading(fieldKey, false);
+        this.showToast('error', 'The selected file does not contain valid JSON.');
+        return;
+      }
+      this.updateSimExpectedOutput(id, content);
+      this.setUploading(fieldKey, false);
+    };
+    reader.onerror = () => {
+      this.setUploading(fieldKey, false);
+      this.showToast('error', 'Failed to read the file.');
+    };
+    reader.readAsText(file);
+    fileInput.value = '';
   }
 
   addDataPair() {
@@ -1334,8 +1769,11 @@ private updateSortedGroups(updater: (groups: DateGroup[]) => DateGroup[]): void 
   }
 
   updateInput(id: string, value: string) {
-    this.dataPairs.update((pairs) => pairs.map((p) => (p.id === id ? { ...p, input: value } : p)));
-    this.validateJson(value, `input-${id}`, ['Input', 'Expectation']);
+    this.dataPairs.update((pairs) =>
+      pairs.map((p) => (p.id === id ? { ...p, input: value } : p))
+    );
+    // "Input" is required, "Expectation" is optional
+    this.validateJson(value, `input-${id}`, ['Input'], false, undefined, ['Expectation']);
   }
 
   updateOutput(id: string, value: string) {
@@ -1441,43 +1879,38 @@ private updateSortedGroups(updater: (groups: DateGroup[]) => DateGroup[]): void 
   fileInput.value = '';
 }
 
-  onFileUpload(event: Event, id: string, target: 'input' | 'output') {
+  onFileUpload(event: Event, pairId: string, fieldType: 'input' | 'output') {
     const fileInput = event.target as HTMLInputElement;
     const file = fileInput.files?.[0];
     if (!file) return;
 
-    if (file.type !== 'application/json' && !file.name.endsWith('.json')) {
-      this.showToast('error', 'Please select a valid JSON file.');
-      fileInput.value = '';
-      return;
-    }
-
-    const fieldKey = `${target}-${id}`;
-    this.setUploading(fieldKey, true);
+    this.uploadingFields.update((set) => {
+      const newSet = new Set(set);
+      newSet.add(`${fieldType}-${pairId}`);
+      return newSet;
+    });
 
     const reader = new FileReader();
     reader.onload = (e) => {
-      const content = e.target?.result as string;
-      try {
-        JSON.parse(content);
-      } catch {
-        this.setUploading(fieldKey, false);
-        this.showToast('error', 'The selected file does not contain valid JSON.');
-        return;
-      }
-      if (target === 'input') {
-        this.updateInput(id, content);
+      const content = (e.target?.result as string) || '';
+      
+      if (fieldType === 'input') {
+        this.updateInput(pairId, content);
+        // Validation is already called in updateInput with optional Expectation
       } else {
-        this.updateOutput(id, content);
+        this.updateOutput(pairId, content);
       }
-      this.setUploading(fieldKey, false);
-    };
-    reader.onerror = () => {
-      this.setUploading(fieldKey, false);
-      this.showToast('error', 'Failed to read the file.');
+
+      // Reset file input
+      fileInput.value = '';
+      
+      this.uploadingFields.update((set) => {
+        const newSet = new Set(set);
+        newSet.delete(`${fieldType}-${pairId}`);
+        return newSet;
+      });
     };
     reader.readAsText(file);
-    fileInput.value = '';
   }
 
   isUploading(key: string): boolean {
@@ -1496,100 +1929,348 @@ private updateSortedGroups(updater: (groups: DateGroup[]) => DateGroup[]): void 
     });
   }
 
-  onEvaluate() {
-    if (this.hasInvalidFields()) return;
+  
+  validateAllFields(): void {
+    // Clear existing invalid fields
+    this.invalidFields.set(new Map());
 
-    if (this.isTraceData()) {
-      const hasEmpty = this.traceDataList().some((t) => t.content.trim() === '');
-      if (hasEmpty) {
-        this.showToast('error', 'Please provide trace data.');
-        return;
+    // Validate agent selection
+    if (!this.selectedAgent()) {
+      this.addInvalid('agent', 'Please select an agent');
+    }
+
+    // Validate evaluation type
+    if (!this.selectedEvalType()) {
+      this.addInvalid('eval-type', 'Please select an evaluation type');
+    }
+
+    // Validate data set
+    if (!this.selectedDataSet()) {
+      this.addInvalid('data-set', 'Please select a data set');
+    }
+
+    // Validate based on scenario
+    if (this.isConfigIoScenario()) {
+      // Validate input/output data pairs
+      for (const pair of this.dataPairs()) {
+        this.validateJson(pair.input, `input-${pair.id}`, ['Input'], false, undefined, ['Expectation']);
+        this.validateJson(pair.output, `output-${pair.id}`, ['Output']);
       }
-    } else {
-      const hasEmpty = this.dataPairs().some((p) => p.input.trim() === '' || p.output.trim() === '');
-      if (hasEmpty) {
-        this.showToast('error', 'Please fill in all Input and Output data fields.');
+    } else if (this.isSimulationBased()) {
+      // Validate simulation fields
+      this.validateSimTextField('sim-scenarios', this.simScenarios());
+      this.validateSimTextField('sim-personas', this.simPersonas());
+      
+      if (this.simTurns() < 1) {
+        this.addInvalid('sim-turns', 'Max turns must be at least 1');
+      }
+    } else if (this.isTraceData()) {
+      // Validate trace data
+      for (const trace of this.traceDataList()) {
+        this.validateJson(trace.content, `trace-${trace.id}`, undefined, false, ['span_count']);
+        if (trace.expectedOutput.trim()) {
+          this.validateJson(trace.expectedOutput, `expected-trace-${trace.id}`, ['Expectation']);
+        }
+      }
+    } else if (this.needsDataInput()) {
+      // Validate input/output pairs
+      for (const pair of this.dataPairs()) {
+        this.validateJson(pair.input, `input-${pair.id}`, ['Input'], false, undefined, ['Expectation']);
+        this.validateJson(pair.output, `output-${pair.id}`, ['Output']);
+      }
+    }
+  }
+
+  onEvaluate(): void {
+  
+  this.isEvaluateAction.set(true);  
+  this.noTracesError.set(null);  
+
+  // Validate all fields
+  this.validateAllFields();
+  if (this.hasInvalidFields()) {
+    return;
+  }
+
+  // ── Base Payload ──
+  const payload: any = {
+    agent_id: this.apiAgentId(),
+    evaluation_type: this.selectedEvalType(),
+    created_by: this._stateService.getLoginDetails()?.Email || '',
+  };
+
+// Replace the existing dateRange block with this:
+const dateRangeVal = this.dateRange();
+if (dateRangeVal && dateRangeVal.length === 2) {
+  const start = dateRangeVal[0];
+  const end = dateRangeVal[1];
+
+   // Format: YYYY-MM-DDT00:00:00Z (12:00 AM of start date)
+  payload.start_time = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}-${String(start.getDate()).padStart(2, '0')}T00:00:00Z`;
+
+  // Format: YYYY-MM-DDT23:59:59Z (11:59 PM of end date)
+  payload.end_time = `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, '0')}-${String(end.getDate()).padStart(2, '0')}T23:59:59Z`;
+
+  console.log('Full ISO dates added:', payload.start_time, 'to', payload.end_time);
+} else {
+  console.log('No date range selected (optional for Online I/O)');
+}
+
+  // =============================================
+  // 1. SIMULATION-BASED
+  // =============================================
+  if (this.isSimulationBased()) {
+    payload.evaluation_method = 'Simulation-Based';
+    payload.agent_api_key = this.selectedAgentObj()?.agent_api_key || '';
+    payload.goal = this.simScenarios();
+    payload.persona = this.simPersonas();
+    payload.max_turns = this.simTurns();
+    // No data_set needed for simulation
+  }
+
+  // =============================================
+// 2. ONLINE CONFIG + I/O DATASET
+// =============================================
+else if (this.isConfigIoScenario()) {
+  payload.evaluation_method = 'Config + I/O Dataset';
+  payload.agent_api_key = this.selectedAgentObj()?.agent_api_key || '';
+  payload.data_set = 'Config + I/O Dataset';
+
+  const parsedInputData: any[] = [];
+  const parsedOutputData: any[] = [];
+
+  for (const pair of this.dataPairs()) {
+    if (pair.input.trim()) {
+      try {
+        parsedInputData.push(JSON.parse(pair.input));
+      } catch (e) {
+        this.evalError.set(`Invalid JSON in Input Data: ${(e as Error).message}`);
         return;
       }
     }
+    if (pair.output.trim()) {
+      try {
+        parsedOutputData.push(JSON.parse(pair.output));
+      } catch (e) {
+        this.evalError.set(`Invalid JSON in Output Data: ${(e as Error).message}`);
+        return;
+      }
+    }
+  }
 
-    let payload: any;
+  payload.input_data = parsedInputData;
+  payload.output_data = parsedOutputData;
+}
 
-    if (this.isTraceData()) {
-      const traceList = this.traceDataList().map((t) => {
-        try { return JSON.parse(t.content); } catch { return t.content; }
-      });
-      const expectedOutputList = this.traceDataList()
-        .filter((t) => t.expectedOutput.trim() !== '')
-        .map((t) => {
-          try { return JSON.parse(t.expectedOutput); } catch { return t.expectedOutput; }
-        });
+  // =============================================
+  // 3. ONLINE I/O DATASET EVALUATION  ← NEW/FIXED
+  // =============================================
+  else if (
+    this.selectedEvalType() === 'Online' &&
+    this.selectedDataSet() === 'I/O Dataset Evaluation'
+  ) {
+    payload.evaluation_method = 'I/O Dataset Evaluation';
+    payload.data_set = 'I/O Dataset Evaluation';
 
-      payload = {
-        agent_id: this.selectedAgent(),
-        evaluation_type: this.selectedEvalType(),
-        data_set: 'Trace Data',
-        trace_data: traceList,
-        created_by: this._stateService.getLoginDetails()?.Email || '',
-        ...(expectedOutputList.length > 0 && { expected_output: expectedOutputList }),
-      };
-    } else {
-      const inputList = this.dataPairs().map((p) => {
-        try { return JSON.parse(p.input); } catch { return p.input; }
-      });
-      const outputList = this.dataPairs().map((p) => {
-        try { return JSON.parse(p.output); } catch { return p.output; }
-      });
-      payload = {
-        agent_id: this.selectedAgent(),
-        evaluation_type: this.selectedEvalType(),
-        data_set: 'Input/Output Data',
-        input_data: inputList,
-        output_data: outputList,
-        created_by: this._stateService.getLoginDetails()?.Email || '',
-      };
+    const parsedInputData: any[] = [];
+    const parsedOutputData: any[] = [];
+
+    for (const pair of this.dataPairs()) {
+      if (pair.input.trim()) {
+        try {
+          parsedInputData.push(JSON.parse(pair.input));
+        } catch (e) {
+          this.evalError.set(`Invalid JSON in Input Data: ${(e as Error).message}`);
+          return;
+        }
+      }
+      if (pair.output.trim()) {
+        try {
+          parsedOutputData.push(JSON.parse(pair.output));
+        } catch (e) {
+          this.evalError.set(`Invalid JSON in Output Data: ${(e as Error).message}`);
+          return;
+        }
+      }
     }
 
-    this.isEvaluating.set(true);
-    this.evalError.set(null);
-    // Auto-scroll to the loading row after it renders
-    setTimeout(() => {
+    payload.input_data = parsedInputData;
+    payload.output_data = parsedOutputData;
+  }
+
+  // =============================================
+  // 4. TRACE-BASED (Online or Offline) + Config + Trace
+  // =============================================
+  else if (this.isTraceData()) {
+    payload.data_set = this.selectedDataSet();
+
+    const parsedTraceData: any[] = [];
+    const parsedExpected: any[] = [];
+
+    for (const trace of this.traceDataList()) {
+      if (trace.content.trim()) {
+        try {
+          parsedTraceData.push(JSON.parse(trace.content));
+        } catch (e) {
+          this.evalError.set(`Invalid JSON in Trace Data: ${(e as Error).message}`);
+          return;
+        }
+      }
+      if (trace.expectedOutput?.trim()) {
+        try {
+          parsedExpected.push(JSON.parse(trace.expectedOutput));
+        } catch (e) {
+          this.evalError.set(`Invalid JSON in Expected Output: ${(e as Error).message}`);
+          return;
+        }
+      }
+    }
+
+    // === BOTH Online Trace-Based AND Config + Trace now use same payload structure ===
+    if (this.selectedEvalType() === 'Online') {
+      payload.agent_api_key = this.selectedAgentObj()?.agent_api_key || '';
+
+      if (this.selectedDataSet() === 'Config + Trace Data') {
+        payload.evaluation_method = 'Config + Trace Data';
+      } else {
+        payload.evaluation_method = 'Trace-Based Evaluation';   // or 'trace-based-evaluation' if backend expects exact string
+      }
+
+      // Do NOT send trace_data by default for online trace cases (backend fetches it)
+      if (parsedTraceData.length > 0) {
+        payload.trace_data = parsedTraceData;
+      }
+
+      if (parsedExpected.length > 0) {
+        payload.expected_output = parsedExpected;
+      }
+    } 
+    else {
+      // Offline Trace Data (keep original behavior)
+      payload.evaluation_method = 'Trace Data';
+      payload.trace_data = parsedTraceData;
+
+      if (parsedExpected.length > 0) {
+        payload.output_data = parsedExpected;
+      }
+    }
+  }
+
+  // =============================================
+  // 5. OFFLINE FALLBACK (Input/Output Data)
+  // =============================================
+  else if (this.needsDataInput() && !this.isTraceData()) {
+    payload.data_set = this.selectedDataSet();
+
+    const parsedInputData: any[] = [];
+    const parsedOutputData: any[] = [];
+
+    for (const pair of this.dataPairs()) {
+      if (pair.input.trim()) {
+        try {
+          parsedInputData.push(JSON.parse(pair.input));
+        } catch (e) {
+          this.evalError.set(`Invalid JSON in Input Data: ${(e as Error).message}`);
+          return;
+        }
+      }
+      if (pair.output.trim()) {
+        try {
+          parsedOutputData.push(JSON.parse(pair.output));
+        } catch (e) {
+          this.evalError.set(`Invalid JSON in Output Data: ${(e as Error).message}`);
+          return;
+        }
+      }
+    }
+
+    payload.input_data = parsedInputData;
+    payload.output_data = parsedOutputData;
+  }
+
+  // Execute
+this.isEvaluating.set(true);
+this.scrollToLoadingRow();
+
+this._evalService.evaluateAgent(payload).subscribe({
+  next: (res) => {
+    this.isEvaluating.set(false);
+    
+    if (res.success && res.data) {
+      const newResults = this.mapFetchedToResults(res.data);
+      
+      if (newResults.length > 0) {
+        // Use the same merging logic as mapResultsToTable for consistency
+        const now = new Date();
+        const dateStr = this.toDateKey(now);
+
+        const existingGroups = this.dateGroups();
+        const matchingGroupIndex = existingGroups.findIndex(g => g.dateKey === dateStr);
+
+        if (matchingGroupIndex !== -1) {
+          // Merge into today's existing group (at the top)
+          this.updateSortedGroups((groups) =>
+            groups.map((g: DateGroup, idx) =>
+              idx === matchingGroupIndex
+                ? { 
+                    ...g, 
+                    results: [...newResults, ...g.results] 
+                  }
+                : g
+            )
+          );
+        } else {
+          // No group for today yet — create new one
+          const newGroup: DateGroup = {
+            dateKey: dateStr,
+            dateLabel: this.formatDateLabel(dateStr),
+            results: newResults,
+          };
+          this.updateSortedGroups((groups) => [newGroup, ...groups]);
+        }
+
+        // Auto-expand today's group
+        this.activeDateKey.set(dateStr);
+      }
+    } else {
+      this.evalError.set(res.message || 'Evaluation failed.');
+    }
+  },
+  error: (err) => {
+    this.isEvaluating.set(false);
+    this.evalError.set(err?.error?.message || err?.message || 'Unexpected error');
+  },
+});
+}
+
+  scrollToLoadingRow(): void {
+    // Retry mechanism — the loading row may not be in DOM yet after signal update
+    let attempts = 0;
+    const maxAttempts = 15;
+    const baseDelay = 50;
+
+    const tryScroll = (): void => {
       const loadingRow = document.querySelector('.eval-loading-row');
       if (loadingRow) {
         loadingRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      } else {
-        const container = document.querySelector('.eval-runs-container');
-        if (container) {
-          container.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
+        return;
       }
-    }, 50);
 
-    this._evalService.evaluateAgent(payload).subscribe({
-      next: (res: any) => {
-        this.isEvaluating.set(false);
+      // Fallback: scroll to container if loading row not found
+      const container = document.querySelector('.eval-runs-container');
+      if (container) {
+        container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        return;
+      }
 
-        if (res.success && res.data) {
-          const data = res.data;
-          if (data.status === 'failed') {
-            this.evalError.set(data.error);
-            this.showToast('error', data.error);
-            return;
-          }
-          this.mapResultsToTable(data);
-        } else {
-          this.evalError.set(res.message);
-          this.showToast('error', res.message);
-        }
-      },
-      error: (err: any) => {
-        this.isEvaluating.set(false);
-        const msg = err?.error?.message || err?.message || 'An unexpected error occurred during evaluation.';
-        this.evalError.set(msg);
-        this.showToast('error', msg);
-        console.error('Evaluation error:', err);
-      },
-    });
+      // Not in DOM yet — retry
+      attempts++;
+      if (attempts < maxAttempts) {
+        setTimeout(tryScroll, baseDelay + (attempts * 20));
+      }
+    };
+
+    setTimeout(tryScroll, baseDelay);
   }
 
 mapResultsToTable(data: any) {
@@ -1626,6 +2307,7 @@ mapResultsToTable(data: any) {
         dateStr,
         time,
         timestamp,
+        agentConfig: data.agent_config || {}
       }));
     } else {
       // No individual_metrics available — nothing to display
@@ -1769,4 +2451,436 @@ getRationaleTooltip(rationale: string): string {
   this.isSuperAdmin.set(mappedRole === 'super admin');
 }
   
+  // extractSimInputOutputFromSpans(row: any): { input: string; output: string; expected: string } {
+  //   const dr = row.detailed_results?.[0];
+  //   if (!dr?.spans) return { input: '', output: '', expected: '' };
+
+  //   const spans = Array.isArray(dr.spans) ? dr.spans : [];
+  //   if (spans.length === 0) return { input: '', output: '', expected: '' };
+
+  //   // Get the last span (most recent turn for this row)
+  //   const span = spans[spans.length - 1];
+  //   if (!span?.attributes) return { input: '', output: '', expected: '' };
+
+  //   const attrs = span.attributes;
+  //   let input = '';
+  //   let output = '';
+  //   let expected = '';
+
+  //   // ── Extract INPUT from mlflow.spanInputs → last user message (index -1) ──
+  //   const spanInputsRaw = attrs['mlflow.spanInputs'] || '';
+  //   if (spanInputsRaw) {
+  //     try {
+  //       const parsed = JSON.parse(spanInputsRaw);
+  //       const messages = parsed.messages || [];
+  //       const userMessages = messages.filter((m: any) => m.role === 'user');
+  //       if (userMessages.length > 0) {
+  //         input = userMessages[userMessages.length - 1].content || '';
+  //       }
+  //     } catch {
+  //       input = spanInputsRaw;
+  //     }
+  //   }
+
+  //   // ── Extract ACTUAL OUTPUT from mlflow.spanOutputs ──
+  //   const spanOutputsRaw = attrs['mlflow.spanOutputs'] || '';
+  //   if (spanOutputsRaw) {
+  //     try {
+  //       // spanOutputs is double-encoded: "\"text here\"" → parse once to unwrap
+  //       let parsed: any = JSON.parse(spanOutputsRaw);
+  //       if (typeof parsed === 'string') {
+  //         output = parsed;
+  //       } else {
+  //         output = JSON.stringify(parsed);
+  //       }
+  //     } catch {
+  //       output = spanOutputsRaw;
+  //     }
+  //   }
+
+  //   // ── Extract EXPECTED OUTPUT from row.expected_output (double-encoded string) ──
+  //   // Value format: "\"User stories may not be defined clearly...\""
+  //   // Parse once to unwrap the extra quotes
+  //   const expectedRaw = row.expected_output || '';
+  //   if (expectedRaw) {
+  //     try {
+  //       const parsed = JSON.parse(expectedRaw);
+  //       if (typeof parsed === 'string') {
+  //         expected = parsed;
+  //       } else {
+  //         expected = JSON.stringify(parsed);
+  //       }
+  //     } catch {
+  //       // If parse fails, use as-is
+  //       expected = expectedRaw;
+  //     }
+  //   }
+
+  //   return { input, output, expected };
+  // }
+
+  private extractSimInputOutputFromSpans(row: any): { input: string; output: string; expected: string } {
+  let input = '';
+  let output = '';
+  let expected = '';
+
+  const dr = row.detailed_results;
+  if (dr && Array.isArray(dr) && dr.length > 0) {
+
+    // ── INPUT: parse mlflow.spanInputs → user_message ──
+    const spans = dr[0].spans;
+    if (spans && Array.isArray(spans) && spans.length > 0) {
+      const attrs = spans[0].attributes || {};
+
+      const spanInputsStr =
+        attrs['mlflow.spanInputs'] ||
+        attrs.mlflow_spanInputs ||
+        '';
+      if (spanInputsStr) {
+        try {
+          const parsed = JSON.parse(spanInputsStr);
+          if (typeof parsed === 'object' && parsed.user_message) {
+            input = parsed.user_message;
+          } else if (typeof parsed === 'string') {
+            input = parsed;
+          } else {
+            input = JSON.stringify(parsed);
+          }
+        } catch {
+          input = spanInputsStr;
+        }
+      }
+
+      // ── OUTPUT: parse mlflow.spanOutputs (double-encoded string) ──
+      const spanOutputsStr =
+        attrs['mlflow.spanOutputs'] ||
+        attrs.mlflow_spanOutputs ||
+        '';
+      if (spanOutputsStr) {
+        try {
+          const parsed = JSON.parse(spanOutputsStr);
+          output = typeof parsed === 'string' ? parsed : JSON.stringify(parsed);
+        } catch {
+          output = spanOutputsStr;
+        }
+      }
+    }
+
+    // ── EXPECTED: from assessments where assessment_name === 'expected_response' ──
+    const assessments: any[] = dr[0].assessments || [];
+    const expectedAssessment = assessments.find(
+      (a: any) => a.assessment_name === 'expected_response'
+    );
+    if (expectedAssessment?.expectation?.value) {
+      expected = expectedAssessment.expectation.value;
+    }
+  }
+
+  // ── Fallbacks from row-level fields ──
+  if (!input && row.input) {
+    if (typeof row.input === 'object') {
+      input =
+        row.input.user_message ||
+        row.input.message ||
+        row.input.content ||
+        JSON.stringify(row.input);
+    } else {
+      input = String(row.input);
+    }
+  }
+
+  if (!output && row.output) {
+    output = typeof row.output === 'string' ? row.output : JSON.stringify(row.output);
+  }
+
+  if (!expected && row.expected_output) {
+    expected = String(row.expected_output);
+  }
+
+  return { input, output, expected };
+}
+  
+toggleConfigHighlight(index: number) {
+  this.expandedCauses.update(set => {
+    const newSet = new Set(set);
+    if (newSet.has(index)) {
+      newSet.delete(index);
+    } else {
+      newSet.add(index);
+    }
+    return newSet;
+  });
+}
+
+showAnalysisModal(result: EvalResult) {
+  let assessments: any[] = [];
+
+  if (result.detailed_results?.[0]?.assessments?.length) {
+    assessments = result.detailed_results[0].assessments;
+  } else if (result.detailed_results?.[0]) {
+    assessments = result.detailed_results[0].assessments || [];
+  }
+
+  const configEval = assessments.find((a: any) => 
+    a.assessment_name === 'agent_config_evaluation'
+  );
+
+  const agentConfig = (result as any).agentConfig || (result as any).agent_config || {};
+
+  let analysis: AnalysisData = {
+    testCaseId: result.testCaseId,
+    problem: "No analysis available.",
+    rootCauses: [],
+    suggestedFixes: [],
+    impact: "",
+    severity: "",
+    severityRationale: "",
+    agentConfig,
+    configHighlights: {}
+  };
+
+  if (configEval?.rationale) {
+    try {
+      let rationaleText = String(configEval.rationale).trim()
+        .replace(/\\n/g, '\n')
+        .replace(/\n/g, ' ')
+        .replace(/\\"/g, '"');
+
+      let parsed: any = null;
+      try {
+        parsed = JSON.parse(rationaleText);
+      } catch {
+        parsed = null;
+      }
+
+      if (parsed && typeof parsed === 'object') {
+        let rootCauses: string[] = [];
+        if (parsed.config_area) {
+          if (typeof parsed.config_area === 'string') {
+            rootCauses = parsed.config_area
+              .split(',')
+              .map((item: string) => item.trim())
+              .filter(Boolean);
+          } else if (Array.isArray(parsed.config_area)) {
+            rootCauses = parsed.config_area;
+          } else {
+            rootCauses = [String(parsed.config_area)];
+          }
+        } else if (Array.isArray(parsed.rootCauses)) {
+          rootCauses = parsed.rootCauses;
+        }
+
+        // Build highlights - improved matching
+        const highlights: Record<string, string> = {};
+        rootCauses.forEach(key => {
+          const cleanKey = key.trim();
+          if (agentConfig[cleanKey] !== undefined) {
+            highlights[cleanKey] = typeof agentConfig[cleanKey] === 'string' 
+              ? agentConfig[cleanKey] 
+              : JSON.stringify(agentConfig[cleanKey], null, 2);
+          } else if (agentConfig[cleanKey.toLowerCase()] !== undefined) {
+            // Fallback case-insensitive
+            highlights[cleanKey] = typeof agentConfig[cleanKey.toLowerCase()] === 'string' 
+              ? agentConfig[cleanKey.toLowerCase()] 
+              : JSON.stringify(agentConfig[cleanKey.toLowerCase()], null, 2);
+          }
+        });
+
+        analysis = {
+          testCaseId: result.testCaseId,
+          problem: parsed.highlight_problem || parsed.problem || "No specific problem identified.",
+          rootCauses: rootCauses,
+          suggestedFixes: parsed.suggestion ? [parsed.suggestion] : (Array.isArray(parsed.suggestedFixes) ? parsed.suggestedFixes : []),
+          impact: parsed.impact_on_output || parsed.impact || "",
+          severity: parsed.severity || "",
+          severityRationale: parsed.rationale || parsed.explanation || "",
+          agentConfig,
+          configHighlights: highlights
+        };
+      } else {
+        analysis.severityRationale = rationaleText;
+      }
+    } catch (e) {
+      console.error("Failed to parse rationale:", e);
+      analysis.severityRationale = String(configEval.rationale).trim();
+    }
+  }
+
+  this.selectedAnalysis.set(analysis);
+
+  // Force UI refresh
+  setTimeout(() => {
+    const modalEl = document.getElementById('analysisModal');
+    if (modalEl) {
+      new bootstrap.Modal(modalEl).show();
+    }
+    this.cdr.detectChanges();  // Important for signals
+  }, 100);
+}
+
+  getEvalMethodDescription(value: string): string {
+  return this.evalMethodDescriptions[value] || '';
+}
+
+  selectedMethodName = computed(() => {
+    if (!this.selectedDataSet()) return '';
+    const opt = this.datasetOptions().find(d => d.value === this.selectedDataSet());
+    return opt?.label || '';
+  });
+
+  toggleMethodDropdown() {
+    this.isMethodDropdownOpen.update(v => !v);
+  }
+
+  closeMethodDropdown() {
+    this.isMethodDropdownOpen.set(false);
+  }
+
+  selectMethod(value: string) {
+    this.selectedDataSet.set(value);
+    this.closeMethodDropdown();
+    this.onDataSetChange();
+  }
+  
+showCellTooltip(event: MouseEvent, text: string): void {
+  if (!text || text.length <= 80) return;
+
+  this.clearCellTooltipTimeout();
+
+  const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+  const gap = 2;
+
+  // Adaptive sizing based on content length
+  const isShort = text.length <= 250;
+  const tooltipWidth = isShort ? 280 : 420;
+  const tooltipMaxHeight = isShort ? 180 : 300;
+
+  let left = rect.left;
+  let top = rect.bottom + gap;
+
+  // If tooltip would go below viewport, show above
+  if (top + tooltipMaxHeight > window.innerHeight - 12) {
+    top = rect.top - tooltipMaxHeight - gap;
+  }
+  if (top < 12) {
+    top = 12;
+  }
+
+  // Clamp horizontal
+  if (left + tooltipWidth > window.innerWidth - 12) {
+    left = window.innerWidth - tooltipWidth - 12;
+  }
+  if (left < 12) {
+    left = 12;
+  }
+
+  this.cellTooltip = {
+    visible: true,
+    position: { left, top },
+    text: text
+  };
+
+  this.cellTooltipSizing = { width: tooltipWidth, maxHeight: tooltipMaxHeight };
+
+  this.cdr.detectChanges();
+
+  // RESET scroll to top every time a new tooltip appears
+  setTimeout(() => {
+    const el = document.querySelector('.cell-tooltip-popup') as HTMLElement;
+    if (el) {
+      el.scrollTop = 0;
+    }
+  }, 0);
+}
+
+hideCellTooltip(): void {
+  this.isCellTooltipHovered = false;
+  this.clearCellTooltipTimeout();
+
+  this.cellTooltipTimeout = setTimeout(() => {
+    if (!this.isCellTooltipHovered) {
+      this.cellTooltip.visible = false;
+      this.cdr.detectChanges();
+    }
+  }, 150);
+}
+
+onCellTooltipEnter(): void {
+  this.isCellTooltipHovered = true;
+  this.clearCellTooltipTimeout();
+}
+
+onCellTooltipLeave(): void {
+  this.isCellTooltipHovered = false;
+  this.clearCellTooltipTimeout();
+
+  this.cellTooltipTimeout = setTimeout(() => {
+    this.cellTooltip.visible = false;
+    this.cdr.detectChanges();
+  }, 100);
+}
+
+private clearCellTooltipTimeout(): void {
+  if (this.cellTooltipTimeout) {
+    clearTimeout(this.cellTooltipTimeout);
+    this.cellTooltipTimeout = null;
+  }
+}
+
+getPassCountTooltip(summary: { total: number; passed: number; failed: number; passRate: number }): string {
+  return `Number of cases passed out of total runs.`;
+}
+
+getPassRateTooltip(summary: { total: number; passed: number; failed: number; passRate: number }): string {
+  return `Pass rate in percentage`;
+}
+
+showMethodInfo(event: MouseEvent, text: string) {
+  event.stopPropagation();
+  const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+  const tooltipWidth = 280;
+
+  let left = rect.right + 10;
+  // If it would go off-screen right, flip to the left
+  if (left + tooltipWidth > window.innerWidth) {
+    left = rect.left - tooltipWidth - 10;
+  }
+
+  this.methodInfoTooltip.set({
+    visible: true,
+    text,
+    position: {
+      left,
+      top: rect.top + rect.height / 2 - 20
+    }
+  });
+}
+
+hideMethodInfo() {
+  this.methodInfoTooltip.update(v => ({ ...v, visible: false }));
+}
+
+showEvalTypeInfo(event: MouseEvent, text: string) {
+  event.stopPropagation();
+  const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+  const tooltipWidth = 280;
+
+  let left = rect.right + 10;
+  if (left + tooltipWidth > window.innerWidth) {
+    left = rect.left - tooltipWidth - 10;
+  }
+
+  this.evalTypeTooltip.set({
+    visible: true,
+    text,
+    position: {
+      left,
+      top: rect.top + rect.height / 2 - 20
+    }
+  });
+}
+
+hideEvalTypeInfo() {
+  this.evalTypeTooltip.update(v => ({ ...v, visible: false }));
+}
 }
