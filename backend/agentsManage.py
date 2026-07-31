@@ -150,7 +150,7 @@ class AgentManager(DatabaseCollections):
              #   data=mail_data,
             #    sourcefrom="Onboarding"
            # )
-             data = {
+            data = {
                 "agent_id": inserted_id,
                 "status": "Approved",
                 "sourcefrom": "Onboarding"
