@@ -278,7 +278,8 @@ class LyzrAPIManagement(DatabaseCollections):
                 #print(model_details)
                 llm_credential_id = model_details.get("credential_id", None)
                 provider_id = model_details.get("provider_id", "")
-                model_name = model_details.get("model", "")
+                model_name_data = model_details.get("model", {})
+                model_name = model_name_data.get("name", "")
                 tool_config = metadata.get("mcp_connector_value", None)
                 tools = ""
                 tool_config_detail = {}
@@ -383,7 +384,7 @@ class LyzrAPIManagement(DatabaseCollections):
                     "features": features,
                     "file_output": metadata.get("file_output", False), 
                     "image_output_config": metadata.get("image_output_config", None),
-                    "llm_credential_id": metadata.get("llm_credential_id", ""),
+                    "llm_credential_id": llm_credential_id,
                     "managed_agents": metadata.get("managed_agents", []),
                     "max_iterations": metadata.get("max_iterations", 15),
                     "mcp_prompts": metadata.get("mcp_prompts", []),
