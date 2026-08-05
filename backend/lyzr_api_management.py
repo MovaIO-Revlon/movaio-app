@@ -455,14 +455,14 @@ class LyzrAPIManagement(DatabaseCollections):
 
                 features = []
                 model_details = metadata.get("model_data", {})
-                #print(model_details)
                 llm_credential_id = model_details.get("credential_id", None)
                 provider_id = model_details.get("provider_id", "")
-                model_name = model_details.get("model", "")
+                model_name_data = model_details.get("model", {})
+                model_name = model_name_data.get("name", "")
                 tool_config = metadata.get("mcp_connector_value", None)
                 tools = ""
                 tool_config_detail = {}
-
+ 
                 if tool_config:
                     tools = tool_config.get("name", "")
                     features.append({
@@ -500,21 +500,6 @@ class LyzrAPIManagement(DatabaseCollections):
                             }
                         }
                     })
-
-                # if metadata.get("data_store_checkbox") == True:
-                #     data_store_value = metadata.get("data_store_value", {})
-                #     features.append({
-                #         "type":"DATA_QUERY",
-                #         "priority":0,
-                #         "config":{
-                #             "auto_train":data_store_value.get("auto_train", False),
-                #             "docs_rag_id": data_store_value.get("data", {}).get("_id", ""),
-                #             "max_tries":data_store_value.get("max_tries", 3),
-                #             "rag_url": "https://rag-prod.studio.lyzr.ai",
-                #             "time_limit":data_store_value.get("time_limit", 60)
-                #         }
-                #     })
-
                 if metadata.get("memory_checkbox") == True:
                     memory_value= metadata.get("memory_value", {})
                     features.append({
@@ -530,7 +515,7 @@ class LyzrAPIManagement(DatabaseCollections):
                             }
                         }
                     })
-                
+               
                 if metadata.get("context_checkbox") == True:
                     context_value = metadata.get("context_value", {})
                     features.append({
@@ -541,6 +526,7 @@ class LyzrAPIManagement(DatabaseCollections):
                             "context_name": context_value.get("name", "")
                         }
                     })
+ 
                 agent_data = {
                     "a2a_tools": metadata.get("a2a_tools", []),
                     "additional_model_params": metadata.get("additional_model_params", None),
@@ -551,9 +537,9 @@ class LyzrAPIManagement(DatabaseCollections):
                     "disable_artifacts": metadata.get("disable_artifacts", False),
                     "examples": metadata.get("example", None),
                     "features": features,
-                    "file_output": metadata.get("file_output", False), 
+                    "file_output": metadata.get("file_output", False),
                     "image_output_config": metadata.get("image_output_config", None),
-                    "llm_credential_id": metadata.get("llm_credential_id", ""),
+                    "llm_credential_id": llm_credential_id,
                     "managed_agents": metadata.get("managed_agents", []),
                     "max_iterations": metadata.get("max_iterations", 15),
                     "mcp_prompts": metadata.get("mcp_prompts", []),
