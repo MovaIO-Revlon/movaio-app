@@ -119,8 +119,8 @@
   },
   "conditionAgent": {
     "Agent_api_url": "https://agent-prod.studio.lyzr.ai/v3/inference/chat/",
-    "x_api_key": "",
-    "user_id": "",
+    "x_api_key": "${CONDITION_AGENT_API_KEY}",
+    "user_id": "${CONDITION_AGENT_USER_ID}",
     "agent_id": "69d7ac4bffc113ae6415fbd9",
     "session_id": "69d7ac4bffc113ae6415fbd9-aiakn9dbefj"
   },
