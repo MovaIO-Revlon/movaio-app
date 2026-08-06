@@ -50,6 +50,7 @@ services:
  # Application Backend service
   appbackend:
     build: ./backend
+    env_file: ./backend/.env
     container_name: app-backend
     restart: unless-stopped
     environment:
