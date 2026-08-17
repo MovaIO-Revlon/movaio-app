@@ -28,9 +28,6 @@ services:
         reservations:
           memory: 256M
 
-
-
-
   # Application Frontend service
   appfrontend:
     build: ./frontend
@@ -46,7 +43,22 @@ services:
       - opencon-network
     depends_on:
       - appbackend
-      
+
+
+ # TeamsApp Backend service
+  teamsbackend:
+    build: ./teamsbackend
+    container_name: teams-backend
+    restart: unless-stopped
+    environment:
+      - MONGO_URI=mongodb://admin_user:CWVlkPthQCknJZTKqflpjdGAYO3-8j@mongodb:27017/
+    ports:
+      - "5002:5002"
+    networks:
+      - opencon-network
+    depends_on:
+      - mongodb
+
  # Application Backend service
   appbackend:
     build: ./backend
