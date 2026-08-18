@@ -45,7 +45,7 @@ services:
       - appbackend
 
 
- TeamsApp Backend service
+ #TeamsApp Backend service
   teamsbackend:
     build: ./teamsbackend
     env_file: ./teamsbackend/.env
