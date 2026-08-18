@@ -26,8 +26,8 @@ logger = logging.getLogger("teams-app")
 
 # Database connection with error handling
 try:
-    client = MongoClient(os.getenv("DB_URL", "mongodb://admin_user:Movate$20261@mongodb:27017/"))
-    mydb = client[os.getenv("DB_NAME", "teamsapp")]
+    client = MongoClient(os.getenv("MONGODB_URL", "mongodb://admin_user:Movate$20261@mongodb:27017/"))
+    mydb = client[os.getenv("MONGODB_NAME", "teamsapp")]
     # Test connection
     client.admin.command('ping')
     logger.info(f'Successfully connected to MongoDB: {mydb}')
@@ -50,7 +50,7 @@ AUTHORITY = f"https://login.microsoftonline.com/{TENANT_ID}"
 SCOPES = ["https://graph.microsoft.com/.default"]
 
 # Initialize the Teams app
-app = App(token=None)
+app = App(token= get_app_token)
 
 async def send_message_activity(ctx: ActivityContext[MessageActivity], text="", attachments=None, suggested_actions=None) -> None:
     """Send a message activity with optional text, attachments, and suggested actions."""
