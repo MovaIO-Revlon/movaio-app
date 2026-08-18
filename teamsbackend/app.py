@@ -395,7 +395,7 @@ async def lifespan(fastapi_app):
 
 fastapi_app = app.server.adapter.app
 fastapi_app.router.lifespan_context = lifespan
-fastapi_app.add_api_route("/health", health, methods=["GET"])
+fastapi_app.add_api_route("/", health, methods=["GET"])
 asgi_app = fastapi_app
 
 if __name__ == "__main__":
