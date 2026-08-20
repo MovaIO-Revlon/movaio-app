@@ -39,7 +39,7 @@ export class Otp implements OnInit {
     this.emailID = this.loggedUser.Email;
     this.employeeId = this.loggedUser.EmployeeId;
     // this.startTimer();
-    this.resendOTP();
+    // this.resendOTP();
     this._stateService.clearLoginOTPDetails();
     this.cd.detectChanges();
   }
@@ -61,6 +61,12 @@ export class Otp implements OnInit {
         this._stateService.setLoginOTPDetails(UserOTPDetails);
         const UserDetails = this._stateService.getLoginDetails();
         this._stateService.setLoginDetails(UserDetails);
+        const route = localStorage.getItem('redirectRoute');
+        if (route) {
+          localStorage.removeItem('redirectRoute');
+          this.router.navigate([route]);
+          return;
+        }
         this.router.navigate(['/managesubscription']);
       },
       error: (err: any) => {

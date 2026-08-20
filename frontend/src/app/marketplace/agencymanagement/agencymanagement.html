@@ -145,11 +145,11 @@
                             <div class="fire-icon" *ngIf="agency.trending_agency === true">🔥</div>
                           </div>
 
-                          <div class="d-flex">
-                            <div class="description mb-2">
+                          <div class="description-wrapper">
+                            <div class="description" [appTooltip]="agency.agency_desc || 'No description available.'">
                               {{ agency.agency_desc || 'No description available.' }}
                             </div>
-                            <i class="fa-solid fa-circle-info route-menu ms-2"
+                            <i class="fa-solid fa-circle-info route-menu"
                               [appTooltip]="agency.agency_desc || 'No description available.'"></i>
                           </div>
                           <div class="agents">
@@ -230,7 +230,7 @@
                             <select class="form-select fs-14" [(ngModel)]="formData.team" name="team" #team="ngModel"
                               required>
                               <option value="" disabled>Select Team</option>
-                              <option *ngFor="let type of teamManagementData" [value]="type.TeamName">
+                              <option *ngFor="let type of personalTeamManagementData" [value]="type.TeamName">
                                 {{ type.TeamName }}
                               </option>
                             </select>
@@ -443,10 +443,10 @@
       <div class="modal-header">
         <div class="title-section">
           <div class="logo-agency2"><img src="assets/img/agency-icon.png" alt="agency-icon"></div>
-          <div class="d-flex flex-column">
+          <div class="d-flex flex-column flex-grow-1 min-width-0">
             <div class="title-agency"> {{ selectedAgency?.agency_name }} </div>
 
-            <div class="description">
+            <div class="description description-modal" [appTooltip]="selectedAgency?.agency_desc || 'No description available.'">
               {{ selectedAgency?.agency_desc || 'No description available.' }}
             </div>
             <div class="usage-section">

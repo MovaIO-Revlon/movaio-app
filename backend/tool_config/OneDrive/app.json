@@ -1,0 +1,31 @@
+{
+  "name": "ONEDRIVE",
+  "display_name": "Microsoft OneDrive",
+  "logo": "https://upload.wikimedia.org/wikipedia/commons/3/3c/Microsoft_Office_OneDrive_%282019-present%29.svg",
+  "provider": "Microsoft",
+  "version": "1.0.0",
+  "description": "Microsoft OneDrive REST API connector for managing files, folders, and drives via Microsoft Graph API.",
+  "security_schemes": {
+    "oauth2_client_credentials": {
+      "type": "oauth2",
+      "flow": "client_credentials",
+      "token_url": "https://login.microsoftonline.com/{{ tenant_id }}/oauth2/v2.0/token",
+      "client_id": "{{ client_id }}",
+      "client_secret": "{{ client_secrets }}",
+      "scope": "https://graph.microsoft.com/.default"
+    }
+  },
+  "default_security_credentials_by_scheme": {},
+  "categories": [
+    "Cloud Storage",
+    "Productivity"
+  ],
+  "visibility": "public",
+  "active": true,
+  "secrets": {
+    "ONEDRIVE_TENANT_ID": "{{ tenant_id }}",
+    "ONEDRIVE_CLIENT_ID": "{{ client_id }}",
+    "ONEDRIVE_CLIENT_SECRET": "{{ client_secrets }}"
+  },
+  "functions_file": "function.json"
+}

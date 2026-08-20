@@ -19,7 +19,6 @@ import {
   withInterceptors,
 } from '@angular/common/http';
 import { authInterceptor } from './services/auth.interceptor';
-import { defaultHeadersInterceptor } from './services/default-headers.interceptor';
 import { apiInterceptor } from './services/api.interceptor';
 
 export const appConfig: ApplicationConfig = {
@@ -32,11 +31,7 @@ export const appConfig: ApplicationConfig = {
     provideClientHydration(withEventReplay()),
     provideHttpClient(
       withFetch(),
-      withInterceptors([
-        authInterceptor,
-        defaultHeadersInterceptor,
-        apiInterceptor,
-      ])
+      withInterceptors([authInterceptor, apiInterceptor]),
     ),
   ],
 };

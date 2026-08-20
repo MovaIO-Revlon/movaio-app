@@ -26,6 +26,8 @@ import { AutomationLibrary } from './marketplace/automationlibrary/automationlib
 import { Promptrepository } from './marketplace/promptrepository/promptrepository';
 import { VoiceChat } from './chatbot/voice-chat';
 import { ConversationalChatbot } from './conversational-chatbot/conversational-chatbot';
+import { AgentApproval } from './agent-approval/agent-approval';
+import { ExternalAppConfig } from './marketplace/external-app-config/external-app-config';
 
 export const routes: Routes = [
   { path: '', component: Login, data: { label: 'Login' } },
@@ -111,6 +113,11 @@ export const routes: Routes = [
         component: Promptrepository,
         data: { label: 'Prompt Repository' },
       },
+      {
+        path: 'externalApplications',
+        component: ExternalAppConfig,
+        data: { label: 'externalApplications' },
+      },
       { path: '', redirectTo: 'agentmanagement', pathMatch: 'full' },
     ],
   },
@@ -155,6 +162,13 @@ export const routes: Routes = [
     canActivate: [AuthGuardService],
     pathMatch: 'full',
     data: { label: 'Conversational Chatbot' },
+  },
+  {
+    path: 'agentApproval',
+    component: AgentApproval,
+    canActivate: [AuthGuardService],
+    pathMatch: 'full',
+    data: { label: 'Agent Approval' },
   },
   { path: 'unauthorized', component: UnauthorizedPopup },
   { path: '**', component: NotFound },

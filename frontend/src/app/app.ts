@@ -13,6 +13,7 @@ import { HomeService } from './services/home.service';
 import { SemarketplaceService } from './services/semarketplace.service';
 import { secommendcenter } from './services/secommedcenter.service';
 import { NgMultiSelectDropDownModule } from 'ng-multiselect-dropdown';
+import { ActivatedRoute } from '@angular/router';
 
 @Component({
   selector: 'app-root',
@@ -37,7 +38,7 @@ import { NgMultiSelectDropDownModule } from 'ng-multiselect-dropdown';
 })
 export class App implements OnInit {
 
-  constructor(private readonly _loadingService: NgxSpinnerService, private readonly _router: Router, private readonly sessionTimeoutService: SessionTimeoutService) {
+  constructor(private readonly _loadingService: NgxSpinnerService, private readonly _router: Router, private readonly sessionTimeoutService: SessionTimeoutService, private route: ActivatedRoute) {
    this._router.events.subscribe((routerEvent: Event) => {
 
      if (routerEvent instanceof NavigationStart) {
@@ -52,6 +53,20 @@ export class App implements OnInit {
  }
 
  ngOnInit() {
+  this.route.queryParamMap.subscribe(params => {
+    const id = params.get('redirectRoute');
+    if (id) {
+      localStorage.setItem('redirectRoute', id);
+    }
+    const agentId = params.get('agentId');
+    if (agentId) {
+      localStorage.setItem('agentId', agentId);
+    }
+    const approvalAction = params.get('approvalAction');
+    if (approvalAction) {
+      localStorage.setItem('approvalAction', approvalAction);
+    }
+  });
    this.sessionTimeoutService.startSessionTimer();
    this.sessionTimeoutService.trackUserActivity();
  }

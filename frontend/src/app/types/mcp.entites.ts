@@ -7,11 +7,14 @@ export type TConnectorType =
   | 'docx'
   | 'pdf'
   | 'ppt'
-  | 'service_now'
+  | 'ServiceNow'
   | 'azure_devops'
   | 'rally'
   | 'github'
-  | 'svn';
+  | 'svn'
+  | 'OneDrive';
+
+export type TConnectorCategory = 'agent' | 'insight';
 
 export type TEntity = 'incident' | 'testcase' | 'defect';
 
@@ -123,4 +126,129 @@ export interface ISchemaForAgent {
         unique_values: any[];
       }[]
     | unknown;
+}
+
+export interface ITool {
+  _id:
+    | {
+        $oid: string;
+      }
+    | string;
+  tool_action: {
+    action_desc: string;
+    action_name: string;
+  }[];
+  tool_configs: string[];
+  tool_name: string;
+}
+
+export interface IConnection {
+  connection_id: string;
+  connection_name: string;
+  connector_type: TConnectorType;
+  connector_id: string;
+  created_at: string;
+  updated_at?: string;
+  user_id: string;
+  auth_type: 'oauth';
+}
+
+export interface IActiveTool {
+  _id: string;
+  connector_id: string;
+  connector_type: string;
+  connection_id: string;
+  tool_action_name: string;
+  description: string;
+  created_at: string;
+  type?: 'custom';
+  parameter: IFunctionJson;
+}
+export interface IConnectionData {
+  _id: string;
+  connection_name: string;
+  connector_type: TConnectorType;
+  connector_id: string;
+  user_id: string;
+  credentials: Record<string, any>;
+  auth_type: 'oauth2';
+  created_at: string;
+  active_tools: IActiveTool[];
+  tools_order: string[];
+}
+
+export interface ISecurityScheme {
+  type: string;
+  location: string;
+  name: string;
+  prefix: string;
+  clientId: string;
+  clientSecret: string;
+  scope: string;
+  authorizeUrl: string;
+  accessTokenUrl: string;
+  refreshTokenUrl: string;
+}
+
+export interface IProperty {
+  name: string;
+  type: string;
+  description: string;
+  required: boolean;
+  visible: boolean;
+}
+
+export interface IGroup {
+  key: string;
+  label: string;
+  locked: boolean;
+  enabled: boolean;
+  description: string;
+  required: boolean;
+  visible: boolean;
+  additionalProperties: boolean;
+  properties: IProperty[];
+}
+
+export interface IRequest {
+  id?: string;
+  // type?: 'local' | 'static' | 'custom';
+  name: string;
+  description: string;
+  tags: string;
+  visibility: string;
+  active: boolean;
+  protocol: string;
+  method: string;
+  serverUrl: string;
+  path: string;
+  paramsAdditional: boolean;
+  securityScheme: ISecurityScheme;
+  groups: IGroup[];
+}
+
+export interface IParameter {
+  type: string;
+  description?: string;
+  properties?: Record<string, IParameter>;
+  required?: string[];
+  visible?: string[];
+  additionalProperties?: boolean;
+}
+
+export interface IFunctionJson {
+  type?: 'local' | 'custom' | 'static';
+  id?: string;
+  name: string;
+  description: string;
+  tags: string[];
+  visibility: string;
+  active: boolean;
+  protocol: string;
+  protocol_data: {
+    method: string;
+    server_url: string;
+    path: string;
+  };
+  parameters: IParameter;
 }

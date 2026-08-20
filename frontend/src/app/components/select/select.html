@@ -1,6 +1,6 @@
 <popover
   [(isOpen)]="isOpen"
-  [attr.popover-width]="parentWidth() ? 'parent' : 'auto'"
+  [popover-width]="parentWidth()"
   [disabled]="disabled()"
 >
   <div
@@ -9,7 +9,7 @@
     [class]="classes()?.label"
     [class.select-placeholder]="!selectedLabel()"
     [attr.aria-expanded]="isOpen()"
-    [class.disabled]="disabled()"
+    [class.disabled-trigger]="disabled()"
   >
     <span>{{ selectedLabel() || placeholder() }}</span>
     <span class="icon">

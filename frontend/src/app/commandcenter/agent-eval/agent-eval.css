@@ -1920,28 +1920,6 @@
   cursor: default;
 }
 
-.cell-tooltip-popup {
-  position: fixed;
-  overflow-y: auto;
-  overflow-x: hidden;
-  background-color: #141920;
-  color: #f9fafb;
-  padding: 8px 12px;
-  border-radius: 6px;
-  font-size: 13px;
-  line-height: 1.5;
-  white-space: pre-wrap;
-  word-break: break-word;
-  word-wrap: break-word;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
-  z-index: 1070;
-  pointer-events: auto;
-  cursor: default;
-  animation: cellTooltipFadeIn 0.1s ease-out;
-  scrollbar-width: thin;
-  scrollbar-color: #6b7280 #374151;
-}
-
 .cell-tooltip-popup::-webkit-scrollbar {
   width: 5px;
 }
@@ -2056,19 +2034,6 @@
   line-height: 1.5;
 }
 
-@media (max-width: 768px) {
-  .no-traces-error {
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-  }
-
-  .no-traces-error__icon {
-    width: 64px;
-    height: 64px;
-  }
-}
-
 .form-step-row .form-group--date {
   max-width: 280px;
   flex-shrink: 0;
@@ -2142,4 +2107,94 @@
   white-space: pre-wrap;
   word-break: break-all;
   font-family: ui-monospace, monospace;
+}
+
+.datepicker-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.datepicker-placeholder {
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.75rem;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.form-group--date:not(.has-date-selection) .datepicker-wrapper ::ng-deep app-datepicker .label {
+  color: transparent !important;
+}
+
+.cell-tooltip-popup {
+  position: fixed;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background-color: #141920;
+  color: #f9fafb;
+  border-radius: 6px;
+  font-size: 13px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+  word-wrap: break-word;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  z-index: 1070;
+  pointer-events: auto;
+  cursor: default;
+  animation: cellTooltipFadeIn 0.1s ease-out;
+  scrollbar-width: thin;
+  scrollbar-color: #6b7280 #374151;
+  padding: 0;
+  max-width: 400px;
+}
+
+.cell-tooltip-popup__inner {
+  padding: 8px 36px 8px 12px; 
+  position: relative;
+  min-height: 24px;
+}
+
+.cell-tooltip-copy-btn {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+  background-color: rgba(255, 255, 255, 0.08);
+  color: #9ca3af;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+  z-index: 2;
+}
+
+.cell-tooltip-copy-btn:hover {
+  border-color: rgba(232, 131, 12, 0.6);
+  color: #e8830c;
+  background-color: rgba(232, 131, 12, 0.15);
+}
+
+.cell-tooltip-copy-btn--copied {
+  border-color: rgba(5, 150, 105, 0.6) !important;
+  color: #059669 !important;
+  background-color: rgba(5, 150, 105, 0.15) !important;
+}
+
+.cell-tooltip-copy-btn svg {
+  pointer-events: none;
+}
+
+.cell-tooltip-copy-btn:active {
+  transform: scale(0.92);
 }

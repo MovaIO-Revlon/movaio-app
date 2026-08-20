@@ -26,16 +26,47 @@
             href="javascript:void(0)"
             [ngClass]="{ 'red-clr': isActiveRoutePrefix('/marketplace'), 'text-dark': !isActiveRoutePrefix('/marketplace') }"
             (click)="marketplace_link()">Market Place</a></li>
-        <li class="nav-item pe-3 ps-3">
-          <div class="d-flex">
-            <i class="fa-solid fa-bell rou-ico me-2"></i>
+        <li class="nav-item pe-3 ps-3 position-relative">
+          <div class="notification-trigger">
+            <i class="fa-solid fa-bell rou-ico me-2" (click)="toggleNotifications($event)"></i>
             <a href="javascript:void(0)" (click)="openRolePrivilegeModal()" *ngIf="isSuperAdminMaster()">
               <i class="fa-solid fa-gear rou-ico gear-colour"></i>
             </a>
+
+            <div *ngIf="showNotifications" class="notifications-panel shadow-sm">
+              <div class="notifications-panel-header d-flex align-items-center justify-content-between">
+                <div>
+                  <h6 class="mb-1">Notifications</h6>
+                </div>
+                <button type="button" class="btn-close" aria-label="Close" (click)="closeNotifications()"></button>
+              </div>
+
+              <div class="notifications-tabs d-flex gap-3 border-bottom pb-2 mb-3">
+                <button type="button" class="tab-btn active">Requests ({{notificationRequestsCount}})</button>
+                <button type="button" class="tab-btn">Activities ({{notificationActivitiesCount}})</button>
+              </div>
+
+              <div class="notifications-list" *ngIf="notifications.length > 0">
+                <div class="notification-item mb-3" *ngFor="let notification of notifications">
+                  <div class="notification-item-label" *ngIf="notification?.type==='recieved_request'">Agent {{ notification?.data?.action }} Request</div>
+                    <div class="notification-item-card bg-light-warning rounded-3 p-3 d-flex justify-content-between align-items-start gap-3">
+                      <div class="fs-14">
+                        <strong>{{ notification?.data?.sender }}</strong> requested to {{ notification?.data?.action==='Onboarding' ? 'Onboard' : notification?.data?.action }}<br />
+                        <strong>{{ notification?.data?.agent_name }}</strong> Agent
+                      </div>
+                      <button type="button" class="btn btn-sm btn-outline-secondary" (click)="openApprovalPage(notification?.data)">View Request</button>
+                    </div>
+                    <div class="notification-item-time text-muted mt-2">{{ notification?.data?.timestamp | date:'h:mm a' }}</div>
+                </div>
+              </div>
+              <div *ngIf="notifications.length === 0" class="text-center text-muted fs-14">
+                No notifications to display.
+              </div>
+            </div>
           </div>
         </li>
         <li class="nav-item">
-          <popover popover-width="parent" [closeOnClick]="true">
+          <popover [popover-width]="true" [closeOnClick]="true">
             <div trigger class="d-flex flex-nowrap gap-2 cursor-pointer" >
               <img [src]="displayAvatar" class="rounded-2 w-10" alt="Avatar"/>
               <span class="fs-12 d-flex justify-content-between flex-column">

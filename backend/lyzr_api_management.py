@@ -266,7 +266,8 @@ class LyzrAPIManagement(DatabaseCollections):
         
             if data.get("sourcefrom") == "Onboarding":
                 agent_id = data.get("agent_id")
-                agent_details = self.agent_collection.find_one({"_id": ObjectId(agent_id)})
+                agent_details = self.agent_approval_request_collection.find_one({"_id": ObjectId(agent_id)})
+                master_agent_id = agent_details.get("master_agent_id", "")
                 metadata = agent_details.get("metadata", {})
                 approval_status = agent_details.get("Approval_Status", "Pending")
                 if not metadata:
@@ -362,16 +363,6 @@ class LyzrAPIManagement(DatabaseCollections):
                             "context_name": context_value.get("name", "")
                         }
                     })
-
-                # tool_config_detail = {
-                #     "action_names":[tool_config.get("description", "")],
-                #     "credential_id":tool_config.get("credential_id", ""),
-                #     "persist_auth":tool_config.get("persist_auth", True),
-                #     "provider_uuid":tool_config.get("provider_uuid", ""),
-                #     "server_id":tool_config.get("server_id", ""),
-                #     "tool_name":tool_config.get("name", ""),
-                #     "tool_source":tool_config.get("data","").get("tool_source", ""),
-                # }
                 agent_data = {
                     "a2a_tools": metadata.get("a2a_tools", []),
                     "additional_model_params": metadata.get("additional_model_params", None),
@@ -401,19 +392,25 @@ class LyzrAPIManagement(DatabaseCollections):
                     "tools": [tools],
                     "top_p": metadata.get("top_p", 0.9)
                 }
-                #print(agent_data)
                 result = self.lyzr_create_agent(agent_data)
                 
                 if result:
                     self.agent_collection.update_one(
+                        {"_id": ObjectId(master_agent_id)},
+                        {"$set": {"Approval_Status": "Approved", "agent_id": result.get("agent_id"), "api_agent_id": result.get("agent_id"),"Approval_Status_Message": "Approved"}}
+                    )
+                    self.agent_approval_request_collection.update_one(
                         {"_id": ObjectId(agent_id)},
                         {"$set": {"Approval_Status": "Approved", "agent_id": result.get("agent_id"), "api_agent_id": result.get("agent_id"),"Approval_Status_Message": "Approved"}}
+                    )
+                    self.user_notification_collection.delete_many(
+                        {"request_id":agent_id}
                     )
                     agent_details["Approval_Status"] = "Approved"
                     agent_details["Approval_Status_Message"] = "Approved"
                     agent_details["version"] = "1.0.0"
                     self.agent_version_history_collection.insert_one({
-                        "agent_id": agent_id,
+                        "agent_id": master_agent_id,
                         "version": "1.0.0",
                         "agent_doc_data": agent_details,
                         "updated_ts": agent_details.get("created_ts", datetime.now(timezone.utc)),
@@ -423,12 +420,14 @@ class LyzrAPIManagement(DatabaseCollections):
                 return "Agent approved and created successfully in Lyzr"
             elif data.get("sourcefrom") == "Update":
                 agent_id = data.get("agent_id")
-                agent_details = json.loads(json_util.dumps(self.agent_collection.find_one({"agent_id": agent_id})))
-                print("Type",type(agent_details))
-                _id = agent_details.get("_id")["$oid"]
+                agent_details = json.loads(json_util.dumps(self.agent_approval_request_collection.find_one({"_id": ObjectId(agent_id)})))
+                master_agent_id = agent_details.get("master_agent_id")
+                master_agent_details = json.loads(json_util.dumps(self.agent_collection.find_one({"agent_id": master_agent_id})))
+                print("Type",type(master_agent_details))
+                _id = master_agent_details.get("_id")["$oid"]
 
                 
-                agent_doc_data = agent_details.get("agent_doc_data", {})
+                agent_doc_data = master_agent_details.get("agent_doc_data", {})
                 agent_doc_data["Approval_Status"] = "Approved"
                 agent_doc_data["Approval_Status_Message"] = "Approved"
                 if "save_history" in agent_doc_data and agent_doc_data["save_history"]:
@@ -447,12 +446,9 @@ class LyzrAPIManagement(DatabaseCollections):
                         "updated_by": agent_details.get("approverEmail", ""),
                         "execution_count":0
                     })
-                self.agent_collection.update_one({'agent_id': agent_id}, {'$set':agent_doc_data}, upsert=True)
-                self.agent_collection.update_one({"agent_id": agent_id}, {"$set": {"agent_doc_data.version": agent_doc_data["version"]}})
                 metadata = agent_details.get("metadata", {})
                 if not metadata:
                     return "Agent details not found"
-
                 features = []
                 model_details = metadata.get("model_data", {})
                 llm_credential_id = model_details.get("credential_id", None)
@@ -462,7 +458,7 @@ class LyzrAPIManagement(DatabaseCollections):
                 tool_config = metadata.get("mcp_connector_value", None)
                 tools = ""
                 tool_config_detail = {}
- 
+
                 if tool_config:
                     tools = tool_config.get("name", "")
                     features.append({
@@ -515,7 +511,7 @@ class LyzrAPIManagement(DatabaseCollections):
                             }
                         }
                     })
-               
+                
                 if metadata.get("context_checkbox") == True:
                     context_value = metadata.get("context_value", {})
                     features.append({
@@ -526,7 +522,7 @@ class LyzrAPIManagement(DatabaseCollections):
                             "context_name": context_value.get("name", "")
                         }
                     })
- 
+
                 agent_data = {
                     "a2a_tools": metadata.get("a2a_tools", []),
                     "additional_model_params": metadata.get("additional_model_params", None),
@@ -537,7 +533,7 @@ class LyzrAPIManagement(DatabaseCollections):
                     "disable_artifacts": metadata.get("disable_artifacts", False),
                     "examples": metadata.get("example", None),
                     "features": features,
-                    "file_output": metadata.get("file_output", False),
+                    "file_output": metadata.get("file_output", False), 
                     "image_output_config": metadata.get("image_output_config", None),
                     "llm_credential_id": llm_credential_id,
                     "managed_agents": metadata.get("managed_agents", []),
@@ -556,29 +552,33 @@ class LyzrAPIManagement(DatabaseCollections):
                     "tools": [tools],
                     "top_p": metadata.get("top_p", 0.9)
                 }
-                resp = self.lyzr_update_agent(agent_id, agent_data)
+                resp = self.lyzr_update_agent(master_agent_id, agent_data)
+                self.agent_collection.update_one({'agent_id': master_agent_id}, {'$set':agent_doc_data}, upsert=True)
+                self.agent_collection.update_one({"agent_id": master_agent_id}, {"$set": {"agent_doc_data.version": agent_doc_data["version"]}})
+                self.agent_approval_request_collection.update_one({"_id": ObjectId(agent_id)}, {"$set": {"Approval_Status": "Approved", "Approval_Status_Message": "Approved"}})
+                self.user_notification_collection.delete_many(
+                    {"request_id":agent_id}
+                )
                 print(f"Lyzr update agent response: {resp}")
 
                 return "Agent updated successfully in Lyzr"
 
             elif data.get("sourcefrom") == "Delete":
                 agent_id = data.get("agent_id")
-                agent_details = self.agent_collection.find_one({
+                agent_details = self.agent_approval_request_collection.find_one({
                     "_id": ObjectId(agent_id),
                     "$or": [
                         {"isDeleted": {"$ne": True}},
                         {"isDeleted": {"$exists": False}}
                     ]
                 })
+                if not agent_details:
+                    return "Agent not found or already deleted"
+                master_agent_id = agent_details.get("master_agent_id", "")
                 lyzr_agent_id = agent_details.get("agent_id", "")
                 agent_provider_type = agent_details.get("agent_provider_type", "")
-                if not agent_details:
-                    return "Agent not found or already deleted", 404
+                
                 knowledge_store= agent_details.get("knowledge_store", {})
-                self.agent_collection.update_one(
-                    {"_id": ObjectId(agent_id)},
-                    {"$set": {"isDeleted": True}}
-                )
             
 
                 for ks in knowledge_store:
@@ -588,20 +588,47 @@ class LyzrAPIManagement(DatabaseCollections):
                 if agent_provider_type == "new":
                     headers = {"x-api-key": api_key, "Content-Type": "application/json"}
                     response = requests.delete(f"{LYZR_API_ENDPOINT}/agents/{lyzr_agent_id}", headers=headers)
+                self.agent_approval_request_collection.update_one(
+                    {"_id": ObjectId(agent_id)},
+                    {"$set": {"isDeleted": True, "Approval_Status": "Approved", "Approval_Status_Message": "Approved"}}
+                )
+                self.agent_collection.update_one(
+                    {"_id": ObjectId(master_agent_id)},
+                    {"$set": {"isDeleted": True}}
+                )
+                self.user_notification_collection.delete_many(
+                    {"request_id":agent_id}
+                )
                 return "Agent deleted successfully"
 
         else:
             if data.get("sourcefrom") == "Onboarding":
-                self.agent_collection.update_one(
+                self.agent_approval_request_collection.update_one(
                     {"_id": ObjectId(data.get("agent_id"))},
                     {"$set": {"Approval_Status": "Rejected","Approval_Status_Message": "Rejected"}}
                 )
+                self.user_notification_collection.delete_many(
+                    {"request_id":data.get("agent_id")}
+                )
                 return "Agent approval rejected"
 
+            elif data.get("sourcefrom") == "Update":
+                self.agent_approval_request_collection.update_one(
+                    {"_id": ObjectId(data.get("agent_id"))},
+                    {"$set": {"Approval_Status": "Rejected","Approval_Status_Message": "Rejected"}}
+                )
+                self.user_notification_collection.delete_many(
+                    {"request_id":data.get("agent_id")}
+                )
+                return "Agent update rejected"
+
             if data.get("sourcefrom") == "Delete":
-                self.agent_collection.update_one(
+                self.agent_approval_request_collection.update_one(
                     {"_id": ObjectId(data.get("agent_id"))},
                     {"$set": {"Approval_Status": "Approved","Approval_Status_Message": "Approved"}}
+                )
+                self.user_notification_collection.delete_many(
+                    {"request_id":data.get("agent_id")}
                 )
                 return "Agent deletion rejected"
 

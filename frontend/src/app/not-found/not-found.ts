@@ -20,7 +20,7 @@ export class NotFound implements OnInit {
     this._stateService.clearLoginDetails();
   }
   closePopup(): void {
-    this._router.navigate(['/login']);
+    this._router.navigate(['/']);
   }
 }
 

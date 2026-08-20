@@ -1,0 +1,80 @@
+.root {
+  overflow: hidden;
+  --accent-color: #f9a84a;
+}
+
+.cursor-pointer {
+  cursor: pointer;
+}
+.font-monospace {
+  font-family: "JetBrains Mono", monospace !important;
+}
+
+/* Custom Tab Styling */
+.active-tab {
+  border-color: var(--accent-color) !important;
+  color: var(--accent-color) !important;
+  background-color: transparent;
+}
+.inactive-tab {
+  border-color: transparent !important;
+  color: #6c6c72 !important;
+}
+.inactive-tab:hover {
+  color: #17171b !important;
+  border-color: #e3e2dd !important;
+}
+
+/* Form Inputs */
+.form-control:focus,
+.form-select:focus {
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 3px #eaeefc;
+  background-color: #ffffff;
+}
+.form-control,
+.form-select {
+  background-color: #fcfcfb;
+  border: 1px solid #e3e2dd;
+}
+.form-check-input:checked {
+  background-color: var(--accent-color);
+  border-color: var(--accent-color);
+}
+
+.border-dashed {
+  border-style: dashed !important;
+  border-color: #e3e2dd !important;
+  color: var(--accent-color);
+  background: transparent;
+}
+.border-dashed:hover {
+  background-color: #eaeefc;
+  border-color: #c9d3f5 !important;
+}
+
+/* Scrollbars */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #ced4da;
+  border-radius: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #adb5bd;
+}
+
+.bg-dark.custom-scrollbar::-webkit-scrollbar-track {
+  background: #212529;
+}
+.bg-dark.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #495057;
+}
+.bg-dark.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #6c757d;
+}

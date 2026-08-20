@@ -141,7 +141,7 @@ export class AgentEval {
 
   isMethodOptionDisabled(optionValue: string): boolean {
     if (this.selectedEvalType() === 'Online') {
-      return ['Config + Trace Data', 'Configuration Only'].includes(optionValue);
+      return ['Configuration Only'].includes(optionValue);
     }
     return false;
   }
@@ -305,6 +305,13 @@ export class AgentEval {
     text: '',
     position: { left: 0, top: 0 }
   });
+  copiedItems = signal<Set<string>>(new Set());
+  tooltipCopied = signal<boolean>(false);
+  evaluatingDateKey = signal<string | null>(null);
+  showFallbackLoading = computed(() => {
+  return this.isEvaluating() && 
+    !this.dateGroups().some(g => g.dateKey === this.evaluatingDateKey());
+});
 
 
   ngOnInit(): void {
@@ -585,13 +592,14 @@ export class AgentEval {
     };
 
     this.isFetchingHistory.set(true);
+    this.evaluatingDateKey.set(null); 
     this.evalError.set(null);
     this.noTracesError.set(null); 
 
     this._evalService.fetchEvaluationData(request).subscribe({
       next: (res) => {
         this.isFetchingHistory.set(false);
-
+        this.evaluatingDateKey.set(null); 
         if (res.success && res.data) {
           const results = this.mapFetchedToResults(res.data);
           this.setSortedGroups(this.groupResultsByDate(results));
@@ -607,6 +615,7 @@ export class AgentEval {
       },
       error: (err: any) => {
         this.isFetchingHistory.set(false);
+        this.evaluatingDateKey.set(null); 
         this.setSortedGroups([]);
         this.activeDateKey.set(null);
         this.noTracesError.set(null);
@@ -1984,6 +1993,10 @@ private updateSortedGroups(updater: (groups: DateGroup[]) => DateGroup[]): void 
   onEvaluate(): void {
   
   this.isEvaluateAction.set(true);  
+  const todayKey = this.toDateKey(new Date());
+  this.isEvaluating.set(true);
+  this.evaluatingDateKey.set(todayKey);
+  this.activeDateKey.set(todayKey);
   this.noTracesError.set(null);  
 
   // Validate all fields
@@ -2195,7 +2208,8 @@ this.scrollToLoadingRow();
 this._evalService.evaluateAgent(payload).subscribe({
   next: (res) => {
     this.isEvaluating.set(false);
-    
+    this.evaluatingDateKey.set(null); 
+    this.noTracesError.set(null);
     if (res.success && res.data) {
       const newResults = this.mapFetchedToResults(res.data);
       
@@ -2231,6 +2245,7 @@ this._evalService.evaluateAgent(payload).subscribe({
 
         // Auto-expand today's group
         this.activeDateKey.set(dateStr);
+        this.cdr.detectChanges();
       }
     } else {
       this.evalError.set(res.message || 'Evaluation failed.');
@@ -2238,6 +2253,8 @@ this._evalService.evaluateAgent(payload).subscribe({
   },
   error: (err) => {
     this.isEvaluating.set(false);
+    this.evaluatingDateKey.set(null); 
+    this.noTracesError.set(null);
     this.evalError.set(err?.error?.message || err?.message || 'Unexpected error');
   },
 });
@@ -2654,35 +2671,52 @@ showAnalysisModal(result: EvalResult) {
       }
 
       if (parsed && typeof parsed === 'object') {
-        let rootCauses: string[] = [];
-        if (parsed.config_area) {
-          if (typeof parsed.config_area === 'string') {
-            rootCauses = parsed.config_area
-              .split(',')
-              .map((item: string) => item.trim())
-              .filter(Boolean);
-          } else if (Array.isArray(parsed.config_area)) {
-            rootCauses = parsed.config_area;
-          } else {
-            rootCauses = [String(parsed.config_area)];
+                let rootCauses: string[] = [];
+
+        const rootCauseFields = ['config_area', 'root_cause', 'rootCauses', 'causes'];
+
+        for (const field of rootCauseFields) {
+          if (parsed[field]) {
+            let value = parsed[field];
+
+            if (typeof value === 'string') {
+              const trimmed = value.trim();
+
+              // Split ONLY if it contains commas AND looks like a list of short items
+              if (trimmed.includes(',')) {
+                const parts = trimmed.split(',').map(item => item.trim()).filter(Boolean);
+                
+                // Heuristic: if most parts are short (likely config keys), split them
+                const isLikelyConfigList = parts.every(part => part.length < 60) && 
+                                         parts.length > 1;
+
+                rootCauses = isLikelyConfigList ? parts : [trimmed];
+              } else {
+                rootCauses = [trimmed];
+              }
+            } 
+            else if (Array.isArray(value)) {
+              rootCauses = value.map(item => String(item).trim()).filter(Boolean);
+            } 
+            else {
+              rootCauses = [String(value).trim()];
+            }
+            break;
           }
-        } else if (Array.isArray(parsed.rootCauses)) {
-          rootCauses = parsed.rootCauses;
         }
 
-        // Build highlights - improved matching
+        // Build highlights...
         const highlights: Record<string, string> = {};
-        rootCauses.forEach(key => {
-          const cleanKey = key.trim();
-          if (agentConfig[cleanKey] !== undefined) {
-            highlights[cleanKey] = typeof agentConfig[cleanKey] === 'string' 
-              ? agentConfig[cleanKey] 
-              : JSON.stringify(agentConfig[cleanKey], null, 2);
-          } else if (agentConfig[cleanKey.toLowerCase()] !== undefined) {
-            // Fallback case-insensitive
-            highlights[cleanKey] = typeof agentConfig[cleanKey.toLowerCase()] === 'string' 
-              ? agentConfig[cleanKey.toLowerCase()] 
-              : JSON.stringify(agentConfig[cleanKey.toLowerCase()], null, 2);
+
+        rootCauses.forEach(rawKey => {
+          const cleanKey = rawKey.trim();
+          if (!cleanKey) return;
+
+          const found = this.findConfigValue(agentConfig, cleanKey);
+          if (found !== undefined) {
+            highlights[cleanKey] = typeof found === 'string' 
+              ? found 
+              : JSON.stringify(found, null, 2);
           }
         });
 
@@ -2690,7 +2724,8 @@ showAnalysisModal(result: EvalResult) {
           testCaseId: result.testCaseId,
           problem: parsed.highlight_problem || parsed.problem || "No specific problem identified.",
           rootCauses: rootCauses,
-          suggestedFixes: parsed.suggestion ? [parsed.suggestion] : (Array.isArray(parsed.suggestedFixes) ? parsed.suggestedFixes : []),
+          suggestedFixes: parsed.suggestion ? [parsed.suggestion] : 
+                         (Array.isArray(parsed.suggestedFixes) ? parsed.suggestedFixes : []),
           impact: parsed.impact_on_output || parsed.impact || "",
           severity: parsed.severity || "",
           severityRationale: parsed.rationale || parsed.explanation || "",
@@ -2708,14 +2743,74 @@ showAnalysisModal(result: EvalResult) {
 
   this.selectedAnalysis.set(analysis);
 
-  // Force UI refresh
   setTimeout(() => {
     const modalEl = document.getElementById('analysisModal');
-    if (modalEl) {
-      new bootstrap.Modal(modalEl).show();
-    }
-    this.cdr.detectChanges();  // Important for signals
+    if (modalEl) new bootstrap.Modal(modalEl).show();
+    this.cdr.detectChanges();
   }, 100);
+}
+
+private findConfigValue(obj: any, searchKey: string): any {
+  if (!obj || typeof obj !== 'object') return undefined;
+
+  const lowerSearch = searchKey.toLowerCase().trim();
+
+  // 1. Direct top-level match
+  if (obj[searchKey] !== undefined) return obj[searchKey];
+
+  // 2. Dot notation support
+  if (searchKey.includes('.')) {
+    const value = this.getNestedValue(obj, searchKey);
+    if (value !== undefined) return value;
+  }
+
+  // 3. Dynamic Feature Array Search (works for any feature type)
+  if (Array.isArray(obj.features)) {
+    for (const feature of obj.features) {
+      if (!feature || typeof feature !== 'object') continue;
+
+      const featureType = String(feature.type || '').toLowerCase();
+      const config = feature.config || {};
+
+      // Match if search key contains feature type or any key inside its config
+      if (lowerSearch.includes(featureType) || 
+          featureType.includes(lowerSearch) ||
+          Object.keys(config).some(k => 
+            k.toLowerCase().includes(lowerSearch) || lowerSearch.includes(k.toLowerCase())
+          )) {
+        return config;   // Return the config object of the matching feature
+      }
+    }
+  }
+
+  // 4. General recursive search as final fallback
+  const searchRecursively = (current: any): any => {
+    if (!current || typeof current !== 'object') return undefined;
+
+    for (const [key, value] of Object.entries(current)) {
+      if (key.toLowerCase().includes(lowerSearch) || 
+          lowerSearch.includes(key.toLowerCase())) {
+        return value;
+      }
+      if (typeof value === 'object' && value !== null) {
+        const found = searchRecursively(value);
+        if (found !== undefined) return found;
+      }
+    }
+    return undefined;
+  };
+
+  return searchRecursively(obj);
+}
+
+private getNestedValue(obj: any, path: string): any {
+  const keys = path.split('.');
+  let current = obj;
+  for (const key of keys) {
+    if (current == null) return undefined;
+    current = current[key];
+  }
+  return current;
 }
 
   getEvalMethodDescription(value: string): string {
@@ -2882,5 +2977,93 @@ showEvalTypeInfo(event: MouseEvent, text: string) {
 
 hideEvalTypeInfo() {
   this.evalTypeTooltip.update(v => ({ ...v, visible: false }));
+}
+
+isCopied(itemId: string): boolean {
+  return this.copiedItems().has(itemId);
+}
+
+async copyToClipboard(text: string, itemId: string): Promise<void> {
+  if (!text || text.trim() === '-' || text.trim() === '') return;
+  
+  try {
+    await navigator.clipboard.writeText(text);
+    this.setCopiedState(itemId);
+  } catch (err) {
+    console.error('Clipboard API failed, using fallback:', err);
+    this.fallbackCopy(text, itemId);
+  }
+}
+
+private fallbackCopy(text: string, itemId: string): void {
+  const textarea = document.createElement('textarea');
+  textarea.value = text;
+  textarea.style.position = 'fixed';
+  textarea.style.left = '-9999px';
+  textarea.style.top = '-9999px';
+  textarea.style.opacity = '0';
+  document.body.appendChild(textarea);
+  textarea.focus();
+  textarea.select();
+  
+  try {
+    const success = document.execCommand('copy');
+    if (success) {
+      this.setCopiedState(itemId);
+    }
+  } catch (err) {
+    console.error('Fallback copy failed:', err);
+  }
+  
+  document.body.removeChild(textarea);
+}
+
+private setCopiedState(itemId: string): void {
+  this.copiedItems.update(set => {
+    const newSet = new Set(set);
+    newSet.add(itemId);
+    return newSet;
+  });
+  
+  setTimeout(() => {
+    this.copiedItems.update(set => {
+      const newSet = new Set(set);
+      newSet.delete(itemId);
+      return newSet;
+    });
+  }, 2000);
+}
+
+// Method to copy tooltip content specifically
+copyTooltipContent(): void {
+  const text = this.cellTooltip.text;
+  if (!text || text.trim() === '-' || text.trim() === '') return;
+  
+  this.copyToClipboard(text, 'tooltip-content');
+  
+  // Also set tooltip-specific copied state
+  this.tooltipCopied.set(true);
+  setTimeout(() => {
+    this.tooltipCopied.set(false);
+  }, 2000);
+}
+
+copyCellContent(result: EvalResult, field: 'input' | 'expectedOutput' | 'actualOutput'): void {
+  const text = result[field];
+  const itemId = `${result.runId}-${result.testCaseId}-${field}`;
+  this.copyToClipboard(text, itemId);
+}
+
+onTooltipMouseEnter(): void {
+  this.isCellTooltipHovered = true;
+  if (this.cellTooltipTimeout) {
+    clearTimeout(this.cellTooltipTimeout);
+    this.cellTooltipTimeout = null;
+  }
+}
+
+onTooltipMouseLeave(): void {
+  this.isCellTooltipHovered = false;
+  this.hideCellTooltip();
 }
 }

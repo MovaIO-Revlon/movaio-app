@@ -36,7 +36,7 @@ from pymongo import DESCENDING
 from roleManage import RoleManager
 from teamManage import TeamManager
 import pytz
-from utils import NotFoundError, buildResponse, ValidationError, log_data, ApiError
+from utils import NotFoundError, buildResponse, ValidationError, log_data, ApiError, encrypt_data, AuthorizationError
 from docx import Document
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
@@ -69,31 +69,22 @@ from Prompt_Repository import PromptRepository
 from trends_usecase import InsightsManager
 from voice_agent import start_session,end_session
 from agent_eval import AgentEval
+from tool_call import DynamicToolExecutor
+from tool_auth import ToolAuthService
+import jwt
+from external_app import ExternalApp
+from ticket_functions import TicketFunctions
+from api_key_auth import require_session_or_api_key, require_token_or_api_key
 
-import shutil
-# pypandoc.__pandoc_path = config_loader.pandac_path
-pandoc_path = shutil.which('pandoc')
-if pandoc_path:
-    # prefer the system pandoc when available
-    pypandoc.__pandoc_path = pandoc_path
-else:
-    # prefer a valid path from config_loader if it exists (e.g. Windows dev/test)
-    cfg_path = getattr(config_loader, 'pandac_path', None)
-    if cfg_path and os.path.exists(cfg_path):
-        pypandoc.__pandoc_path = cfg_path
-    else:
-        # Fallback paths for common Linux installations
-        common_paths = ['/usr/bin/pandoc', '/usr/local/bin/pandoc', '/opt/pandoc/bin/pandoc']
-        for path in common_paths:
-            if os.path.exists(path):
-                pypandoc.__pandoc_path = path
-                break
+pypandoc.__pandoc_path = config_loader.pandac_path
 
 user_id = config_loader.USER_ID_LYZR
 api_key = config_loader.API_KEY_LYZR
 trend_agent_id = config_loader.TREND_AGENT_ID_LYZR
 insight_agent_id = config_loader.INSIGHT_AGENT_ID_LYZR
 insight_limit = config_loader.INSIGHT_LIMIT
+
+JWT_SECRET_KEY = config_loader.JWT_SECRET_KEY
 
 class OTPDetails(BaseModel):
     EmployeeId: str | None = None
@@ -102,6 +93,228 @@ class OTPDetails(BaseModel):
 class OnboardResponseMessage(BaseModel):
     Success: bool
     Message: str | None = None
+
+
+def _is_sensitive_query(text: str) -> bool:
+    """Return True when the query appears to include sensitive personal data."""
+    lowered = text.lower()
+    sensitive_patterns = [
+        r'\bid\b',
+        r'\bpassword is\b',
+        r'\bsecret\b',
+        r'\botp\b',
+        r'\bpin\b',
+        r'\bmobile\b',
+        r'\bphone\b',
+        r'\bemail\b',
+        r'\baadhar\b',
+        r'\bssn\b',
+        r'\bcredit card\b',
+        r'\bcvv\b'
+    ]
+    return any(re.search(pattern, lowered) for pattern in sensitive_patterns)
+
+
+def _is_low_quality_query(text: str) -> bool:
+    """Return True for short greetings, closers, and gibberish-like text."""
+    lowered = text.lower()
+    if lowered in {'hi', 'hello', 'hey', 'thanks', 'thank you', 'bye', 'goodbye', 'ok', 'okay', 'this is fine'}:
+        return True
+
+    if re.search(r'\b(bye|goodbye|thanks|thank you|see you|talk later|this is fine|fine)\b', lowered):
+        return True
+
+    word_count = len(text.split())
+    alpha_count = sum(1 for ch in text if ch.isalpha())
+    if word_count < 3 or alpha_count < 6:
+        return True
+
+    if any(token in lowered for token in ['eiu', 'hiv', 'uir', 'uie']):
+        return True
+
+    unique_chars = set(text.strip())
+    if len(unique_chars) <= 2 and len(text) >= 8:
+        return True
+
+    return False
+
+
+def _score_query(text: str) -> int:
+    """Score the query by how much it looks like a useful initiating intent."""
+    lowered = text.lower()
+    score = min(len(text.split()), 10) * 2
+
+    intent_words = ['create', 'generate', 'make', 'need', 'want', 'show', 'find', 'search', 'draft', 'report']
+    if any(word in lowered for word in intent_words):
+        score += 4
+
+    topic_words = ['report', 'langchain', 'dashboard', 'workflow', 'document', 'test case', 'analysis', 'query']
+    if any(word in lowered for word in topic_words):
+        score += 3
+
+    if len(text) >= 20:
+        score += 2
+
+    if lowered.startswith(('i want', 'can you', 'please', 'help me')):
+        score += 2
+
+    return score
+
+
+def _is_sensitive_key(key: str) -> bool:
+    """Return True when a JSON field name looks sensitive."""
+    if not isinstance(key, str):
+        return False
+
+    normalized = key.strip().lower()
+    sensitive_keywords = {
+        'email', 'user_id', 'userid', 'first_name', 'firstname', 'last_name', 'lastname',
+        'password', 'pass', 'secret', 'secrets', 'token', 'api_key', 'apikey', 'ssn','caller_id'
+    }
+
+    if normalized in sensitive_keywords:
+        return True
+
+    parts = re.split(r'[\s_\-.]+', normalized)
+    if any(part in sensitive_keywords for part in parts):
+        return True
+
+    return any(keyword in normalized for keyword in ('email', 'password', 'secret', 'token', 'user', 'name'))
+
+
+def _get_fernet() -> Fernet:
+    key = config_loader.encryption_key
+    if isinstance(key, str):
+        key = key.encode('utf-8')
+    return Fernet(key)
+
+
+def _process_sensitive_value(value: Any, fernet: Fernet, action: str) -> Any:
+    if value is None:
+        return None
+
+    if action == 'encrypt':
+        if not isinstance(value, str):
+            try:
+                value = json.dumps(value)
+            except Exception:
+                value = str(value)
+        return fernet.encrypt(value.encode('utf-8')).decode('utf-8')
+
+    if action == 'decrypt':
+        if not isinstance(value, str):
+            return value
+        try:
+            decrypted = fernet.decrypt(value.encode('utf-8')).decode('utf-8')
+            try:
+                return json.loads(decrypted)
+            except JSONDecodeError:
+                return decrypted
+        except Exception:
+            return value
+
+    raise ValueError("Action must be 'encrypt' or 'decrypt'.")
+
+
+def _decrypt_embedded_fernet_tokens(value: Any, fernet: Fernet) -> Any:
+    """Decrypt Fernet tokens embedded inside a larger string, if present."""
+    if not isinstance(value, str) or "gAAAAA" not in value:
+        return value
+
+    token_pattern = re.compile(r"gAAAAA[A-Za-z0-9_-]+=*")
+
+    def _replace(match: re.Match) -> str:
+        token = match.group(0)
+        try:
+            decrypted = fernet.decrypt(token.encode("utf-8")).decode("utf-8")
+            return decrypted
+        except Exception:
+            return token
+
+    return token_pattern.sub(_replace, value)
+
+
+def process_sensitive_fields(json_data: Any, action: str) -> Any:
+    """Encrypt or decrypt sensitive fields inside a JSON-like object."""
+    action = action.strip().lower() if isinstance(action, str) else ''
+    if action not in {'encrypt', 'decrypt'}:
+        raise ValueError("Action must be 'encrypt' or 'decrypt'.")
+
+    fernet = _get_fernet()
+
+    def _recurse(value: Any, parent_key: str | None = None) -> Any:
+        if isinstance(value, dict):
+            return {k: _recurse(v, k) for k, v in value.items()}
+
+        if isinstance(value, list):
+            return [_recurse(item, parent_key) for item in value]
+
+        if parent_key and _is_sensitive_key(parent_key):
+            return _process_sensitive_value(value, fernet, action)
+
+        if action == 'decrypt':
+            return _decrypt_embedded_fernet_tokens(value, fernet)
+
+        return value
+
+    return _recurse(json_data)
+
+
+def find_top_initiating_queries(query_list: List[str], max_results: int = 3) -> List[str]:
+    """
+    Return up to `max_results` meaningful initiating user queries from a noisy list.
+
+    Filters out short greetings, closing messages, gibberish, and sensitive
+    information, then returns the top-scoring valid queries.
+    """
+    if not isinstance(query_list, list):
+        return []
+
+    normalized_queries = []
+    for item in query_list:
+        if not isinstance(item, str):
+            continue
+
+        cleaned = re.sub(r'\s+', ' ', item.strip())
+        if not cleaned:
+            continue
+
+        if _is_sensitive_query(cleaned):
+            continue
+
+        if _is_low_quality_query(cleaned):
+            continue
+
+        if re.search(r'\d{4,}', cleaned):
+            continue
+
+        normalized_queries.append(cleaned)
+
+    if not normalized_queries:
+        return []
+
+    seen = set()
+    unique_queries = []
+    for query in normalized_queries:
+        dedupe_key = re.sub(r'\s+', ' ', query.strip().lower())
+        if dedupe_key in seen:
+            continue
+        seen.add(dedupe_key)
+        unique_queries.append(query)
+
+    sorted_queries = sorted(unique_queries, key=_score_query, reverse=True)
+    return sorted_queries[:max_results]
+
+
+def find_initiating_query(query_list: List[str]) -> str | None:
+    """
+    Pick the most meaningful initiating user query from a noisy conversation list.
+
+    The function filters out short greetings, closing messages, gibberish,
+    and sensitive information, then returns the highest-scoring valid query.
+    """
+    suggestions = find_top_initiating_queries(query_list, max_results=1)
+    return suggestions[0] if suggestions else None
 
 # DatabaseManager replaced by DatabaseCollections in commonutils file
 
@@ -143,6 +356,7 @@ class ChatbotAgent(DatabaseCollections):
     def __init__(self):
         super().__init__()
         self.utils = CommonUtils()
+        self.CONNECTORS_BASE_DIR = "tool_config"
         
     
     def _query_db(self, collection_name, operation, user_type=None):
@@ -486,6 +700,998 @@ class ChatbotAgent(DatabaseCollections):
             logger.error(f"[TRACE DETAIL] Traceback: {traceback.format_exc()}")
             return {}
 
+
+
+    def mask_pii_sensitive_data(self, text):
+        """Masks PII, URLs, and sensitive business data partially using asterisks (***)."""
+        # If the tool returned a dictionary/list, convert it to a JSON string first
+        if isinstance(text, (dict, list)):
+            text = json.dumps(text)
+        elif not isinstance(text, str):
+            text = str(text)
+
+        # 1. Mask URLs / Links (Keep scheme, partial host)
+        # e.g., "https://www.example.com/path" -> "https://ww***.com/path"
+        def _mask_url(m):
+            url = m.group(0)
+            if "://" in url:
+                scheme, rest = url.split("://", 1)
+                if len(rest) > 6:
+                    return f"{scheme}://{rest[:2]}***{rest[-4:]}"
+                return f"{scheme}://***"
+            return url[:3] + "***"
+
+        url_pattern = r"https?://(?:[-\w.]|(?:%[\da-fA-F]{2}))+[/\w\.-]*"
+        text = re.sub(url_pattern, _mask_url, text)
+
+        # 2. Mask Email Addresses (Keep 1st & last char of username + domain extension)
+        # e.g., "john.doe@example.com" -> "j***e@e***.com"
+        def _mask_email(m):
+            user, domain = m.group(1), m.group(2)
+
+            # Mask Username
+            masked_user = (
+                f"{user[0]}***{user[-1]}" if len(user) > 2 else f"{user[0]}***"
+            )
+
+            # Mask Domain
+            if "." in domain:
+                host, tld = domain.rsplit(".", 1)
+                masked_host = (
+                    f"{host[0]}***{host[-1]}" if len(host) > 2 else f"{host[0]}***"
+                )
+                return f"{masked_user}@{masked_host}.{tld}"
+            return f"{masked_user}@{domain}"
+
+        email_pattern = r"([a-zA-Z0-9_.+-]+)@([a-zA-Z0-9-.]+)"
+        text = re.sub(email_pattern, _mask_email, text)
+
+        # 3. Mask Phone Numbers (Keep only last 4 digits)
+        # e.g., "+1 (555) 019-2834" -> "*** (***) ***-2834"
+        def _mask_phone(m):
+            s = m.group(0)
+            digits = [c for c in s if c.isdigit()]
+            total_digits = len(digits)
+
+            digit_count = 0
+            res = []
+            for char in s:
+                if char.isdigit():
+                    digit_count += 1
+                    # Replace all digits except the last 4 with '*'
+                    if digit_count <= total_digits - 4:
+                        res.append("*")
+                    else:
+                        res.append(char)
+                else:
+                    res.append(char)
+            return "".join(res)
+
+        phone_pattern = r"(\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}"
+        text = re.sub(phone_pattern, _mask_phone, text)
+
+        # 4. Mask Credit Card Numbers (Keep first 4 and last 4 digits)
+        # e.g., "1234-5678-9012-3456" -> "1234-****-****-3456"
+        def _mask_card(m):
+            s = m.group(0)
+            digits = [c for c in s if c.isdigit()]
+            total_digits = len(digits)
+
+            digit_count = 0
+            res = []
+            for char in s:
+                if char.isdigit():
+                    digit_count += 1
+                    # Keep first 4 and last 4 digits visible
+                    if 4 < digit_count <= total_digits - 4:
+                        res.append("*")
+                    else:
+                        res.append(char)
+                else:
+                    res.append(char)
+            return "".join(res)
+
+        cc_pattern = r"\b(?:\d[ -]*?){13,16}\b"
+        text = re.sub(cc_pattern, _mask_card, text)
+
+        # 5. Mask UUIDs / API Keys (Keep first 4 and last 4 characters)
+        # e.g., "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11" -> "a0ee****-****-****-****-****380a11"
+        def _mask_uuid(m):
+            s = m.group(0)
+            return f"{s[:4]}****-****-****-****-****{s[-4:]}"
+
+        uuid_pattern = r"\b[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\b"
+        text = re.sub(uuid_pattern, _mask_uuid, text)
+
+        return text
+    
+    # def mask_pii_sensitive_data(self,text):
+        
+    #     # If the tool returned a dictionary/list, convert it to a JSON string first
+    #     if isinstance(text, (dict, list)):
+    #         text = json.dumps(text)
+    #     elif not isinstance(text, str):
+    #         text = str(text)
+
+    #     # 1. Mask URLs / Links
+    #     url_pattern = r'https?://(?:[-\w.]|(?:%[\da-fA-F]{2}))+[/\w\.-]*'
+    #     text = re.sub(url_pattern, '[REDACTED_LINK]', text)
+
+    #     # 2. Mask Email Addresses
+    #     email_pattern = r'[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+'
+    #     text = re.sub(email_pattern, '[REDACTED_EMAIL]', text)
+
+    #     # 3. Mask Phone Numbers (Basic international and US formats)
+    #     phone_pattern = r'(\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}'
+    #     text = re.sub(phone_pattern, '[REDACTED_PHONE]', text)
+
+    #     # 4. Mask Credit Card Numbers (14-16 digits, with or without dashes)
+    #     cc_pattern = r'\b(?:\d[ -]*?){13,16}\b'
+    #     text = re.sub(cc_pattern, '[REDACTED_CARD]', text)
+
+    #     # 5. Mask UUIDs / Business API Keys / Tokens (e.g., a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11)
+    #     uuid_pattern = r'\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b'
+    #     text = re.sub(uuid_pattern, '[REDACTED_ID]', text)
+
+    #     # Add any custom business Regex here (e.g., custom employee ID formats)
+    #     # emp_id_pattern = r'\bEMP-\d{5}\b'
+    #     # text = re.sub(emp_id_pattern, '[REDACTED_EMP_ID]', text)
+
+    #     return text
+
+    def _extract_tool_call(self, response_payload):
+        """Extract a tool call object from mixed Lyzr response payload formats."""
+
+        def normalize_tool_call(candidate):
+            if isinstance(candidate, dict):
+                if candidate.get("tool_name"):
+                    arguments = candidate.get("arguments", {})
+                    if isinstance(arguments, str):
+                        try:
+                            arguments = json.loads(arguments)
+                        except Exception:
+                            arguments = {"value": arguments}
+                    return {
+                        "tool_name": candidate.get("tool_name"),
+                        "arguments": arguments if isinstance(arguments, dict) else {},
+                    }
+
+                # Handle tool call envelope used by some providers.
+                if candidate.get("type") == "tool_call" and candidate.get("name"):
+                    arguments = candidate.get("arguments", {})
+                    if isinstance(arguments, str):
+                        try:
+                            arguments = json.loads(arguments)
+                        except Exception:
+                            arguments = {"value": arguments}
+                    return {
+                        "tool_name": candidate.get("name"),
+                        "arguments": arguments if isinstance(arguments, dict) else {},
+                    }
+
+                function_payload = candidate.get("function")
+                if isinstance(function_payload, dict) and function_payload.get("name"):
+                    function_args = function_payload.get("arguments", {})
+                    if isinstance(function_args, str):
+                        try:
+                            function_args = json.loads(function_args)
+                        except Exception:
+                            function_args = {"value": function_args}
+                    return {
+                        "tool_name": function_payload.get("name"),
+                        "arguments": function_args if isinstance(function_args, dict) else {},
+                    }
+
+            return None
+
+        def parse_json_from_text(text):
+            if not isinstance(text, str):
+                return []
+
+            candidates = []
+            stripped = text.strip()
+            if not stripped:
+                return candidates
+
+            # Parse the full string first.
+            try:
+                parsed = json.loads(stripped)
+                candidates.append(parsed)
+            except Exception:
+                pass
+
+            # Parse fenced JSON blocks (```json ... ```).
+            for block in re.findall(
+                r"```(?:json)?\s*([\s\S]*?)\s*```", stripped, flags=re.IGNORECASE
+            ):
+                candidate_text = block.strip()
+                if not candidate_text:
+                    continue
+                try:
+                    candidates.append(json.loads(candidate_text))
+                    continue
+                except Exception:
+                    pass
+                try:
+                    repaired = repair_json(candidate_text)
+                    candidates.append(json.loads(repaired))
+                except Exception:
+                    pass
+
+            # Parse possible inline JSON objects by balancing braces.
+            for start_idx, char in enumerate(stripped):
+                if char != "{":
+                    continue
+
+                depth = 0
+                in_string = False
+                escaped = False
+
+                for end_idx in range(start_idx, len(stripped)):
+                    ch = stripped[end_idx]
+
+                    if escaped:
+                        escaped = False
+                        continue
+
+                    if ch == "\\":
+                        escaped = True
+                        continue
+
+                    if ch == '"':
+                        in_string = not in_string
+                        continue
+
+                    if in_string:
+                        continue
+
+                    if ch == "{":
+                        depth += 1
+                    elif ch == "}":
+                        depth -= 1
+                        if depth == 0:
+                            snippet = stripped[start_idx : end_idx + 1]
+                            try:
+                                candidates.append(json.loads(snippet))
+                            except Exception:
+                                try:
+                                    repaired = repair_json(snippet)
+                                    candidates.append(json.loads(repaired))
+                                except Exception:
+                                    pass
+                            break
+
+            return candidates
+
+        visited = set()
+        stack = [response_payload]
+
+        while stack:
+            item = stack.pop()
+            item_id = id(item)
+            if item_id in visited:
+                continue
+            visited.add(item_id)
+
+            normalized = normalize_tool_call(item)
+            if normalized:
+                return normalized
+
+            if isinstance(item, dict):
+                # Prioritize common response fields first.
+                priority_keys = ["content", "response", "message", "data", "output", "text"]
+                for key in priority_keys:
+                    if key in item:
+                        stack.append(item.get(key))
+                for value in item.values():
+                    stack.append(value)
+            elif isinstance(item, list):
+                for value in item:
+                    stack.append(value)
+            elif isinstance(item, str):
+                for parsed_item in parse_json_from_text(item):
+                    stack.append(parsed_item)
+
+        return None
+    
+
+    
+    # def run_lyzr(self, user_input: str, user_id: str, lyzr_api_key: str, lyzr_agent_id: str, step_callback=None) -> str:
+    #     """
+    #     Runs Lyzr Agent with support for multiple sequential tool calls (Pause & Resume pattern).
+    #     """
+    #     print("33")
+    #     context = self._get_agent_context(lyzr_agent_id)
+    #     raw_tools_docs = context.get("raw_tools_docs", [])
+
+    #     # Build tools description
+    #     tools_prompt = "\n\nYou have access to these tools. When you need to use a tool, respond with ONLY a valid JSON object with 'tool_name' and 'arguments'. Do not add any extra text. If multiple tool calls are required for a result do it in sequence.\n"
+    #     for doc in raw_tools_docs:
+    #         if not isinstance(doc, dict):
+    #             continue
+                
+    #         tool_key = doc.get("tool_key", {})
+    #         if not isinstance(tool_key, dict):
+    #             continue
+                
+    #         functions = tool_key.get("functions", [])
+    #         if isinstance(functions, list):
+    #             for func in functions:
+    #                 if not isinstance(func, dict):
+    #                     continue
+                        
+    #                 # Only include active functions
+    #                 if func.get("active", True):
+    #                     name = func.get("name", "Unknown_Tool")
+    #                     description = func.get("description", "No description provided.")
+    #                     parameters = func.get("parameters", {})
+    #                     properties_only = {}
+    #                     if isinstance(parameters, dict):
+    #                         properties_only = parameters.get("properties", parameters)
+                        
+    #                     tools_prompt += f"- {name}: {description}\n Parameters: {json.dumps(properties_only)}\n"
+
+    #     # client = LyzrAgentAPI(api_key=lyzr_api_key)
+    #     session_id = f"session-{user_id}-{int(time.time())}"
+
+    #     print("34 - Starting conversation")
+
+    #     current_message = user_input + tools_prompt
+    #     # print("35 - Initial message prepared:", current_message)
+
+    #     max_rounds = 10  # Safety limit for tool call rounds
+
+    #     for round_num in range(max_rounds):
+    #         if step_callback:
+    #             step_callback(f"Round {round_num + 1}: Sending message to Lyzr Agent")
+
+    #         # Call Lyzr
+    #         # 6a54be1f4b6c08a182b1c8d2
+    #         print("user_input - Sending to Lyzr:", current_message)
+    #         # response = client.inference.chat({
+    #         #     "user_id": user_id,
+    #         #     "agent_id": lyzr_agent_id,
+    #         #     "message": current_message,
+    #         #     "session_id": session_id
+    #         # })
+    #         headers = {"x-api-key": lyzr_api_key, "Content-Type": "application/json"}
+    #         agent_api_url = "https://agent-prod.studio.lyzr.ai"
+           
+    #         payload = {
+    #             "user_id": user_id,
+    #             "agent_id": lyzr_agent_id,
+    #             "session_id": session_id,
+    #             "message": current_message
+    #         }
+    #         response = requests.post(f"{agent_api_url}/v3/inference/chat/", headers=headers, json=payload)
+    #         response_json = response.json()
+    #         print("Lyzr API Response:", response_json)
+    #         # response = response_json.get("response", "")
+    #         print("--------------------------------")
+
+    #         print(f"agent_resposnse - Round {round_num + 1} Response:", response)
+
+    #         print("--------------------------------")
+
+    #         # Extract content
+    #         if isinstance(response_json, dict):
+    #             content = response_json.get("content") or response_json.get("response") or response_json.get("message") or str(response_json)
+    #         else:
+    #             content = str(response_json)
+
+    #         # Try to parse tool call
+    #         tool_call = None
+    #         try:
+    #             # Step 1: Strip markdown code block wrappers like ```json and ```
+    #             cleaned = re.sub(
+    #                 r"^```(?:json)?\s*", "", content.strip(), flags=re.IGNORECASE
+    #             )
+    #             cleaned = re.sub(r"\s*```$", "", cleaned).strip()
+
+    #             # Step 2: Try parsing directly if it starts and ends with {}
+    #             if cleaned.startswith("{") and cleaned.endswith("}"):
+    #                 tool_call = json.loads(cleaned)
+    #             else:
+    #                 # Step 3: Fallback - Extract the first JSON object using Regex
+    #                 json_match = re.search(r"\{.*\}", content, re.DOTALL)
+    #                 if json_match:
+    #                     tool_call = json.loads(json_match.group(0))
+    #         except Exception as e:
+    #             print(f"JSON parsing error: {e}")
+
+    #         # If it's a tool call
+    #         if tool_call and isinstance(tool_call, dict) and "tool_name" in tool_call:
+    #             tool_name = tool_call["tool_name"]
+    #             args = tool_call.get("arguments", {})
+    #             print("aaa")
+
+    #             if step_callback:
+    #                 step_callback(f"🔧 Executing: {tool_name}({args})")
+    #             print("user_id:", user_id)
+    #             # Execute tool locally
+    #             auth_service = ToolAuthService() 
+    #             tool_result = auth_service._execute_tool(tool_name, args, raw_tools_docs, user_id)
+
+    #             if step_callback:
+    #                 step_callback(f"Tool {tool_name} finished.")
+
+    #             # tool_result = self.optimize_tool_result(tool_name, tool_result)
+    #             masked_tool_result = self.mask_pii_sensitive_data(tool_result)
+
+    #             current_message = f"Tool '{tool_name}' executed successfully.\nResult: {masked_tool_result}\n\nContinue with the next step tool call if required or give final answer."
+
+    #         else:
+    #             # No more tool calls → Final Answer
+    #             if step_callback:
+    #                 step_callback("✅ Agent finished. Returning final answer.")
+    #             return buildResponse("Final Answer", content, 200)
+
+    #     return "Error: Too many tool call rounds."
+        
+    def run_lyzr(
+    self,
+    user_input: str,
+    user_id: str,
+    lyzr_api_key: str,
+    lyzr_agent_id: str,
+    session_id: str,
+    event_id: str,
+    step_callback=None
+):
+        
+        # session_id = f"session-{user_id}-{int(time.time())}"
+       
+        ws_url = (
+            f"wss://metrics.studio.lyzr.ai/ws/{session_id}?x-api-key={lyzr_api_key}"
+        )
+
+        log_queue = Queue()
+        collected_logs = []
+        ws_thread = None
+        ws = None
+
+        # Helper generator to drain and yield ONLY WebSocket logs in real-time
+        def flush_log_queue():
+            while not log_queue.empty():
+                log_entry = log_queue.get()
+                if log_entry.get("type") == "log":
+                    yield f"data: {json.dumps({'type': 'log', 'data': log_entry['data']})}\n\n"
+                elif log_entry.get("type") == "error":
+                    yield f"data: {json.dumps({'type': 'ws_error', 'message': log_entry['message']})}\n\n"
+
+        # Helper to execute blocking tasks in a background thread while continuously yielding runtime logs
+        def execute_and_stream_logs(target_func, *args, **kwargs):
+            result_container = {}
+            error_container = {}
+
+            def worker():
+                try:
+                    result_container["result"] = target_func(*args, **kwargs)
+                except Exception as e:
+                    error_container["error"] = e
+
+            thread = threading.Thread(target=worker)
+            thread.start()
+
+            # While task runs in background, yield real-time logs to UI
+            while thread.is_alive():
+                yield from flush_log_queue()
+                time.sleep(0.1)
+
+            thread.join()
+            yield from flush_log_queue()
+
+            if "error" in error_container:
+                raise error_container["error"]
+
+            return result_container.get("result")
+
+        # ------------------------------------------------------------------
+        # 1. WEBSOCKET HANDLERS
+        # ------------------------------------------------------------------
+        def on_message(ws_inst, message):
+            try:
+                log_data = json.loads(message)
+                print("\n=== WEBSOCKET LOG RECEIVED ===")
+                # print(json.dumps(log_data, indent=2))
+                print("===============================\n")
+
+                log_entry = {
+                    "type": "log",
+                    "data": log_data,
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                }
+                log_queue.put(log_entry)
+                collected_logs.append(log_data)
+            except Exception as e:
+                print(f"Error parsing WebSocket message: {e}")
+
+        def on_error(ws_inst, error):
+            print(f"🚨 WebSocket error: {error}")
+            log_queue.put(
+                {
+                    "type": "error",
+                    "message": str(error),
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                }
+            )
+
+        def on_close(ws_inst, close_status_code, close_msg):
+            print(
+                f"❌ WebSocket closed. Code: {close_status_code}, Message: {close_msg}"
+            )
+
+        def on_open(ws_inst):
+            print("✅ WebSocket connection opened")
+
+        # Start WebSocket thread
+        try:
+            ws = websocket.WebSocketApp(
+                ws_url,
+                on_message=on_message,
+                on_error=on_error,
+                on_close=on_close,
+                on_open=on_open,
+            )
+            ws_thread = threading.Thread(target=ws.run_forever)
+            ws_thread.daemon = True
+            ws_thread.start()
+            time.sleep(1)
+        except Exception as e:
+            print(f"Failed to initialize WebSocket: {e}")
+
+        # ------------------------------------------------------------------
+        # 2. PROMPT & TOOLS PREPARATION
+        # ------------------------------------------------------------------
+        context = self._get_agent_context(lyzr_agent_id)
+        raw_tools_docs = context.get("raw_tools_docs", [])
+
+        user_data = self.user_collection.find_one({
+            "Email": re.compile(f"^{re.escape(user_id.lower())}$", re.IGNORECASE),
+            "IsActive": True,
+            "IsDelete": False
+        },{"_id": 0, "Email": 1, "FirstName": 1, "LastName": 1})
+
+        encrypted_user_data = process_sensitive_fields(user_data,"encrypt")
+        print("Encrypted user data:", encrypted_user_data)
+
+        tools_prompt = f"""\n\nIMPORTANT INSTRUCTION: \nYou have access to these tools. When you need to use a tool, respond with ONLY a valid JSON object with 'tool_name' and 'arguments'. The tool call will happen from client side so respond only with given JSON format and not from the lyzr tool. Do not add any extra text. If multiple tool calls are required for a result do it in sequence. \n
+
+        !!!IMPORTANT: Do not execute any URL from your end. The tool call should happen from the client side. You are only responsible for providing the correct tool call in JSON format. Do not provide any additional text or explanations.
+        
+        Workflow:
+        1. Review the user query + the attached tool schemas
+        2. Select the most relevant tool(s) .
+        3. Output the tool call in the exact required format.
+        4. Wait for the backend to execute the tool and return the result.
+        5. Analyze the tool response.
+        6. Give the final clear answer to the user.
+
+        Rules:
+        - Think step-by-step before calling tools.
+        - Only use available tool schemas.
+        - Never hallucinate tool results.
+        - After receiving tool response, provide the final response to the user.
+        - Be professional, patient, and clear.
+        - Use numbered steps.
+        - Include warnings when needed.
+        - Ask clarifying questions if information is missing.
+
+        Use user data if required. User Data: \n{json.dumps(encrypted_user_data)}
+
+        """
+        for doc in raw_tools_docs:
+            if not isinstance(doc, dict):
+                continue
+
+            tool_key = doc.get("tool_key", {})
+            if not isinstance(tool_key, dict):
+                continue
+
+            functions = tool_key.get("functions", [])
+            if isinstance(functions, list):
+                for func in functions:
+                    if not isinstance(func, dict):
+                        continue
+
+                    if func.get("active", True):
+                        name = func.get("name", "Unknown_Tool")
+                        description = func.get(
+                            "description", "No description provided."
+                        )
+                        parameters = func.get("parameters", {})
+                        properties_only = {}
+                        if isinstance(parameters, dict):
+                            properties_only = parameters.get(
+                                "properties", parameters
+                            )
+
+                        tools_prompt += f"- {name}: {description}\n Parameters: {json.dumps(properties_only)}\n"
+
+        current_message = tools_prompt + "\nUser Query:" + user_input
+        final_input_message = current_message
+        max_rounds = 10
+        final_content = ""
+
+        try:
+            # ------------------------------------------------------------------
+            # 3. AGENT CALL & TOOL EXECUTION LOOP
+            # ------------------------------------------------------------------
+            for round_num in range(max_rounds):
+
+                def call_lyzr_api(msg):
+                    print(f"msg: {msg}")
+                    headers = {
+                        "x-api-key": lyzr_api_key,
+                        "Content-Type": "application/json",
+                    }
+                    agent_api_base = getattr(
+                        config_loader,
+                        "LYZR_AGENT_URL",
+                        "https://agent-prod.studio.lyzr.ai",
+                    )
+                    payload = {
+                        "user_id": user_id,
+                        "agent_id": lyzr_agent_id,
+                        "session_id": session_id,
+                        "message": msg,
+                    }
+                    res = requests.post(
+                        f"{agent_api_base}/v3/inference/chat/",
+                        headers=headers,
+                        json=payload,
+                    )
+                    return res.json()
+
+                # Call Lyzr API while continuously streaming runtime logs
+                response_json = yield from execute_and_stream_logs(
+                    call_lyzr_api, current_message
+                )
+                print(f"agent_response - Round {round_num + 1} Response:", response_json)
+
+                if isinstance(response_json, dict):
+                    content = (
+                        response_json.get("content")
+                        or response_json.get("response")
+                        or response_json.get("message")
+                        or str(response_json)
+                    )
+                else:
+                    content = str(response_json)
+                print("Agent response content:", content)
+                # Parse tool call robustly from dict/string/fenced-json payloads.
+                tool_call = self._extract_tool_call(response_json)
+
+                # If tool call -> execute tool locally while streaming logs
+                if (
+                    tool_call
+                    and isinstance(tool_call, dict)
+                    and "tool_name" in tool_call
+                ):
+                    tool_name = tool_call["tool_name"]
+                    args = tool_call.get("arguments", {})
+                    decrypted_args = process_sensitive_fields(args, "decrypt")
+                    print(f"Executing tool: {tool_name} with arguments: {decrypted_args}")
+
+                    def run_tool_func():
+                        auth_service = ToolAuthService()
+                        return auth_service._execute_tool(
+                            tool_name, decrypted_args, raw_tools_docs, user_id
+                        )
+
+                    tool_result = yield from execute_and_stream_logs(run_tool_func)
+                    masked_tool_result = self.mask_pii_sensitive_data(tool_result)
+                    current_message = f"Tool '{tool_name}' executed successfully.\nResult: {masked_tool_result}\n\nContinue with the next step tool call if required or give final answer."
+                else:
+                    # Final answer ready
+                    final_content = content
+                    break
+
+            # ------------------------------------------------------------------
+            # 4. FETCH TRACE DETAILS (WHILE YIELDING RUNTIME LOGS)
+            # ------------------------------------------------------------------
+            time.sleep(2)
+
+            def fetch_trace_data():
+                agent_api_base = getattr(
+                    config_loader,
+                    "LYZR_AGENT_URL",
+                    "https://agent-prod.studio.lyzr.ai",
+                )
+                trace_url = f"{agent_api_base}/v3/traces"
+                trace_headers = {
+                    "x-api-key": lyzr_api_key,
+                    "Content-Type": "application/json",
+                }
+                trace_params = {
+                    "agent_id": lyzr_agent_id,
+                    "limit": 1,
+                    "sort": "desc",
+                }
+
+                max_retries = 5
+                retry_delay = 1
+
+                for retry in range(max_retries):
+                    try:
+                        trace_response = requests.get(
+                            trace_url, headers=trace_headers, params=trace_params
+                        )
+                        trace_response.raise_for_status()
+                        traces = trace_response.json()
+
+                        if traces and len(traces) > 0:
+                            latest_trace = traces[0]
+                            trace_id = latest_trace.get("trace_id")
+
+                            if trace_id:
+                                detail_response = requests.get(
+                                    f"{trace_url}/{trace_id}", headers=trace_headers
+                                )
+                                detail_response.raise_for_status()
+                                trace_details = detail_response.json()
+
+                                if isinstance(trace_details, list):
+                                    trace_details = (
+                                        trace_details[0] if trace_details else {}
+                                    )
+
+                                spans = trace_details.get("spans", [])
+                                our_session = False
+
+                                for span in spans:
+                                    span_attrs = span.get("SpanAttributes", {})
+                                    if (
+                                        span_attrs.get("session_id") == session_id
+                                        or (
+                                            span_attrs.get("input")
+                                            and user_input
+                                            in str(span_attrs.get("input", ""))
+                                        )
+                                    ):
+                                        our_session = True
+                                        break
+
+                                if our_session:
+                                    formatted_spans = []
+                                    for span in spans:
+                                        clean_attrs = span.get(
+                                            "SpanAttributes", {}
+                                        ).copy()
+                                        clean_attrs.pop("input", None)
+                                        clean_attrs.pop("output", None)
+                                        clean_attrs.pop("llm_output", None)
+
+                                        clean_events_attrs = []
+                                        for attr in span.get(
+                                            "Events.Attributes", []
+                                        ):
+                                            clean_attr = attr.copy()
+                                            clean_attr.pop("query", None)
+                                            clean_events_attrs.append(clean_attr)
+
+                                        original_attrs = span.get(
+                                            "SpanAttributes", {}
+                                        )
+                                        input_msg = original_attrs.get("input", "")
+                                        output_msg = original_attrs.get(
+                                            "output", ""
+                                        )
+
+                                        # if hasattr(
+                                        #     self,
+                                        #     "call_agent_api_input_output_replacement",
+                                        # ):
+                                        #     input_msg = self.call_agent_api_input_output_replacement(
+                                        #         input_msg, user_input
+                                        #     )
+                                        #     output_msg = self.call_agent_api_input_output_replacement(
+                                        #         output_msg, final_content
+                                        #     )
+
+                                        formatted_span = {
+                                            "SpanName": span.get("SpanName", ""),
+                                            "SpanAttributes": clean_attrs,
+                                            "Events.Name": span.get(
+                                                "Events.Name", []
+                                            ),
+                                            "Events.Attributes": clean_events_attrs,
+                                            "chat_messages": {
+                                                "input_message": user_input,
+                                                "output_message": final_content,
+                                            },
+                                        }
+                                        formatted_spans.append(formatted_span)
+
+                                    return [
+                                        {
+                                            "trace_id": trace_id,
+                                            "details": {
+                                                "spans": formatted_spans,
+                                                "trace_id": trace_id,
+                                            },
+                                        }
+                                    ]
+                    except Exception as e:
+                        print(
+                            f"Attempt {retry + 1} trace fetch error: {e}"
+                        )
+
+                    time.sleep(retry_delay * (retry + 1))
+                return []
+
+            trace_details_data = yield from execute_and_stream_logs(
+                fetch_trace_data
+            )
+
+            # ------------------------------------------------------------------
+            # 5. SEND FINAL RESPONSE AND TRACES AT THE VERY END
+            # ------------------------------------------------------------------
+            yield from flush_log_queue()
+
+            final_payload = {
+                "type": "final_response",
+                "data": {
+                    "response": final_content,
+                    "session_id": session_id,
+                    "trace_details": trace_details_data,
+                },
+            }
+            self.chatbot_agent = self
+            FlaskApp.update_chat_messages(self, event_id, session_id, final_content, trace_details_data, collected_logs,final_input_message)
+            delattr(self, 'chatbot_agent')
+            yield f"data: {json.dumps(final_payload)}\n\n"
+
+        except Exception as e:
+            yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+
+        finally:
+            # Flush remaining logs and close WebSocket
+            time.sleep(1)
+            yield from flush_log_queue()
+
+            if ws and ws_thread and ws_thread.is_alive():
+                try:
+                    ws.close()
+                    ws_thread.join(timeout=3)
+                except Exception as e:
+                    print(f"Error closing WebSocket: {e}")
+
+            yield "data: [DONE]\n\n"
+
+    def to_standard_json_schema(self,active_tool_doc: dict) -> list:
+        tool_key = active_tool_doc.get("tool_key", {})
+        standard_schemas = []
+
+        if "functions" in tool_key:
+            for func in tool_key["functions"]:
+                if func.get("active", True):
+                    standard_schemas.append({
+                        "name": func.get("name", active_tool_doc.get("tool_action_name", "")),
+                        "description": func.get("description", active_tool_doc.get("description", "")),
+                        "parameters": func.get("parameters", {
+                            "type": "object",
+                            "properties": {},
+                            "required": []
+                        })
+                    })
+            return standard_schemas
+
+        parameter_doc = active_tool_doc.get("parameter")
+        if isinstance(parameter_doc, dict):
+            parameters = parameter_doc.get("parameters", {
+                "type": "object",
+                "properties": {},
+                "required": []
+            })
+            standard_schemas.append({
+                "name": parameter_doc.get("name", active_tool_doc.get("tool_action_name", "")),
+                "description": parameter_doc.get("description", active_tool_doc.get("description", "")),
+                "parameters": parameters
+            })
+
+        return standard_schemas
+
+    
+    def _get_agent_context(self, agent_id: str) -> dict:
+        agent = self.agent_collection.find_one({"api_agent_id": agent_id})
+        if not agent:
+            raise ValueError(f"Agent {agent_id} not found.")
+
+        system_prompt = f"Role: {agent.get('agent_role', '')}\nGoal: {agent.get('agent_goal', '')}\nInstructions: {agent.get('agent_prompt', '')}"
+        tool_ids = agent.get("internal_tool", [])
+        print(f"Fetching tools for agent {agent_id}: {tool_ids}")
+        active_tools = []
+        compiled_schemas = []
+        
+        # Cache to prevent reading the same functions.json multiple times 
+        # if an agent has multiple tools from the same connector
+        file_cache = {}
+
+        for tid in tool_ids:
+            try:
+                tool_doc = self.active_tool_collection.find_one({"_id": ObjectId(tid)})
+                if not tool_doc:
+                    continue
+
+                connector_type = tool_doc.get("connector_type")
+                tool_name = tool_doc.get("tool_action_name")
+                tool_type = str(tool_doc.get("tool_type") or tool_doc.get("type", "default")).strip().lower()
+                print("tool_type:", tool_type, "tool_name:", tool_name)
+                if tool_type == "custom":
+                    parameter_doc = tool_doc.get("parameter")
+                    if isinstance(parameter_doc, dict):
+                        protocol_data = parameter_doc.get("protocol_data", {})
+                        tool_doc["tool_key"] = {
+                            "functions": [{
+                                "name": parameter_doc.get("name") or tool_name,
+                                "description": parameter_doc.get("description") or tool_doc.get("description", ""),
+                                "parameters": parameter_doc.get("parameters", {
+                                    "type": "object",
+                                    "properties": {},
+                                    "required": []
+                                }),
+                                "protocol_data": {
+                                    "method": protocol_data.get("method", "GET"),
+                                    "path": protocol_data.get("path", ""),
+                                    "server_url": protocol_data.get("server_url", ""),
+                                    "headers": protocol_data.get("headers", {"Content-Type": "application/json"}),
+                                    "timeout": protocol_data.get("timeout", 15)
+                                },
+                                "active": parameter_doc.get("active", True)
+                            }]
+                        }
+                    else:
+                        print(f"Warning: Custom tool '{tool_name}' is missing parameter schema in active_tool_collection")
+                        continue
+                elif connector_type and tool_name:
+                    # 1. Load the JSON file for this connector (using cache)
+                    if connector_type not in file_cache:
+                        # Assuming your file is named 'functions.json' or 'function.json'
+                        file_path = os.path.join(self.CONNECTORS_BASE_DIR, connector_type, "function.json")
+                        print("Loading schema from:", file_path)
+                        
+                        if os.path.exists(file_path):
+                            with open(file_path, 'r', encoding='utf-8') as f:
+                                file_cache[connector_type] = json.load(f)
+                        else:
+                            print(f"Warning: Schema file not found at {file_path}")
+                            continue
+                    
+                    connector_data = file_cache[connector_type]
+
+                    # 2. Find the specific function schema by tool_name
+                    target_function = None
+                    for func in connector_data.get("functions", []):
+                        if func.get("name") == tool_name:
+                            target_function = func
+                            break
+                    
+                    if target_function:
+                        # 3. Inject the tool_key back into the tool_doc dynamically 
+                        # so `to_standard_json_schema()` continues to work normally
+                        tool_doc["tool_key"] = {
+                            "security_schemes": connector_data.get("security_schemes", {}),
+                            "functions": [target_function]
+                        }
+                    else:
+                        print(f"Warning: Tool '{tool_name}' not found in {connector_type} functions.json")
+                        continue
+
+                active_tools.append(tool_doc)
+                # Now that tool_doc has the "tool_key" attached, this will work seamlessly
+                compiled_schemas.extend(self.to_standard_json_schema(tool_doc))
+
+            except Exception as e:
+                print(f"Error processing tool {tid}: {str(e)}")
+                continue
+
+        return {
+            "system_prompt": system_prompt,
+            "tools": compiled_schemas,
+            "raw_tools_docs": active_tools
+        }
+
    
         
     def process_request(self, request, data, has_prompt_title=False):
@@ -497,16 +1703,12 @@ class ChatbotAgent(DatabaseCollections):
         user_id = data.get('user_id', '')
         prompt_title = data.get('prompt_title', '') if has_prompt_title else None
         agency_id = ""  # Initialize as empty, will be fetched later
-
         event_id = data.get('event_id', "")
         map_id = data.get('map_id',"")
         isSavedToRepo = data.get('isSavedToRepo', "")
 
-        # ================================================
-        # SESSION ID MANAGEMENT (Simple & Clean)
-        # ================================================
         session_id = data.get('session_id')
-
+            
         if not session_id:
             session_id = self.utils.generate_uuid()
             print(f"🆕 New session_id generated: {session_id}")
@@ -564,31 +1766,78 @@ class ChatbotAgent(DatabaseCollections):
         insert_event_op = {'type': 'insert_one', 'document': new_event}
         self._query_db('chatbot_tracking', insert_event_op)
 
-        try:
-            agent_data = json.loads(json_util.dumps(self.agent_collection.find_one({"agent_id": agent_id})))
-            doc_id = agent_data.get("_id")["$oid"]
-            print(f"Agent data fetched for agent_id {doc_id}: {agent_data['version']}")
-            execution_count_version = json.loads(json_util.dumps(self.agent_version_history_collection.find_one({"agent_id": doc_id,"version": agent_data["version"]})))
-            self.agent_version_history_collection.update_one(
-                {"agent_id": doc_id,"version": agent_data["version"]},
-                {"$set": {"execution_count": execution_count_version.get("execution_count", 0) + 1}}
+        tool_res = self.agent_collection.find_one({'agent_id':agent_id})
+        print(f"Tool response fetched for agent_id {agent_id}")
+        custom_tool_config = tool_res.get("Iscustomtool",'')
+        internal_tool_data = tool_res.get("internal_tool", [])
+        print(f"Custom tool configuration: {custom_tool_config}")
+        if custom_tool_config and internal_tool_data:
+            print("Custom tool configuration detected. Using agent_api_key from agent collection.")
+            api_key = tool_res.get("agent_api_key")
+            # session_id = data.get('session_id')
+            # return self.run_lyzr(
+               
+            #     user_input=user_query,
+            #     user_id=user_id,
+            #     lyzr_api_key=api_key,
+            #     lyzr_agent_id=agent_id,
+            #     session_id=session_id,
+            #     event_id=event_id
+            # )
+            return Response(
+                stream_with_context(
+                    self.run_lyzr(
+                        user_input=user_query,
+                        user_id=user_id,
+                        lyzr_api_key=api_key,
+                        lyzr_agent_id=agent_id,
+                        session_id=session_id,
+                        event_id=event_id
+                    )
+                ),
+                mimetype="text/event-stream",
+                headers={
+                    "Content-Type": "text/event-stream",
+                    "Cache-Control": "no-cache",
+                    "Connection": "keep-alive",
+                    "X-Accel-Buffering": "no"
+                }
             )
-        except Exception as e:
-            print(f"Error updating execution count for agent_id {agent_id}: {str(e)}")
+        else:
+            
+    
+            # ================================================
+            # SESSION ID MANAGEMENT (Simple & Clean)
+            # ================================================
+            
+    
+            try:
+                agent_data = json.loads(json_util.dumps(self.agent_collection.find_one({"agent_id": agent_id})))
+                doc_id = agent_data.get("_id")["$oid"]
+                print(f"Agent data fetched for agent_id {doc_id}: {agent_data['version']}")
+                execution_count_version = json.loads(json_util.dumps(self.agent_version_history_collection.find_one({"agent_id": doc_id,"version": agent_data["version"]})))
+                self.agent_version_history_collection.update_one(
+                    {"agent_id": doc_id,"version": agent_data["version"]},
+                    {"$set": {"execution_count": execution_count_version.get("execution_count", 0) + 1}}
+                )
+            except Exception as e:
+                print(f"Error updating execution count for agent_id {agent_id}: {str(e)}")
+    
+            if not agent_id:
+                return self.static_chatbot_agent(user_query, event_id, session_id, user_id)
+    
+            agent_data = self.agent_collection.find_one({"agent_id": agent_id})
+            if not agent_data:
+                raise NotFoundError("Agent not found")
+    
+            api_key = agent_data.get('agent_api_key', '')
+            if not api_key:
+                raise ValidationError("Missing API key for agent")
+    
+            # Call the agent API and handle the response
+            return self.call_agent_api(agent_data, user_query, event_id, api_key, session_id, user_id, prompt_title)
 
-        if not agent_id:
-            return self.static_chatbot_agent(user_query, event_id, session_id, user_id)
-
-        agent_data = self.agent_collection.find_one({"agent_id": agent_id})
-        if not agent_data:
-            raise NotFoundError("Agent not found")
-
-        api_key = agent_data.get('agent_api_key', '')
-        if not api_key:
-            raise ValidationError("Missing API key for agent")
-
-        # Call the agent API and handle the response
-        return self.call_agent_api(agent_data, user_query, event_id, api_key, session_id, user_id, prompt_title)
+        
 
     def mask_pii_content(self, text):
         if not isinstance(text, str):
@@ -1008,8 +2257,6 @@ class ChatbotAgent(DatabaseCollections):
 
     def call_agent_api(self, agent_data, user_query, event_id, api_key, session_id, user_id, prompt_title=None):
         message = f"""{user_query}"""
-        if prompt_title:
-            message = f"Title: {prompt_title}\n\nQuery: {message}"
         agent_api_url = config_loader.LYZR_STREAMING_AGENT_URL
         payload = {
             "user_id": user_id or "default_user",
@@ -1017,6 +2264,8 @@ class ChatbotAgent(DatabaseCollections):
             "session_id": session_id or "default_session",
             "message": message
         }
+        if prompt_title:
+            payload["prompt_title"] = prompt_title.strip()
        
         print(f"Chatbot_payload----{payload}")
        
@@ -1389,6 +2638,7 @@ class ChatbotAgent(DatabaseCollections):
                                 "$set": {
                                     "prompt_output": full_response,
                                     "status": "completed",
+                                    "user_prompt": user_query,
                                     "session_id": session_id,
                                     "real_time_logs": collected_logs,
                                     "trace_info": trace_info
@@ -1454,6 +2704,259 @@ class ChatbotAgent(DatabaseCollections):
             return user_query
         return Input_query
 
+
+    def process_chat(self, request, data, has_prompt_title=False):
+        """Process chatbot request with optional prompt_title and agency_id"""
+        print("Processing standard chatbot request...")
+        user_query = data.get('userQuery', "")
+        agent_id = data.get('agent_id', "")
+        user_id = data.get('user_id', '')
+
+        session_id = data.get('session_id')
+            
+        if not session_id:
+            session_id = self.utils.generate_uuid()
+            print(f"🆕 New session_id generated: {session_id}")
+        else:
+            print(f"♻️ Using session_id: {session_id}")
+
+        # Fetch agency_id from agent_agency_mapping_collection
+        # try:
+        #     if master_agent_id:
+        #         master_agent_doc = self.agent_collection.find_one(
+        #             {"agent_id": master_agent_id, "status": "active"}
+        #         )
+        #         if master_agent_doc:
+        #             mapping_doc = self.agent_agency_mapping_collection.find_one(
+        #                 {"agent_id": master_agent_id, "status": "active"}
+        #             )
+        #             if mapping_doc:
+        #                 agency_id = mapping_doc.get("agency_id", "")
+        # except Exception as e:
+        #     print(f"Error fetching agency_id: {str(e)}")
+
+        # Prepare the new event document to be inserted into chatbot_tracking
+        # new_event = {
+        #     "event_id": event_id,
+        #     "user_query": user_query,
+        #     "prompt_title": prompt_title,
+        #     "prompt_output": "",
+        #     "agent_id": agent_id,
+        #     "agency_id": agency_id,
+        #     "status": "inprogress",
+        #     "session_id": session_id,
+        #     "feedback_rating": data.get("feedback_rating"),
+        #     "feedback_comments": data.get("feedback_comments", ""),
+        #     "created_ts": self.utils.get_current_timestamp(),
+        #     "updated_ts": self.utils.get_current_timestamp(),
+        #     "user_id": user_id,
+        #     "map_id": map_id,
+        #     "master_agent_id": master_agent_id,
+        #     "isSavedToRepo" :isSavedToRepo
+        # }
+
+        # Insert into chatbot_tracking
+        # insert_event_op = {'type': 'insert_one', 'document': new_event}
+        # self._query_db('chatbot_tracking', insert_event_op)
+
+        tool_res = self.agent_collection.find_one({'agent_id': agent_id})
+        custom_tool_config = tool_res.get("Iscustomtool", False)
+        internal_tool_data = tool_res.get("internal_tool", [])
+        api_key = tool_res.get("agent_api_key")
+        if custom_tool_config and internal_tool_data:
+            print("Custom tool configuration detected. Routing to run_lyzr.")
+            
+            
+            # Call synchronous run_lyzr
+            return self.run_lyzr_chat(
+                user_input=user_query,
+                user_id=user_id,
+                lyzr_api_key=api_key,
+                lyzr_agent_id=agent_id,
+                session_id=session_id,
+               
+            )
+        else:
+
+            # Call synchronous call_agent_api
+            return self.call_agent_api_chat( user_query, api_key, session_id, user_id,agent_id)
+
+
+    def run_lyzr_chat(self, user_input: str, user_id: str, lyzr_api_key: str, lyzr_agent_id: str, session_id: str):
+        
+        # 1. Prepare Tools and Prompt
+        context = self._get_agent_context(lyzr_agent_id)
+        raw_tools_docs = context.get("raw_tools_docs", [])
+        tools_called = []
+        user_data = self.user_collection.find_one({
+            "Email": re.compile(f"^{re.escape(user_id.lower())}$", re.IGNORECASE),
+            "IsActive": True,
+            "IsDelete": False
+        }, {"_id": 0, "Email": 1, "FirstName": 1, "LastName": 1})
+        if not user_data:
+            user_data = {"Email": user_id, "FirstName": "", "LastName": ""}
+
+        encrypted_user_data = process_sensitive_fields(user_data, "encrypt")
+
+        tools_prompt = f"""\n\n Important Instruction: You have access to these tools. When you need to use a tool, respond with ONLY a valid JSON object with 'tool_name' and 'arguments'. The tool call will happen from client side so respond only with given JSON format and not from the lyzr tool. Do not add any extra text. If multiple tool calls are required for a result do it in sequence. \n
+
+            !!!IMPORTANT: Do not execute any URL from your end. The tool call should happen from the client side. You are only responsible for providing the correct tool call in JSON format. Do not provide any additional text or explanations.
+            
+            Workflow:
+            1. Review the user query + the attached tool schemas
+            2. Select the most relevant tool(s) .
+            3. Output the tool call in the exact required format.
+            4. Wait for the backend to execute the tool and return the result.
+            5. Analyze the tool response.
+            6. Give the final clear answer to the user.
+
+            Rules:
+            - Think step-by-step before calling tools.
+            - Only use available tool schemas.
+            - Never hallucinate tool results.
+            - After receiving tool response, provide the final response to the user.
+            - Be professional, patient, and clear.
+            - Use numbered steps.
+            - Include warnings when needed.
+            - Ask clarifying questions if information is missing.
+
+            Use user data if required. User Data: \n{json.dumps(encrypted_user_data)}
+
+            """
+        
+        for doc in raw_tools_docs:
+            if not isinstance(doc, dict): continue
+            tool_key = doc.get("tool_key", {})
+            if not isinstance(tool_key, dict): continue
+
+            functions = tool_key.get("functions", [])
+            if isinstance(functions, list):
+                for func in functions:
+                    if not isinstance(func, dict): continue
+                    if func.get("active", True):
+                        name = func.get("name", "Unknown_Tool")
+                        description = func.get("description", "No description provided.")
+                        parameters = func.get("parameters", {})
+                        properties_only = parameters.get("properties", parameters) if isinstance(parameters, dict) else {}
+                        tools_prompt += f"- {name}: {description}\n Parameters: {json.dumps(properties_only)}\n"
+
+        current_message = tools_prompt + "\nUser Query:" + user_input
+        max_rounds = 10
+        final_content = ""
+        agent_api_base = "https://agent-prod.studio.lyzr.ai"
+
+        try:
+            # 2. Synchronous Agent Execution Loop
+            for _ in range(max_rounds):
+                headers = {
+                    "x-api-key": lyzr_api_key,
+                    "Content-Type": "application/json",
+                }
+                payload = {
+                    "user_id": user_id,
+                    "agent_id": lyzr_agent_id,
+                    "session_id": session_id,
+                    "message": current_message,
+                }
+                
+                # Make Standard Blocking API Call
+                res = requests.post(f"{agent_api_base}/v3/inference/chat/", headers=headers, json=payload)
+                res.raise_for_status()
+                response_json = res.json()
+
+                # Parse Response Content
+                content = (
+                    response_json.get("content") or 
+                    response_json.get("response") or 
+                    response_json.get("message") or 
+                    str(response_json)
+                )
+                print("Agent Response Content:", content)
+                # Parse tool call robustly from dict/string/fenced-json payloads.
+                tool_call = self._extract_tool_call(response_json)
+
+                # Execute Tool OR End Loop
+                if tool_call and isinstance(tool_call, dict) and "tool_name" in tool_call:
+                    tool_name = tool_call["tool_name"]
+                    tools_called.append(tool_name)
+                    args = tool_call.get("arguments", {})
+                    decrypted_args = process_sensitive_fields(args, "decrypt")
+                    
+                    auth_service = ToolAuthService()
+                    tool_result = auth_service._execute_tool(tool_name, decrypted_args, raw_tools_docs, user_id)
+                    masked_tool_result = self.mask_pii_sensitive_data(tool_result)
+                    
+                    current_message = f"Tool '{tool_name}' executed successfully.\nResult: {masked_tool_result}\n\nContinue with the next step tool call if required or give final answer."
+                else:
+                    # Final response generated
+                    final_content = content
+                    break
+
+            # 3. Save to database and return result immediately
+            
+
+            return {
+                "type": "final_response",
+                "data": {
+                    "response": final_content,
+                    "session_id": session_id,
+                    "tools_called": tools_called
+                }
+            }
+
+        except Exception as e:
+            # Save failure to db and return error
+            return {"type": "error", "message": str(e)}
+
+
+    def call_agent_api_chat(self, user_query,api_key, session_id, user_id, agent_id):
+        
+        
+        agent_api_base ="https://agent-prod.studio.lyzr.ai"
+        agent_api_url = f"{agent_api_base}/v3/inference/chat/" # Standard chat API (non-streaming)
+        
+        payload = {
+            "user_id": user_id or "default_user",
+            "agent_id": agent_id,
+            "session_id": session_id or "default_session",
+            "message": user_query
+        }
+        
+        
+        headers = {
+            "x-api-key": api_key,
+            "Content-Type": "application/json"
+        }
+        
+        try:
+            # Standard synchronous post request (no stream=True)
+            response = requests.post(agent_api_url, json=payload, headers=headers)
+            response.raise_for_status()
+            response_json = response.json()
+            
+            # Extract content
+            final_content = (
+                response_json.get("content") or 
+                response_json.get("response") or 
+                response_json.get("message") or 
+                str(response_json)
+            )
+            
+
+            return {
+                "type": "final_response",
+                "data": {
+                    "response": final_content,
+                    "session_id": session_id
+                }
+            }
+            
+        except Exception as e:
+            print(f"LYZR ERROR: {e}")
+            # Mark as failed in DB
+            
+            return {"type": "error", "message": str(e)}
+
     def get_trace_details(self, agent_data, api_key, chat_response):
         time.sleep(2)
         trace_url = config_loader.LYZR_AGENT_URL + '/v3/ops/traces'
@@ -1490,7 +2993,7 @@ class ChatbotAgent(DatabaseCollections):
                     for msg in input_messages:
                         if (isinstance(msg, dict) and 
                            msg.get("role") == "user" and 
-                           "You are an AI assistant tasked" in msg.get("content", "")):
+                           ("You are an AI assistant tasked" in msg.get("content", "") or "You have access to these tools. When you need to use a tool" in msg.get("content", ""))):
                            improvement_contents.append(msg.get("content", ""))
                 
                 content = target.get("output_messages", {}).get("content", "") if target else ""
@@ -1750,17 +3253,7 @@ class FlaskApp(DatabaseCollections):
         self.db =config_loader.main_db
         self.fs = gridfs.GridFS(self.db)
         
-        # self.model= SentenceTransformer('all-MiniLM-L6-v2')
         
-        
-        # self.client = OpenSearch(
-            # hosts=[{'host': '34.235.49.226', 'port': 9200, 'scheme': 'http'}],
-            # http_auth=('admin', "MovateOpenSearch$123"), 
-            # verify_certs=False,
-            # ssl_show_warn=False,
-            # sniff_on_start=False,
-            # sniff_on_connection_fail=False
-        # )
         opensearch = config_loader.get_opensearch_details()
         
         self.client = OpenSearch(
@@ -1789,6 +3282,9 @@ class FlaskApp(DatabaseCollections):
         self.lyzr_api_manager = LyzrAPIManagement()
         self.automation_library_api_manager = AutomationLibraryAPI()
         self.insight_manager = InsightsManager()
+        self.external_app_manager = ExternalApp()
+        self.ticket_functions = TicketFunctions()
+        
         ## self.socketio = SocketIO(self.app, cors_allowed_origins="*",async_mode='threading')
         
             # Cleanup if needed
@@ -1809,6 +3305,37 @@ class FlaskApp(DatabaseCollections):
         self.setup_routes()
         # self.app.register_blueprint(voice_bp, url_prefix='/voice-agent')
     
+        original_add_url_rule = self.app.add_url_rule
+ 
+        # Create a list of existing rules before modifying the map
+        existing_rules = list(self.app.url_map.iter_rules())
+        for rule in existing_rules:
+            rule_string = rule.rule
+            endpoint_name = rule.endpoint
+            # Skip if it's static, docs, or already starts with /v1
+            if (rule_string.startswith('/v1') or 
+                rule_string in ['/openapi.json', '/docs', '/static'] or
+                endpoint_name.startswith('static')):
+                continue
+            # Get the view function safely
+            try:
+                view_func = self.app.view_functions.get(endpoint_name)
+            except:
+                continue
+            if view_func is None:
+                continue
+ 
+            # Extract the original HTTP methods
+            methods = list(rule.methods) if rule.methods else ['GET']
+            if 'OPTIONS' in methods:
+                methods.remove('OPTIONS')
+            if 'HEAD' in methods:
+                methods.remove('HEAD')
+            # Register the exact same route, but with /v1
+            v1_rule = f"/v1{rule_string}"
+            v1_endpoint = f"{endpoint_name}_v1"
+            original_add_url_rule(v1_rule, endpoint=v1_endpoint, view_func=view_func, methods=methods)
+
     def register_socket_events(self):
 
         @self.socketio.on("connect")
@@ -2144,13 +3671,16 @@ class FlaskApp(DatabaseCollections):
     def setup_routes(self):
         # Health check endpoint
         self.app.add_url_rule('/health', 'health_check', self.health_check, methods=['GET'])   
+        self.app.add_url_rule('/test-sensitive-encryption', 'test_sensitive_encryption', self.test_sensitive_encryption, methods=['POST'])
 
         #Subscription-Re_Sync_All
         self.app.add_url_rule('/refreshsubScriptionDetails', 'refresh_subscription_details', self.refreshsubScriptionDetails, methods=['POST'])
         
         # User Management Routes
         self.app.add_url_rule('/DoLogin', 'do_login', self.do_login, methods=['POST'])
-        self.app.add_url_rule('/api/DoLogin', 'do_login', self.do_login, methods=['POST'])
+        self.app.add_url_rule('/refresh-token', 'refresh_token', session_manager.refresh_token, methods=['POST'])
+        self.app.add_url_rule('/session-token', 'session', self.session_token, methods=['POST'])
+        self.app.add_url_rule('/verify-token', 'verify-token', self.verify_token, methods=['POST'])
         self.app.add_url_rule('/GetReCaptchaConfig', 'get_recaptcha_config', self.get_recaptcha_config, methods=['GET'])
         self.app.add_url_rule('/OTPDetails', 'otp_details', self.otp_details, methods=['POST'])
         self.app.add_url_rule('/ValidateOTP', 'validate_otp', self.validate_otp, methods=['POST'])
@@ -2190,6 +3720,7 @@ class FlaskApp(DatabaseCollections):
         
         # Agent Management Routes
         self.app.add_url_rule('/GetAllAgents', 'get_all_agents', self.get_all_agents, methods=['POST'])
+        self.app.add_url_rule('/GetAgentDetailsForApproval/<agent_id>', 'get_agent_details_for_approval', self.get_agent_details_for_approval, methods=['GET'])
         self.app.add_url_rule('/GetAllVoiceAgents', 'get_all_voice_agents', self.get_all_voice_agents, methods=['POST'])
         self.app.add_url_rule('/voice-agent/sessions/start', 'get_session_start_agent', self.get_session_start_agent, methods=['POST'])
         self.app.add_url_rule('/voice-agent/sessions/end', 'get_session_end_agent', self.get_session_end_agent, methods=['POST'])
@@ -2216,11 +3747,16 @@ class FlaskApp(DatabaseCollections):
 
         # Chatbot Routes
         self.app.add_url_rule('/chatbotagent', 'chatbot_agent_handler', self.chatbot_agent_handler, methods=['POST'])
+        self.app.add_url_rule('/chatbotagent/chat', 'chatbot_agent_handler_chat', self.chatbot_agent_handler_chat, methods=['POST'])
         self.app.add_url_rule('/popularQueries', 'get_popular_queries', self.get_popular_queries, methods=['POST'])
         self.app.add_url_rule('/getRecentData', 'get_recent_data', self.get_recent_data, methods=['POST'])
         self.app.add_url_rule('/getRecentDataAgent', 'get_recent_data_agent', self.get_recent_data_agent, methods=['POST'])
         self.app.add_url_rule('/getmasteragent', 'get_master', self.get_master, methods=['POST'])
         self.app.add_url_rule('/routeQuery', 'route_query_api', self.route_query_api, methods=['POST'])
+        self.app.add_url_rule('/feedback', 'incident_feedback', self.ticket_functions.incident_feedback, methods=['POST'])
+        self.app.add_url_rule('/patch-by-number', 'patch_incident_by_number', self.ticket_functions.patch_incident_by_number, methods=['POST'])
+        self.app.add_url_rule('/webhook/incident/preview', 'preview_dag', self.ticket_functions.preview_dag, methods=['POST'])
+        self.app.add_url_rule('/webhook/incident', 'receive_incident', self.ticket_functions.receive_incident, methods=['POST'])
         self.app.add_url_rule('/updateFeedBackDetails', 'update_feedback_details', self.update_feedback_details, methods=['POST'])
         self.app.add_url_rule('/updatereviewFeedBackDetails', 'update_review_feedback_details', self.update_review_feedback_details, methods=['POST'])
         self.app.add_url_rule('/getGraphData', 'fetch_and_transform_graph', self.fetch_and_transform_graph, methods=['POST'])
@@ -2380,6 +3916,7 @@ class FlaskApp(DatabaseCollections):
         self.app.add_url_rule('/UpdatePrompt', 'update_prompt', self.update_prompt, methods=['POST'])
         self.app.add_url_rule('/BatchUpdate', 'batch_update_prompts', self.batch_update_prompts, methods=['POST'])
         self.app.add_url_rule('/DeletePrompt', 'delete_prompt', self.delete_prompt, methods=['POST'])
+        self.app.add_url_rule('/recoverDuplicateTitle', 'deduplicate_prompt_titles', self.deduplicate_prompt_titles, methods=['POST'])
 
         # Agent Evaluation (Offline)
         self.app.add_url_rule('/agent-evaluation', 'agent_evaluation', self.agent_evaluation_handler, methods=['POST'])
@@ -2390,6 +3927,39 @@ class FlaskApp(DatabaseCollections):
         self.app.add_url_rule('/fetchAgentVersionHistory', 'fetch_agent_version_history', self.fetch_agent_version_history, methods=['POST'])
         self.app.add_url_rule('/fetchAgentVersionDetails', 'fetch_agent_version_details', self.fetch_agent_version_details, methods=['POST'])
 
+        #Tool Management Routes
+        self.app.add_url_rule('/tools', 'get_all_tools', self.get_all_tools, methods=['GET'])
+        self.app.add_url_rule('/tools/<tool_id>', 'get_tool_by_id', self.get_tool_by_id, methods=['GET'])
+        self.app.add_url_rule('/saveconnection', 'save_connections_details', self.save_connections_details, methods=['POST'])
+        self.app.add_url_rule('/fetchconnection', 'fetch_connections', self.fetch_connections, methods=['POST'])
+        self.app.add_url_rule('/getconnectiondata/<connection_id>', 'get_connection_data_by_id', self.get_connection_data_by_id, methods=['GET'])
+        self.app.add_url_rule('/toolauthentication', 'authenticate_tool', self.authenticate_tool, methods=['POST'])
+        self.app.add_url_rule('/deleteconnection/<connection_id>', 'delete_connection', self.delete_connection, methods=['DELETE'])
+        self.app.add_url_rule('/getCustomAction/<tool_id>', 'get_custom_action', self.get_custom_action, methods=['GET'])
+
+        # Conversational chat history routes
+        self.app.add_url_rule('/getSessionList', 'get_session_list', self.get_session_list, methods=['GET'])
+        self.app.add_url_rule('/getSessionDetails/<session_id>', 'get_session_details', self.get_session_details, methods=['GET'])
+        self.app.add_url_rule('/getRecentQuery/<agent_id>', 'get_recent_query', self.get_recent_query, methods=['GET'])
+
+        # Notification Routes
+        self.app.add_url_rule('/getNotificationsByUser/<email_id>', 'get_notifications', self.get_notifications, methods=['GET'])
+        
+        # External Application routes
+        self.app.add_url_rule('/registerExternalApplication', 'register_external_application', self.register_external_application, methods=['POST'])
+        self.app.add_url_rule('/getExternalApplications', 'get_external_applications', self.get_external_applications, methods=['GET'])
+        self.app.add_url_rule('/getExternalApplication/<application_id>', 'get_external_application_by_id', self.get_external_application_by_id, methods=['GET'])
+        self.app.add_url_rule('/deleteExternalApplication/<application_id>', 'delete_external_application', self.delete_external_application, methods=['POST'])
+        self.app.add_url_rule('/updateExternalApplication/<application_id>','update_external_application',self.update_external_application,methods=['POST'])
+        
+        # Serve the raw openapi.json file for Postman Import
+        self.app.add_url_rule('/openapi.json', 'serve_openapi_json', self.serve_openapi_json, methods=['GET'])
+        # Serve the Swagger UI HTML
+        self.app.add_url_rule('/docs', 'serve_swagger_ui', self.serve_swagger_ui, methods=['GET'])
+        
+        # External Application using API only
+        self.app.add_url_rule('/GetAgentsForSubscriptionUser', 'get_agents_for_subscription_user', self.get_agents_for_subscription_user, methods=['GET', 'POST'])
+
     # User Management Methods
     def do_login(self):
         try:
@@ -2399,15 +3969,89 @@ class FlaskApp(DatabaseCollections):
             if response.get("Success"):
                 session_id = session_manager.create_session(response)
                 response["SessionId"] = session_id
-            
-            return jsonify(response), 200
+
+                tokens = session_manager.get_tokens({
+                    "user_id": response.get("Email"),
+                    "name": response.get("UserName"),
+                    "role": response.get("Role"),
+                    "ActiveProject": response.get("ActiveProject"),
+                })
+
+                return jsonify({ **response, **tokens }), 200
+
+            return jsonify({"Success": False, "Message": response.get('Message', 'Login error') }), 500
         except Exception as ex:
             self.utils.log_error("Error in DoLogin:")
             return jsonify({"Success": False, "Message": str(ex)}), 500
+   
+    @require_session
+    def session_token(self):
+        user = get_current_user()
+        user_op = {
+            'type': 'find_one',
+            'filter': {
+                "Email": user.get('user_id'),
+                "IsActive": True,
+                "IsDelete": False
+            }     
+        }
+        user_data = self.user_manager._query_db('user', user_op, user_type='master')
+                
+        token = session_manager.get_session_token(user_data)
+        return buildResponse("Session token generated successfully", { "session_token": token }, 201)
+
+    @require_session
+    def verify_token(self):
+        user = get_current_user()
+
+        user_op = {
+                    'type': 'find_one',
+                    'filter': {
+                        "Email": user.get('user_id'),
+                        "IsActive": True,
+                        "IsDelete": False
+                    }     
+                }
+        user_data = self.user_manager._query_db('user', user_op, user_type='master')
+
+        if not user_data:
+            raise AuthorizationError()
+
+        role_ids = {user.get('role')}
+        role_ids.update(
+                [detail["role_name"] for detail in user_data.get("PrjDetails")]
+            )
+        user_data = {
+            "user_id": user.get("user_id", None),
+            "role_id": list(role_ids),
+            "UserName": user.get("name", None),
+            "active_subscription": user.get("ActiveProject", None),
+            "profile_picture": user_data.get("Avatar", None),
+        }
+        
+
+        return buildResponse("Token verified successfully", user_data, 200)
 
     def health_check(self):
         """Simple health check endpoint"""
         return jsonify({"status": "healthy", "message": "Service is running"}), 200
+
+    def test_sensitive_encryption(self):
+        """Test endpoint for encrypting/decrypting sensitive JSON fields."""
+        payload = self.utils.validate_json_request(request)
+        action = payload.get('action', '').strip().lower()
+        data = payload.get('data')
+
+        if action not in {'encrypt', 'decrypt'}:
+            return buildResponse("Invalid action. Use 'encrypt' or 'decrypt'", {}, 400)
+        if data is None:
+            return buildResponse("Missing 'data' field in request body", {}, 400)
+
+        try:
+            result = process_sensitive_fields(data, action)
+            return buildResponse("Sensitive fields processed", result, 200)
+        except Exception as exc:
+            return buildResponse("Failed to process sensitive fields", {"error": str(exc)}, 500)
     
     def get_recaptcha_config(self):
        
@@ -2443,36 +4087,7 @@ class FlaskApp(DatabaseCollections):
         payload = self.utils.validate_json_request(request)
         response = self.user_manager.perform_get_roles(payload)
         return buildResponse("Details fetched successfully", response, 200)
-
-    '''@require_session
-    def sso_login(self):
-        """SSO login via MSAL Bearer token - validates token, creates backend session."""
-        from session_manager import _validate_msal_token
-        email = ''
-        try:
-            auth_header = request.headers.get('Authorization', '')
-            if not auth_header.startswith('Bearer '):
-                return jsonify({"Success": False, "Message": "Missing Bearer token"}), 401
-            token = auth_header[7:]
-            claims = _validate_msal_token(token)
-            if not claims:
-                return jsonify({"Success": False, "Message": "Invalid or expired token"}), 401
-            email = claims.get('preferred_username') or claims.get('upn') or claims.get('email', '')
-            if not email:
-                return jsonify({"Success": False, "Message": "Email claim not found in token"}), 401
-            response = self.user_manager.sso_login(email)
-            if response.get("Success"):
-                session_id = session_manager.create_session(response)
-                response["SessionId"] = session_id
-            return jsonify(response), 200
-        except NotFoundError:
-            msg = f"Your account ({email}) is not registered in the system. Please contact your administrator." if email else "User not found. Please contact your administrator."
-            return jsonify({"Success": False, "Message": msg}), 403
-        except Exception as ex:
-            self.utils.log_error("Error in SsoLogin:")
-            return jsonify({"Success": False, "Message": str(ex)}), 500
-            '''
-    
+        
     @require_session
     def get_mcp_statistics(self):
         stats = self.knowledgestore_manager.get_mcp_statistics()
@@ -4410,6 +6025,7 @@ class FlaskApp(DatabaseCollections):
         self.agent_manager.delete_agent_details(agent_id)
         return buildResponse("Agent deleted successfully",None, 200)
 
+    @require_session
     def delete_agent_with_approval(self):
         try:
             data = self.utils.validate_json_request(request)
@@ -4424,6 +6040,11 @@ class FlaskApp(DatabaseCollections):
         agents = self.agent_manager.get_all_agent_details()
         return buildResponse("Agents fetched successfully", agents, 200)
 
+    @require_session
+    def get_agent_details_for_approval(self, agent_id):
+        agent_details = self.agent_manager.get_agent_details_for_approval(agent_id)
+        return buildResponse("Agent details fetched successfully", agent_details, 200)
+        
     @require_session
     def get_all_voice_agents(self):
         agents = self.agent_manager.get_all_voice_agent_details()
@@ -4599,6 +6220,22 @@ class FlaskApp(DatabaseCollections):
             
             # Process the request with or without prompt_title
             return self.chatbot_agent.process_request(request, data, has_prompt_title)
+            
+        except Exception as e:
+            print(f"Error in chatbot_agent_handler: {str(e)}")
+            return buildResponse(f"Error processing request: {str(e)}", 500)
+
+    @require_session
+    def chatbot_agent_handler_chat(self):
+        """Handle chatbot requests from both chatbot page and prompt repository"""
+        try:
+            data = self.utils.validate_json_request(request)
+            
+            # Check if prompt_title is present (from prompt repository)
+            has_prompt_title = "prompt_title" in data
+            
+            # Process the request with or without prompt_title
+            return self.chatbot_agent.process_chat(request, data, has_prompt_title)
             
         except Exception as e:
             print(f"Error in chatbot_agent_handler: {str(e)}")
@@ -4827,7 +6464,12 @@ class FlaskApp(DatabaseCollections):
             raise ValidationError( "project_name is required")
         
         result = self.user_manager.switch_projectname(project_name)
-        return buildResponse("Project switched successfully", result, 200)
+
+        if not result:
+            raise ValidationError("Failed to switch project")
+        
+        tokens = session_manager.get_tokens({ **get_current_user(), "ActiveProject": project_name })
+        return buildResponse("Project switched successfully", tokens, 200)
             
            
     def get_scheduled_agents(self):
@@ -5080,12 +6722,74 @@ class FlaskApp(DatabaseCollections):
         
         # If we still haven't found an API key, raise an error
         raise NotFoundError("API key not found for agent")
- 
-    def get_chat_messages(self, request_id: str, user_type: str):
+
+    def _get_event_id_from_logs(self, request_id: str, selected_project: str) -> str:
+        logs_dir = "logs"
+        if not os.path.isdir(logs_dir):
+            return None
+
+        raw_project = selected_project
+        print(f"Selected project: {raw_project}")
+        if not raw_project:
+            return None
+
+        projects = [p.strip() for p in raw_project.split(",") if p.strip()]
+        if not projects:
+            return None
+
+        # Get relevant log files for this project
+        relevant_files = self._get_relevant_files(
+            logs_dir, projects, start=None, end=None
+        )
+
+        # Sort files by modified time (newest first)
+        relevant_files.sort(key=lambda x: os.path.getmtime(x[0]), reverse=True)
+
+        for filepath, project_name, log_date in relevant_files:
+            try:
+                with open(filepath, "r", encoding="utf-8") as f:
+                    for line in f:
+                        # Check if this line belongs to the request_id
+                        if f"request_id={request_id}" in line or request_id in line:
+                            print("iiiiiii")
+                            print("line",line)
+
+                            # 1. Extract JSON from body={...}
+                            body_match = re.search(
+                                r"body=(\{.*?\})(?:\s*\||$)", line
+                            )
+                            if body_match:
+                                try:
+                                    body_data = json.loads(body_match.group(1))
+                                    event_id = body_data.get("event_id")
+                                    if event_id:
+                                        return str(event_id)
+                                except json.JSONDecodeError:
+                                    pass
+
+                            # 2. Fallback regex to capture "event_id": "VALUE"
+                            event_match = re.search(
+                                r'["\']event_id["\']\s*:\s*["\']([^"\']+)["\']',
+                                line,
+                            )
+                            
+                            if event_match:
+                                return event_match.group(1)
+
+                            # If event_id wasn't found on this line (e.g. rtype=response),
+                            # the loop will continue to check other lines for this request_id!
+            except Exception as e:
+                print(f"Error reading log file {filepath}: {e}")
+                continue
+
+        return None
+    def get_chat_messages(self, request_id: str, user_type: str, selected_project: str):
         try:
+
+            event_id = self._get_event_id_from_logs(request_id,selected_project)
             find_op = {
                 'type': 'find_one',
-                'filter': {"event_id": request_id}
+                'filter': {"event_id": event_id}
             }
 
             data = self.chatbot_agent._query_db(
@@ -5097,13 +6801,33 @@ class FlaskApp(DatabaseCollections):
             if data and isinstance(data, dict):
                 return {
                     'output_message': data.get("prompt_output", ""),
-                    'input_message': data.get("user_query", "")
+                    'input_message': data.get("user_prompt") or data.get("user_query", "")
                 }
         except Exception as e:
             print(f"Error fetching chat messages: {e}")
 
         return {}
-      
+
+    def update_chat_messages(self,event_id, session_id, final_content, trace_details_data,collected_logs,final_input_message):
+        try:
+            update_op = {
+                'type': 'update_one',
+                'filter': {'event_id': event_id},
+                'update': {
+                    "$set": {
+                        "prompt_output": final_content,
+                        "status": "completed",
+                        "session_id": session_id,
+                        "real_time_logs": collected_logs,
+                        "trace_info": trace_details_data,
+                        "user_prompt": final_input_message
+                    }
+                }
+            }
+            self.chatbot_agent._query_db('chatbot_tracking', update_op)
+            print("Full Response and trace info saved into db111")
+        except Exception as e:
+            print("No data found for the given event_id to update", e)
     
     @require_session
     def grp_log(self):
@@ -6143,19 +7867,55 @@ class FlaskApp(DatabaseCollections):
             trace_details = trace_detail_response.json()
             if isinstance(trace_details, list):
                 trace_details = trace_details[0] if trace_details else {}
+            print("tttttt",trace_details)
 
             # Extract chat messages from spans BEFORE removing input/output
-            extracted_chat_messages = {}
+            priority_text = "You have access to these tools. When you need to use a tool"
+
+            extracted_chat_messages = {"input_message": "", "output_message": ""}
+
             if "spans" in trace_details and isinstance(trace_details["spans"], list):
+                first_input = ""
+                priority_input = ""
+                first_output = ""
+
                 for span in trace_details["spans"]:
                     span_attrs = span.get("SpanAttributes", {})
-                    if span_attrs.get("input") or span_attrs.get("output"):
-                        extracted_chat_messages = {
-                            "input_message": span_attrs.get("input", ""),
-                            "output_message": span_attrs.get("output", "")
-                        }
-                        if extracted_chat_messages["input_message"] or extracted_chat_messages["output_message"]:
-                            break  # Found messages, stop searching
+                    inp = span_attrs.get("input", "")
+                    out = span_attrs.get("output", "")
+
+                    # 1. Handle Output (First output found, exactly like previous logic)
+                    if not first_output and out:
+                        first_output = out
+
+                    # 2. Handle Input (Store first input, but prioritize if it contains the tools text)
+                    if inp:
+                        if not first_input:
+                            first_input = inp
+
+                        if priority_text in str(inp):
+                            priority_input = inp
+
+                # Set final input: Use priority input if found, otherwise default to first input
+                extracted_chat_messages["input_message"] = (
+                    priority_input if priority_input else first_input
+                )
+
+                # Set final output: Normal first available output
+                extracted_chat_messages["output_message"] = first_output
+
+
+            # extracted_chat_messages = {}
+            # if "spans" in trace_details and isinstance(trace_details["spans"], list):
+            #     for span in trace_details["spans"]:
+            #         span_attrs = span.get("SpanAttributes", {})
+            #         if span_attrs.get("input") or span_attrs.get("output"):
+            #             extracted_chat_messages = {
+            #                 "input_message": span_attrs.get("input", ""),
+            #                 "output_message": span_attrs.get("output", "")
+            #             }
+            #             if extracted_chat_messages["input_message"] or extracted_chat_messages["output_message"]:
+            #                 break  # Found messages, stop searching
 
             # Clean spans
             if "spans" in trace_details and isinstance(trace_details["spans"], list):
@@ -6187,13 +7947,14 @@ class FlaskApp(DatabaseCollections):
                         e, getattr(e.response, 'status_code', 500))
 
         # Use extracted chat messages first, fallback to database query if not found
-        chat_messages = extracted_chat_messages if extracted_chat_messages else self.get_chat_messages(request_id, user_type)
+        chat_messages = self.get_chat_messages(request_id, user_type, selected_project)
 
         real_time_logs = []
         try:
+            event_id = self._get_event_id_from_logs(request_id,selected_project)
             find_op = {
                 'type': 'find_one',
-                'filter': {"event_id": request_id}
+                'filter': {"event_id": event_id}
             }
 
             tracking_doc = self.chatbot_agent._query_db(
@@ -13442,7 +15203,8 @@ class FlaskApp(DatabaseCollections):
                 agent_id=data["agent_id"],
                 map_id=data["map_id"],
                 prompt_title=data["prompt_title"],
-                user_query=data["user_query"]
+                user_query=data["user_query"],
+                created_by=data["created_by"]
             )
             
             return buildResponse("Prompt saved successfully", result, 200)
@@ -13708,24 +15470,263 @@ class FlaskApp(DatabaseCollections):
         except Exception as e:
             return buildResponse(f"Error in batch update: {str(e)}", None, 500)
         
-    # Agent Evaluation (Offline)
+    @require_session
+    def deduplicate_prompt_titles(self):
+        """Generate unique titles for ALL duplicate records in both
+        chatbot_tracking_collection and prompt_repo collection.
+        """
+        try:
+            data = self.utils.validate_json_request(request)
+            dry_run = data.get("dry_run", True)
+
+            # ------------------------------------------------------------------
+            # fetch records that have a non-empty title + query
+            # ------------------------------------------------------------------
+            def fetch_records(collection, extra_projection=None):
+                query = {
+                    "prompt_title": {"$exists": True, "$ne": None, "$ne": ""},
+                    "user_query":   {"$exists": True, "$ne": None, "$ne": ""}
+                }
+                projection = {
+                    "event_id": 1,        
+                    "_id": 1,             
+                    "prompt_title": 1,
+                    "user_query": 1,
+                    "prompt_output": 1  
+                }
+                if extra_projection:
+                    projection.update(extra_projection)
+
+                return list(collection.find(query, projection).sort("updated_ts", -1))
+
+            # ------------------------------------------------------------------
+            # STEP 1 – Load records from both collections
+            # ------------------------------------------------------------------
+            tracking_records = fetch_records(self.chatbot_tracking_collection)
+            repo_records     = fetch_records(self.prompt_repo)   # ← new
+
+            # Tag each record with its source so we know where to write later
+            for r in tracking_records:
+                r["_source"] = "tracking"
+            for r in repo_records:
+                r["_source"] = "repo"
+
+            all_records = tracking_records + repo_records
+
+            if not all_records:
+                return buildResponse("No records found", {"total_updated": 0}, 200)
+
+            # ------------------------------------------------------------------
+            # STEP 2 – Build duplicate maps
+            # ------------------------------------------------------------------
+            title_count = {}
+            title_query_combo_count = {}
+
+            for record in all_records:
+                title = (record.get("prompt_title") or "").strip().lower()
+                query_text = (record.get("user_query") or "").strip().lower()
+
+                if title:
+                    title_count[title] = title_count.get(title, 0) + 1
+
+                combo_key = f"{title}|||{query_text}"
+                title_query_combo_count[combo_key] = title_query_combo_count.get(combo_key, 0) + 1
+
+            # ------------------------------------------------------------------
+            # STEP 3 – Collect every record that is a duplicate
+            # ------------------------------------------------------------------
+            records_to_process = []
+
+            for record in all_records:
+                original_title = record.get("prompt_title") or ""
+                user_query = record.get("user_query", "")
+
+                if not original_title.strip() or not user_query:
+                    continue
+
+                title_lower = original_title.strip().lower()
+                query_lower = user_query.strip().lower()
+
+                is_duplicate_title = title_count.get(title_lower, 0) > 1
+                combo_key = f"{title_lower}|||{query_lower}"
+                is_duplicate_combo = title_query_combo_count.get(combo_key, 0) > 1
+
+                if is_duplicate_title or is_duplicate_combo:
+                    records_to_process.append(record)
+
+            if not records_to_process:
+                return buildResponse("No duplicate titles found", {
+                    "total_duplicates_found": 0,
+                    "total_updated": 0,
+                    "message": "All titles are already unique"
+                }, 200)
+
+            # ------------------------------------------------------------------
+            # STEP 4 – Shared uniqueness set
+            # ------------------------------------------------------------------
+            evaluator = AgentEval()
+            changes_log = []
+            total_updated = 0
+
+            # Load all existing titles from both collections once
+            existing_titles = self._get_all_existing_titles()         
+            existing_titles |= self._get_all_existing_titles_from_repo() 
+
+            # ------------------------------------------------------------------
+            # STEP 5 – Generate unique titles & write back
+            # ------------------------------------------------------------------
+            for record in records_to_process:
+                source = record["_source"]
+                original_title = record.get("prompt_title") or ""
+                user_query = record.get("user_query", "")
+                prompt_output = record.get("prompt_output", "")   
+
+                new_title = self._generate_unique_prompt_title(
+                    evaluator=evaluator,
+                    original_title=original_title,
+                    user_query=user_query,
+                    prompt_output=prompt_output,
+                    existing_titles=existing_titles
+                )
+
+                if not new_title or new_title == original_title:
+                    continue
+
+                if not dry_run:
+                    if source == "tracking":
+                        self.chatbot_tracking_collection.update_one(
+                            {"event_id": record["event_id"]},
+                            {
+                                "$set": {
+                                    "prompt_title": new_title,
+                                    "isSavedToRepo": True,
+                                    "updated_ts": datetime.now(timezone.utc)
+                                }
+                            }
+                        )
+                    else:  # prompt_repo
+                        self.prompt_repo.update_one(
+                            {"_id": record["_id"]},
+                            {
+                                "$set": {
+                                    "prompt_title": new_title,
+                                    "updated_ts": datetime.now(timezone.utc)
+                                }
+                            }
+                        )
+
+                # Logging
+                title_lower = original_title.strip().lower()
+                query_lower = user_query.strip().lower()
+                combo_key = f"{title_lower}|||{query_lower}"
+
+                reasons = []
+                if title_count.get(title_lower, 0) > 1:
+                    reasons.append("duplicate_title")
+                if title_query_combo_count.get(combo_key, 0) > 1:
+                    reasons.append("duplicate_title+query")
+
+                changes_log.append({
+                    "source": source,
+                    "id": str(record.get("event_id") or record.get("_id")),
+                    "original_title": original_title,
+                    "new_title": new_title,
+                    "user_query_preview": (user_query[:150] + "...") if len(user_query) > 150 else user_query,
+                    "reason": " | ".join(reasons) if reasons else "duplicate"
+                })
+
+                total_updated += 1
+                existing_titles.add(new_title.lower())   
+
+            return buildResponse(
+                f"Successfully processed {total_updated} duplicate titles "
+                f"(tracking + prompt_repo).",
+                {
+                    "total_duplicates_found": len(records_to_process),
+                    "total_updated": total_updated,
+                    "dry_run": dry_run,
+                    "changes": changes_log
+                },
+                200
+            )
+
+        except Exception as e:
+            import traceback
+            logger.error(traceback.format_exc())
+            return buildResponse(f"Error: {str(e)}", None, 500)
+
+    def _generate_unique_prompt_title(self, evaluator, original_title, user_query, prompt_output, existing_titles=None, max_attempts=3):
+        """Generate unique title using Judge Agent."""
+        if existing_titles is None:
+            existing_titles = self._get_all_existing_titles()
+
+        for attempt in range(max_attempts):
+            prompt = f"""You are a strict title deduplicator.
+
+    Original Title: {original_title or 'No Title'}
+    User Query: {user_query}
+    Output Summary: {str(prompt_output)[:650]}
+
+    Generate a **unique, clear, professional, descriptive title** (max 50 characters).
+    Make it specific and different from existing ones.
+    Return ONLY the title as plain text. No quotes, no explanation."""
+
+            try:
+                new_title = evaluator.call_title_recover_agent(prompt)
+                if not new_title:
+                    continue
+
+                new_title = str(new_title).strip().strip('"').strip("'")
+
+                if len(new_title) >= 5 and new_title.lower() not in existing_titles:
+                    return new_title
+
+            except Exception as e:
+                logger.warning(f"Judge attempt {attempt+1} failed: {e}")
+
+        return None
+
+    def _get_all_existing_titles_from_repo(self):
+        """Get current set of prompt titles from prompt_repo (case-insensitive)."""
+        try:
+            titles = self.prompt_repo.distinct("prompt_title")
+            return {str(t).strip().lower() for t in titles if t and str(t).strip()}
+        except Exception as e:
+            logger.warning(f"Failed to fetch existing titles from prompt_repo: {e}")
+            return set()
+    
+    def _get_all_existing_titles(self):
+        """Get current set of prompt titles for uniqueness (case-insensitive)."""
+        try:
+            titles = self.chatbot_tracking_collection.distinct("prompt_title")
+            return {str(t).strip().lower() for t in titles if t and str(t).strip()}
+        except Exception as e:
+            logger.warning(f"Failed to fetch existing titles: {e}")
+            return set()
+    # Agent Evaluation
     @require_session
     def agent_evaluation_handler(self):
         """Handle agent evaluation requests from UI"""
         try:
             data = self.utils.validate_json_request(request)
-            
+
             # Validate required fields
-            required_fields = ["agent_id", "evaluation_type", "data_set"]
+            evaluation_type = data.get("evaluation_type", "")
+            evaluation_method = data.get("evaluation_method", "")
+
+            required_fields = ["agent_id", "evaluation_type"]
+            # data_set is NOT required for Simulation-Based or Config + I/O Dataset
+            if evaluation_method not in ["Simulation-Based", "Config + I/O Dataset", "I/O Dataset Evaluation", "Config + Trace Data", "Trace-Based Evaluation"]:
+                required_fields.append("data_set")
+
             if not all(field in data for field in required_fields):
                 return buildResponse("Missing required fields", None, 400)
-            
+
             evaluator = AgentEval()
             result = evaluator.evaluate_agent(data)
-            
-            # Format response exactly like your other endpoints
+
             return buildResponse("Evaluation completed successfully", result, 200)
-            
+
         except Exception as e:
             import traceback
             traceback.print_exc()
@@ -13735,29 +15736,30 @@ class FlaskApp(DatabaseCollections):
     def fetch_agent_evaluation_handler(self):
         """Handle fetching agent evaluation data from UI"""
         try:
-            # Get query parameters
             agent_id = request.args.get('agent_id')
             evaluation_type = request.args.get('evaluation_type')
             data_set = request.args.get('data_set')
-            
-            # Validate required parameters
+
             if not all([agent_id, evaluation_type, data_set]):
                 return buildResponse("Missing required parameters: agent_id, evaluation_type, or data_set", None, 400)
-            
-            # Validate data_set value
-            if data_set not in ["Input/Output Data", "Trace Data"]:
-                return buildResponse("Invalid data_set value. Must be 'Input/Output Data' or 'Trace Data'", None, 400)
-            
+
+            # FIX: Added "I/O Dataset Evaluation" to allowed values
+            if data_set not in ["Input/Output Data", "Trace Data", "Simulation Data", "Config + I/O Dataset", "I/O Dataset Evaluation", "Config + Trace Data", "Trace-Based Evaluation"]:
+                return buildResponse(
+                    "Invalid data_set value.",
+                    None, 400
+                )
+
             evaluator = AgentEval()
             result = evaluator.fetch_evaluation_data(agent_id, evaluation_type, data_set)
-            
+
             return buildResponse("Evaluation data fetched successfully", result, 200)
-            
+
         except Exception as e:
             import traceback
             traceback.print_exc()
             return buildResponse(f"Error fetching evaluation data: {str(e)}", None, 500)
-
+        
 
             
     def fetch_agent_version_history(self):
@@ -13782,6 +15784,849 @@ class FlaskApp(DatabaseCollections):
             print(f"Error fetching agent version details: {e}")
             return buildResponse(f"Failed to fetch agent version details: {e}", None, 500)
 
+    @require_session
+    def get_all_tools(self):
+        try:
+            find_op = {'type': 'find','filter': {}}
+            tools = self.chatbot_agent._query_db('tool_management_collection', find_op)
+            # tools = json.loads(json_util.dumps(self.tool_management_collection.find({})))
+            return buildResponse("All tools fetched successfully", tools, 200)
+        except Exception as e:
+            print(f"Error fetching all tools: {e}")
+            return buildResponse(f"Failed to fetch all tools: {e}", None, 500)
+
+    @require_session
+    def get_tool_by_id(self, tool_id):
+        try:
+            tool = json.loads(json_util.dumps(self.tool_management_collection.find_one({"_id": ObjectId(tool_id)})))
+            if tool:
+                return buildResponse("Tool fetched successfully", tool, 200)
+            else:
+                return buildResponse("Tool not found", None, 404)
+        except Exception as e:
+            print(f"Error fetching tool by ID: {e}")
+            return buildResponse(f"Failed to fetch tool by ID: {e}", None, 500)
+
+    @require_session
+    def save_connections_details(self):
+        try:
+            data = self.utils.validate_json_request(request)
+            connection_name = data.get("connection_name")
+            connecter = data.get("connector")
+            user_id = data.get("user_id")
+            credentials = data.get("credentials", {})
+            connector_id = data.get("connector_id")  # Optional: If provided, update existing connector
+            auth = data.get("auth")
+            custom_tool = data.get("custom_tool", [])
+            tools_order = data.get("tools_order", [])
+
+            credentials = encrypt_data(credentials)
+
+            existing_connection = self.connections_collection.find_one({"connector_type": connecter,"connection_name": connection_name})
+            if not existing_connection:
+                connection_id = str(self.connections_collection.insert_one({
+                    
+                    "connection_name": connection_name,
+                    "connector_type": connecter,
+                    "connector_id": connector_id,
+                    "user_id": user_id,
+                    "credentials": credentials,
+                    "auth_type": auth,
+                    "tools_order": tools_order,
+                    "created_at": datetime.now(timezone.utc),
+                    "updated_at": datetime.now(timezone.utc)
+                }).inserted_id)
+
+                tools = self.tool_management_collection.find_one({"tool_name": connecter})
+                tool_actions = tools.get("tool_action", []) if tools else []
+                for action in tool_actions:
+                    description = action.get("action_desc", "")
+                    # connector_id = tools.get("_id", "") 
+                    connector_type = tools.get("tool_name")
+                    tool_action_name = action.get("action_name", "")
+
+                    self.active_tool_collection.insert_one({
+                        "connector_id": connector_id,
+                        "connector_type": connector_type,
+                        "connection_id": connection_id,
+                        "tool_action_name": tool_action_name,
+                        "description": description,
+                        "created_at": datetime.now(timezone.utc),
+                        "type": "default"
+                    })
+
+                for actions in custom_tool:
+                    self.active_tool_collection.insert_one({
+                        "connector_id": connector_id,
+                        "connector_type": tools.get("tool_name"),
+                        "connection_id": connection_id,
+                        "tool_action_name": actions.get("action_name", ""),
+                        "description": actions.get("action_desc", ""),
+                        "created_at": datetime.now(timezone.utc),
+                        "parameter":actions.get("parameters", []),
+                        "type": "custom"
+                    })
+            else:
+                connection_id = str(existing_connection.get("_id"))
+                # Update existing connector details
+                self.connections_collection.update_one(
+                    {"_id": ObjectId(connection_id)},
+                    {"$set": {
+                        "connection_name": connection_name,
+                        "connector_type": connecter,
+                        "connector_id": connector_id,
+                        "user_id": user_id,
+                        "credentials": credentials,
+                        "auth_type": auth,
+                        "tools_order": tools_order,
+                        "updated_at": datetime.now(timezone.utc),
+                    }}
+                )
+                for actions in custom_tool:
+                    id: str = actions.get("id", '')
+                    payload = {
+                            "connector_id": connector_id,
+                            "connection_id": connection_id,
+                            "tool_action_name": actions.get('action_name', ""),
+                            "connector_type": connecter,
+                            "description": actions.get("action_desc", ""),
+                            "created_at": datetime.now(timezone.utc),
+                            "parameter":actions.get("parameters", []),
+                            "type": "custom"
+                    }
+
+                    if id:
+                         self.active_tool_collection.update_one(
+                            { "_id": ObjectId(id) },
+                            { "$set": payload },
+                            upsert=True
+                        ) 
+                    else :
+                         self.active_tool_collection.insert_one(payload)               
+
+
+            return buildResponse("Connection details saved successfully", None, 200)
+        
+               
+        except Exception as e:
+            print(f"Error saving connection: {e}")
+            return buildResponse(f"Failed to saving connection {e}", None, 500)
+
+    @require_session
+    def fetch_connections(self, request=None):
+        try:
+            pipeline = []
+
+            # Get optional query parameter
+            connector_name = request.args.get("connector_name") if request else None
+
+            # Filter by connector_name if provided
+            if connector_name:
+                pipeline.append({
+                    "$match": {
+                        "connector_type": connector_name  # Matches exact connector type/name
+                    }
+                })
+
+            # Add remaining aggregation stages
+            pipeline.extend([
+                {
+                    "$group": {
+                        "_id": "$connector_type",
+                        "connections": {
+                            "$push": {
+                                "connection_id": {"$toString": "$_id"},  # Convert ObjectId to string
+                                "connection_name": "$connection_name",
+                                "connector_id": "$connector_id",
+                                "user_id": "$user_id",
+                                "auth_type": "$auth_type",
+                                "created_at": {"$toString": "$created_at"}  # Convert datetime to string
+                            }
+                        }
+                    }
+                },
+                {
+                    "$project": {
+                        "_id": 0,
+                        "connector_type": "$_id",
+                        "connections": 1
+                    }
+                }
+            ])
+
+            # Execute aggregation pipeline
+            grouped_connectors = list(self.connections_collection.aggregate(pipeline))
+
+            return buildResponse("Connectors fetched successfully", grouped_connectors, 200)
+
+        except Exception as e:
+            print(f"Error fetching connectors: {e}")
+            return buildResponse(f"Failed to fetch connectors: {e}", None, 500)
+
+    @require_session   
+    def get_connection_data_by_id(self, connection_id):
+        try:
+            # 1. Validate connection_id
+            try:
+                obj_id = ObjectId(connection_id)
+            except Exception as e:
+                return buildResponse("Invalid connection_id format", None, 400)
+
+            # 2. Fetch connection details
+            connection = self.connections_collection.find_one({"_id": obj_id})
+            if not connection:
+                return buildResponse("Connection not found", None, 404)
+
+            # Format connection details
+            connection["_id"] = str(connection["_id"])
+            if "created_at" in connection and connection["created_at"]:
+                connection["created_at"] = connection["created_at"].isoformat()
+
+            # 3. Fetch active tool actions for this connection
+            active_tools_cursor = self.active_tool_collection.find(
+                {"connection_id": connection_id}
+            )
+
+            active_tools = []
+            for tool in active_tools_cursor:
+                tool["_id"] = str(tool["_id"])
+                if "created_at" in tool and tool["created_at"]:
+                    tool["created_at"] = tool["created_at"].isoformat()
+                active_tools.append(tool)
+
+            # Combine active tools inside connection object
+            connection["active_tools"] = active_tools
+
+            # 4. Map directly as { connection_id : data }
+            result = {connection_id: connection}
+
+            return buildResponse("Data fetched successfully", result, 200)
+
+        except Exception as e:
+            print(f"Error fetching connection details: {e}")
+            return buildResponse(f"Failed to fetch data: {e}", None, 500)
+
+    @require_session
+    def delete_connection(self, connection_id):
+        try:
+            # Extract connection_id from request body or query params
+            # data = self.utils.validate_json_request(request) if request else {}
+            # connection_id = data.get("connection_id") or (request.args.get("connection_id") if request else None)
+
+            # try:
+            #     connection_id = ObjectId(connection_id)
+            # except Exception as e:
+            #     return buildResponse("Invalid connection_id format", None, 400)
+
+            # 1. Check if the connection exists
+            existing_connection = self.connections_collection.find_one({"_id": ObjectId(connection_id)})
+            if not existing_connection:
+                return buildResponse("Connection not found", None, 404)
+
+            # 2. Delete connection from connections_collection
+            self.connections_collection.delete_one({"_id": ObjectId(connection_id)})
+
+            # 3. Delete all matching active tools from active_tool_collection
+            # Note: connection_id was stored as a string in active_tool_collection
+            delete_tools_result = self.active_tool_collection.delete_many({"connection_id": str(connection_id)})
+
+            return buildResponse(
+                f"Connection and {delete_tools_result.deleted_count} associated active tools deleted successfully", 
+                None, 
+                200
+            )
+
+        except Exception as e:
+            print(f"Error deleting connection: {e}")
+            return buildResponse(f"Failed to delete connection: {str(e)}", None, 500)
+    # def run_tool(self):
+    #     try:
+    #         data = self.utils.validate_json_request(request)
+    #         function_name = data.get("function_name")
+    #         if not function_name:
+    #             return buildResponse("Missing required field: function_name", None, 400)
+
+    #         parameters = data.get("parameters", {})
+    #         tool_id = data.get("tool_id")
+    #         if not tool_id:
+    #             return buildResponse("Missing required field: tool_id", None, 400)
+    #         data = json.loads(json_util.dumps(self.connections_collection.find_one({"_id": ObjectId(tool_id)})))
+    #         print(data)
+    #         credentials = data.get("credentials", {})
+    #         tool_payload = dict(parameters or {})
+    #         tool_payload["credentials"] = credentials
+    #         result = self.tool_manager.execute_function(function_name, tool_payload)
+    #         return buildResponse("Tool executed successfully", result, 200)
+    #     except Exception as e:
+    #         print(f"Error executing tool: {e}")
+    #         return buildResponse(f"Failed to execute tool: {e}", None, 500)
+
+    # def agent_tool_call(self):
+
+    #     tools_prompt = "\n\nYou have access to these tools. When you need to use a tool, respond with ONLY with the output format mentioned. Do not add any extra text.\n"
+    #     try:
+    #         data = self.utils.validate_json_request(request)
+    #         agent_id = data.get("agent_id","")
+    #         user_id = data.get("user_id","")
+    #         user_query = data.get("user_query","")
+    #         session_id = data.get("session_id","")
+    #         api_key = data.get("api_key","")
+    #         tool_id = data.get("tool_id","")
+
+    #         prompt = f"User Query: {user_query}{tools_prompt}"
+    #         tool_details = json.loads(json_util.dumps(self.connections_collection.find_one({"_id": ObjectId(tool_id)})))
+    #         if tool_details:
+    #             credentials = tool_details.get("credentials", {})
+    #             connector_type = tool_details.get("connector_type")
+    #             tool = json.loads(json_util.dumps(self.tool_management_collection.find_one({"tool_name": connector_type})))
+    #             tool_functions = tool.get("tool_action", [])
+    #             final_prompt = f"{prompt}\n\nTool Functions: {tool_functions}"
+
+    #             headers = {"x-api-key": api_key, "Content-Type": "application/json"}
+    #             agent_api_url = "https://agent-prod.studio.lyzr.ai"
+    #             payload = {
+    #                 "user_id": user_id,
+    #                 "agent_id": agent_id,
+    #                 "session_id": session_id,
+    #                 "message": final_prompt
+    #             }
+    #             response = requests.post(f"{agent_api_url}/v3/inference/chat/", headers=headers, json=payload)
+                
+    #             response_json = response.json()
+    #             res = response_json.get("response", "")
+    #             if res:
+    #                 # Try to parse agent response robustly (handle unescaped control chars)
+    #                 try:
+    #                     output = json.loads(res)
+    #                 except Exception:
+    #                     try:
+    #                         safe = res.replace('\n', '\\n').replace('\r', '\\r')
+    #                         output = json.loads(safe)
+    #                     except Exception:
+    #                         # Fallback to wrapping raw string so .get() calls remain safe
+    #                         output = {"output_message": res, "is_tool_call_req": False}
+
+    #                 is_tool_call_req = output.get("is_tool_call_req", False)
+    #                 if is_tool_call_req:
+    #                     data_tool = self.tool_calling(output, credentials, agent_id, user_id, session_id, api_key)
+    #                     out_msg = None
+    #                     if isinstance(data_tool, dict):
+    #                         out_msg = data_tool.get("output_message")
+    #                     else:
+    #                         out_msg = str(data_tool)
+    #                     return buildResponse("Agent tool call processed successfully", {"prompt": final_prompt, "response": out_msg}, 200)
+    #                 else:
+    #                     out_msg = output.get("output_message") if isinstance(output, dict) else str(output)
+    #                     return buildResponse("Agent tool call processed successfully", {"prompt": final_prompt, "response": out_msg}, 200)
+    #     except Exception as e:
+    #         print(f"Error processing agent tool call: {e}")
+    #         return buildResponse(f"Failed to process agent tool call: {e}", None, 500)
+
+    # def tool_calling(self,data,credentials,agent_id,user_id,session_id,api_key):
+    #     is_call_req = data.get('is_tool_call_req',False)
+    #     if not is_call_req:
+    #         print("uuriiri")
+    #         return data
+    #     else:
+    #         tool_name = data.get("function_name")
+    #         parameters = data.get("parameter", {})
+    #         parameters["credentials"] = credentials
+    #         result = self.tool_manager.execute_function(tool_name, parameters)
+    #         tool_out = result.get("body", {})
+    #         headers = {"x-api-key": api_key, "Content-Type": "application/json"}
+    #         agent_api_url = "https://agent-prod.studio.lyzr.ai"
+    #         tool_retrive_prompt = f"Tool Name: {tool_name}\n\nResult: {tool_out}\n\nPlease continue the conversation with the user based on this result."
+    #         payload = {
+    #             "user_id": user_id,
+    #             "agent_id": agent_id,
+    #             "session_id": session_id,
+    #             "message": tool_retrive_prompt
+    #         }
+    #         response = requests.post(f"{agent_api_url}/v3/inference/chat/", headers=headers, json=payload)
+    #         response_json = response.json()
+    #         print(f"Agent response after tool call: {response_json}")
+    #         res = response_json.get("response", "")
+    #         # Safely parse response; tolerate unescaped newlines/control chars
+    #         parsed_output = None
+    #         if res:
+    #             try:
+    #                 parsed_output = json.loads(res)
+    #             except Exception:
+    #                 try:
+    #                     safe = res.replace('\n', '\\n').replace('\r', '\\r')
+    #                     parsed_output = json.loads(safe)
+    #                 except Exception:
+    #                     parsed_output = {"output_message": res}
+    #         else:
+    #             parsed_output = {}
+
+    #         return self.tool_calling(parsed_output,credentials,agent_id,user_id,session_id,api_key)
+
+    @require_session
+    def authenticate_tool(self):
+        try:
+            data = self.utils.validate_json_request(request)
+            connector_type = data.get("connector_type")
+            auth_service = ToolAuthService() 
+            if connector_type == "ServiceNow":
+                result = auth_service.authenticate_servicenow(data)
+                if result and result.get("status")=="success":
+                    return buildResponse("ServiceNow authentication successful", result, 200)
+                else:
+                    return buildResponse("ServiceNow authentication failed", None, 500)
+            elif connector_type == "OneDrive":
+                result = auth_service.authenticate_onedrive(data)
+                if result and result.get("status")=="success":
+                    return buildResponse("OneDrive authentication successful", result, 200)
+                else:
+                    return buildResponse("OneDrive authentication failed", None, 500)
+        except Exception as e:
+            print(f"Error authenticating tool: {e}")
+            return buildResponse(f"Failed to authenticate tool: {e}", None, 500)
+
+    @require_session
+    def get_session_list(self):
+        try:
+            data = json.loads(json_util.dumps(self.chatbot_tracking_collection.find({}, {"_id": 0,"detailed_results":0})))
+            res = {}
+            for i in data:
+                agent_id = i.get("agent_id","")
+                agent_data = json.loads(json_util.dumps(self.agent_collection.find_one({"agent_id": agent_id}, {"_id": 0})))
+                if agent_data and agent_data.get("agent_type_id") == "CONVERSATIONAL":
+                    i["agent_name"] = agent_data.get("name","")
+                    res[i.get("session_id")] = {
+                        "agent_id": agent_id,
+                        "agent_name": agent_data.get("name","") if agent_data else "",
+                        "created_ts": i.get("created_ts",""),
+                        "status": i.get("status",""),
+                        "user_id": i.get("user_id","")
+                    }
+            result = []
+            for i,j in res.items():
+                user_query = self.chatbot_tracking_collection.find({"session_id": i}, {"_id": 0,"user_query":1})
+                queries = []
+                if user_query:
+                    for k in user_query:
+
+                        queries.append(k.get("user_query",""))
+                initiative_query = find_initiating_query(queries)
+                result.append({
+                    "session_id": i,
+                    "agent_id": j.get("agent_id",""),
+                    "agent_name": j.get("agent_name",""),
+                    "created_ts": j.get("created_ts",""),
+                    "status": "completed",
+                    "user_id": j.get("user_id",""),
+                    "initiative_query": initiative_query
+                })
+                    
+            # result = sorted(result, key=lambda x: x.get("created_ts",""), reverse=True)
+            print(len(result))
+            return buildResponse("Session list fetched successfully", result, 200)
+        except Exception as e:
+            print(f"Error fetching session list: {e}")
+            return buildResponse(f"Failed to fetch session list: {e}", None, 500)
+
+    def get_session_details(self, session_id):
+        try:
+            session_data = json.loads(json_util.dumps(self.chatbot_tracking_collection.find({"session_id": session_id}, {"_id": 0}).sort("created_ts", 1)))
+            if not session_data:
+                return buildResponse(f"Session with session_id {session_id} not found", [], 404)
+            convo = []
+            for session in session_data:
+                convo.append({
+                    "user_query": session.get("user_query", ""),
+                    "agent_response": session.get("prompt_output", ""),
+                    "created_ts": session.get("created_ts", "")
+                })
+
+            return buildResponse("Session details fetched successfully", convo, 200)
+
+        except Exception as e:
+            print(f"Error fetching session details for session_id {session_id}: {e}")
+            return buildResponse(f"Failed to fetch session details for session_id {session_id}: {e}", None, 500)
+
+    def get_recent_query(self, agent_id):
+        try:
+            recent_query_data = json.loads(json_util.dumps(self.chatbot_tracking_collection.find({"agent_id": agent_id}, {"_id": 0}).sort("created_ts", -1)))
+            if not recent_query_data:
+                return buildResponse(f"No recent query found for agent_id {agent_id}", [], 404)
+            queries = []
+            for i in recent_query_data[:25]:  # Get the last 25 queries
+                queries.append(i.get("user_query", ""))
+            print(f"Recent queries for agent_id {agent_id}: {queries}")
+            suggestions = find_top_initiating_queries(queries, max_results=3)
+            return buildResponse("Recent query fetched successfully", {"suggestions": suggestions}, 200)
+        except Exception as e:
+            print(f"Error fetching recent query for agent_id {agent_id}: {e}")
+            return buildResponse(f"Failed to fetch recent query for agent_id {agent_id}: {e}", None, 500)
+
+    def get_custom_action(self, tool_id):
+        try:
+            custom_action_data = json.loads(json_util.dumps(self.active_tool_collection.find({"_id": ObjectId(tool_id)}, {"_id": 0})))
+            if not custom_action_data:
+                return buildResponse(f"Custom action with tool_id {tool_id} not found", [], 404)
+            return buildResponse("Custom action fetched successfully", custom_action_data, 200)
+        except Exception as e:
+            print(f"Error fetching custom action for tool_id {tool_id}: {e}")
+            return buildResponse(f"Failed to fetch custom action for tool_id {tool_id}: {e}", None, 500)
+
+# Notification Routes
+    @require_session
+    def get_notifications(self, email_id):
+        result = self.user_notification_collection.find({"email": email_id}).sort("timestamp", -1)
+        return buildResponse("Notifications fetched successfully", json.loads(json_util.dumps(result)), 200)
+    
+     # External Applications
+    @require_session
+    def register_external_application(self):
+        try:
+            data = self.utils.validate_json_request(request)
+            external_app_manager = ExternalApp()
+            result = external_app_manager.register_external_application(data)
+            return buildResponse("External application registered successfully", result, 201)
+        except ValidationError as ve:
+            return buildResponse(str(ve), None, 400)
+        except Exception as e:
+            print(f"Error registering external application: {e}")
+            return buildResponse(f"Failed to register external application: {e}", None, 500)
+
+    @require_session
+    def update_external_application(self, application_id):
+        try:
+            data = request.get_json() or {}
+            result = self.external_app_manager.update_external_application(application_id, data)
+            return buildResponse("External application updated successfully", result, 200)
+        except ValidationError as ve:
+            return buildResponse(str(ve), None, 400)
+        except Exception as e:
+            return buildResponse(f"Failed to update external application: {e}", None, 500)
+    
+    @require_session
+    def get_external_applications(self):
+        try:
+            external_app_manager = ExternalApp()
+            apps = external_app_manager.get_external_applications()
+            return buildResponse("External applications fetched successfully", apps, 200)
+        except Exception as e:
+            print(f"Error fetching external applications: {e}")
+            return buildResponse(f"Failed to fetch external applications: {e}", None, 500)
+
+
+    @require_session
+    def get_external_application_by_id(self, application_id):
+        try:
+            external_app_manager = ExternalApp()
+            app = external_app_manager.get_external_application_by_id(application_id)
+            return buildResponse("External application fetched successfully", app, 200)
+        except Exception as e:
+            print(f"Error fetching external application: {e}")
+            return buildResponse(f"Failed to fetch external application: {e}", None, 500)
+
+    @require_session
+    def delete_external_application(self, application_id):
+        try:
+            external_app_manager = ExternalApp()
+            result = external_app_manager.delete_external_application(application_id)
+            return buildResponse("External application deleted successfully", result, 200)
+        except Exception as e:
+            print(f"Error deleting external application: {e}")
+            return buildResponse(f"Failed to delete external application: {e}", None, 500)
+       
+    #Ext App using API only 
+    @require_token_or_api_key("agents")
+    def get_agents_for_subscription_user(self):
+        """
+        Fetch agents based on API key, prj_id, and Email for subscription-based users.
+        
+        Headers (API Key is mandatory):
+            X-API-Key: sk-movaio-xxxxx (mandatory)
+            
+        Query Parameters (GET):
+            prj_id: Project ID (required)
+            Email: User's email address (required)
+            
+        JSON Body (POST):
+            prj_id: Project ID (required)
+            Email: User's email address (required)
+        """
+        try:
+            # 1. Get API key context from the decorator
+            ctx = g.api_key_context
+            
+            if not ctx:
+                return buildResponse("API Key validation failed", None, 401)
+            
+            # 2. Get subscription details from the validated context
+            matched_sub = ctx.get("subscription")
+            if not matched_sub:
+                return buildResponse("API key is not associated with any subscription", None, 403)
+            
+            subscription_project_id = matched_sub.get("project_id")
+            database_name = matched_sub.get("database_name")
+            
+            if not subscription_project_id:
+                return buildResponse("Subscription does not have a project mapped", None, 403)
+            
+            if not database_name:
+                return buildResponse("Subscription does not have a database configured", None, 403)
+            
+            # 3. Get prj_id and Email from query params (GET) or body (POST)
+            requested_prj_id = None
+            requested_email = None
+            
+            # Try query parameters first (for GET requests)
+            requested_prj_id = request.args.get('prj_id')
+            requested_email = request.args.get('Email')
+            
+            # If not in query params, try body (for POST requests)
+            if not requested_prj_id or not requested_email:
+                if request.method == 'POST' and request.is_json:
+                    data = request.get_json()
+                    if data:
+                        if not requested_prj_id:
+                            requested_prj_id = data.get('prj_id')
+                        if not requested_email:
+                            requested_email = data.get('Email')
+            
+            # Validate that we have both required fields
+            if not requested_prj_id:
+                return buildResponse(
+                    "Missing required field: prj_id (provide in query params for GET or body for POST)", 
+                    None, 400
+                )
+            if not requested_email:
+                return buildResponse(
+                    "Missing required field: Email (provide in query params for GET or body for POST)", 
+                    None, 400
+                )
+            
+            # Convert to appropriate types
+            try:
+                prj_id_int = int(requested_prj_id)
+            except ValueError:
+                return buildResponse("prj_id must be a valid integer", None, 400)
+            
+            email_lower = requested_email.strip().lower()
+            
+            # 4. Validate that the requested project matches the subscription's project
+            if prj_id_int != subscription_project_id:
+                return buildResponse(
+                    f"Access Denied: This API key is mapped to project ID '{subscription_project_id}', "
+                    f"but you requested project ID '{prj_id_int}'",
+                    None, 403
+                )
+            
+            # 5. Find the user in the master database
+            user_data = self.user_collection.find_one(
+                {
+                    "Email": re.compile(f"^{re.escape(email_lower)}$", re.IGNORECASE),
+                    "IsActive": True,
+                    "IsDelete": False
+                },
+                {"_id": 0, "PrjDetails": 1, "Email": 1, "FirstName": 1, "LastName": 1}
+            )
+            
+            if not user_data:
+                return buildResponse(f"User with email '{requested_email}' not found or inactive", None, 404)
+            
+            # 6. Find the specific project entry in user's PrjDetails
+            project_entry = None
+            for prj in user_data.get("PrjDetails", []):
+                if prj.get("prj_id") == prj_id_int:
+                    project_entry = prj
+                    break
+            
+            if not project_entry:
+                return buildResponse(
+                    f"User '{requested_email}' is not mapped to project ID '{prj_id_int}'",
+                    None, 404
+                )
+            
+            # 7. Get the team_name from the project entry
+            team_name = project_entry.get("team_name")
+            if not team_name:
+                return buildResponse(f"Team name not found for project ID '{prj_id_int}'", None, 404)
+            
+            # 8. Get the user_type (database name) from the project collection
+            project_doc = self.project.find_one(
+                {"projectId": prj_id_int},
+                {"database_name": 1, "_id": 0}
+            )
+            
+            if not project_doc:
+                return buildResponse(f"Project with ID '{prj_id_int}' not found", None, 404)
+            
+            user_type = project_doc.get("database_name")
+            if not user_type:
+                return buildResponse(f"Database name not configured for project '{prj_id_int}'", None, 404)
+            
+            # Verify that the project's database name matches the subscription's database name
+            if user_type != database_name:
+                return buildResponse(
+                    f"Database mismatch: Project has '{user_type}' but API key is mapped to '{database_name}'",
+                    None, 403
+                )
+            
+            # 9. Find the agency assigned to the team (assigned_to: team_name)
+            find_agency_op = {
+                'type': 'find',
+                'filter': {
+                    "assigned_to": team_name,
+                    "is_deleted": {"$ne": True}
+                },
+                'projection': {"agency_id": 1, "agency_name": 1, "_id": 0}
+            }
+            agency_docs = self._query_db_for_api_fetch('agency', find_agency_op, user_type)
+            
+            if not agency_docs:
+                return buildResponse(f"No active agencies found for team '{team_name}'", None, 404)
+            
+            # Collect all agency IDs
+            agency_ids = [doc.get("agency_id") for doc in agency_docs if doc.get("agency_id")]
+            
+            if not agency_ids:
+                return buildResponse("No valid agency IDs found", None, 404)
+            
+            # 10. Get all agent IDs from the agent_agency_mapping collection for these agency_ids
+            find_mapping_op = {
+                'type': 'find',
+                'filter': {
+                    "agency_id": {"$in": agency_ids},
+                    "status": "active"
+                },
+                'projection': {"agent_id": 1, "agency_id": 1, "_id": 0}
+            }
+            mapping_docs = self._query_db_for_api_fetch('agent_agency_mapping', find_mapping_op, user_type)
+            
+            if not mapping_docs:
+                return buildResponse(f"No active agent mappings found for agencies: {agency_ids}", None, 404)
+            
+            # Extract unique agent IDs
+            agent_ids = list(set([doc.get("agent_id") for doc in mapping_docs if doc.get("agent_id")]))
+            
+            if not agent_ids:
+                return buildResponse("No valid agent IDs found in mappings", None, 404)
+            
+            # 11. Fetch agents based on the agent_ids from the agent collection
+            agents_found = []
+            
+            for agent_id in agent_ids:
+                find_agent_op = {
+                    'type': 'find_one',
+                    'filter': {
+                        "$or": [
+                            {"api_agent_id": agent_id, "isDeleted": {"$ne": True}},
+                            {"agent_id": agent_id, "isDeleted": {"$ne": True}}
+                        ]
+                    },
+                    'projection': {"_id": 0}
+                }
+                agent_doc = self._query_db_for_api_fetch('agent', find_agent_op, user_type)
+                
+                if agent_doc:
+                    agents_found.append(agent_doc)
+            
+            # 12. Return the list of agents
+            if agents_found:
+                return buildResponse("Agents fetched successfully", {
+                    "total_agents": len(agents_found),
+                    "agents": agents_found,
+                    "project_id": prj_id_int,
+                    "team_name": team_name,
+                    "agency_ids": agency_ids,
+                    "database_name": database_name
+                }, 200)
+            else:
+                return buildResponse("No agents found for the given criteria", {
+                    "total_agents": 0,
+                    "agents": [],
+                    "project_id": prj_id_int,
+                    "team_name": team_name,
+                    "database_name": database_name
+                }, 200)
+                
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return buildResponse(f"Error fetching agents: {str(e)}", None, 500)
+
+    def _query_db_for_api_fetch(self, collection_name, operation, user_type):
+        """
+        Helper method to query a specific database by user_type for API key based requests.
+        """
+        try:
+            from database_manager import select_database_by_user_type
+            return config_loader.query_db(
+                collection_name,
+                operation,
+                condition_func=select_database_by_user_type,
+                user_type=user_type
+            )
+        except Exception as e:
+            print(f"Error in _query_db_for_api_fetch: {e}")
+            return config_loader.query_db(
+                collection_name,
+                operation,
+                condition_func=select_database_by_user_type,
+                user_type='master'
+            )
+        
+    # Swagger UI
+    def serve_openapi_json(self):
+        """Serves the raw OpenAPI JSON."""
+        try:
+            with open('openapi.json', 'r') as f:
+                return jsonify(json.load(f))
+        except FileNotFoundError:
+            return jsonify({"error": "openapi.json file not found"}), 500
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+
+    def serve_swagger_ui(self):
+        """Serves the Swagger UI interface."""
+        return """
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Mova iO Platform API - Swagger UI</title>
+            <link rel="stylesheet" type="text/css" href="https://unpkg.com/swagger-ui-dist@3/swagger-ui.css" />
+            <style>
+                /* Hide the v1 tag from the tag list */
+                .swagger-ui .information-container .info .title small.version-stamp {
+                    display: none;
+                }
+                /* Optional: Hide v1 from the operations block */
+                .swagger-ui .opblock-tag[data-tag="v1"] {
+                    display: none !important;
+                }
+            </style>
+        </head>
+        <body>
+            <div id="swagger-ui"></div>
+            <script src="https://unpkg.com/swagger-ui-dist@3/swagger-ui-bundle.js"></script>
+            <script>
+                const ui = SwaggerUIBundle({
+                    url: './openapi.json',
+                    dom_id: '#swagger-ui',
+                    presets: [
+                        SwaggerUIBundle.presets.apis
+                    ],
+                    layout: "BaseLayout",
+                    // Filter out the "v1" tag completely
+                    tagsSorter: function(a, b) {
+                        // Filter out 'v1' tag
+                        if (a === 'v1') return 1;
+                        if (b === 'v1') return -1;
+                        return a.localeCompare(b);
+                    },
+                    operationsSorter: 'method'
+                });
+            </script>
+        </body>
+        </html>
+        """    
+
 # Create and run the app
 if __name__ == '__main__':
     
@@ -13790,4 +16635,4 @@ if __name__ == '__main__':
         port = port[0]  # extract first item
     
     flask_app = FlaskApp()        
-    flask_app.socketio.run(app=flask_app.app,host='0.0.0.0',port=int(port),debug=True,log_output=True,use_reloader=False,allow_unsafe_werkzeug=True)
+    flask_app.socketio.run(app=flask_app.app,host='0.0.0.0',port=int(port),debug=True,log_output=True, use_reloader=False)

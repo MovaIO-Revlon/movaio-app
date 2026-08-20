@@ -4,6 +4,8 @@ import {
   AfterViewInit,
   ViewChild,
   ElementRef,
+  computed,
+  signal,
 } from '@angular/core';
 import { NgxSpinnerService } from 'ngx-spinner';
 import { Router } from '@angular/router';
@@ -33,7 +35,11 @@ import { RolePrivilegeMappingService } from '../../services/role-privilege-mappi
 import { finalize } from 'rxjs/operators';
 import { environment as config } from '../../../environments/environment';
 import { getApiError, V } from '../../utils';
-import { error } from 'node:console';
+import { MultiSelect } from '../../components/multi-select/multi-select';
+import { Select, TOption } from '../../components/select/select';
+import { rxResource } from '@angular/core/rxjs-interop';
+import { IAgent } from '../../types';
+import { FormError } from '../../components/form-error/form-error';
 
 declare var $: any;
 declare var bootstrap: any;
@@ -42,7 +48,7 @@ type Frequency = 'daily' | 'weekly' | 'monthly';
 @Component({
   selector: 'app-agentmanagement',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, TooltipDirective],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, TooltipDirective, MultiSelect, Select, FormError],
   templateUrl: './agentmanagement.html',
   styleUrl: './agentmanagement.css',
 })
@@ -253,6 +259,7 @@ export class Agentmanagement implements AfterViewInit, OnInit {
 
   ngOnInit(): void {
     this.loggedUser = this._stateService.getLoginDetails();
+    console.log('Logged User Details:', this.loggedUser);
     this.fetchAgenciesWithAgents();
     this.initAgentForm();
     this.initCreateAgentForm();
@@ -712,6 +719,18 @@ export class Agentmanagement implements AfterViewInit, OnInit {
                   .url()
                   .required()
                   .when(() => this.isVoiceAgent)],
+      connector: ['', V.string('Connector').build()],
+      internal_tool: [[], V.array()
+                  .test(
+                    "validate_internal_tool",
+                    "At least one tool should be selected",
+                    (value: string[]) => {
+
+                      if(!this.connectorId()) return true;
+
+                      return !!value.length
+                    }).build()
+                  ],
     });
     this.schedules = [];
     this.hasDailySchedule = false;
@@ -1922,6 +1941,13 @@ fetchAgenciesWithAgents(): void {
       approverEmail: formValue.approverEmail,
       avatar: formValue.avatar,
       ai_foundation: formValue.ai_foundation,
+      modified_by: {
+        "email":this.loggedUser?.Email,
+        "name":this.loggedUser?.UserName,
+      },
+      connector: formValue.connector,
+      internal_tool: formValue.internal_tool,
+      Iscustomtool: !!formValue.connector
     };
     //console.log('Onboard Payload internal:', payload);
     const payload1 = {
@@ -1941,6 +1967,13 @@ fetchAgenciesWithAgents(): void {
       avatar: formValue.avatar,
       session_start_url: formValue.session_start_url,
       session_end_url: formValue.session_end_url,
+      modified_by: {
+        "email":this.loggedUser?.Email,
+        "name":this.loggedUser?.UserName,
+      },
+      connector: formValue.connector,
+      internal_tool: formValue.internal_tool,
+      Iscustomtool: !!formValue.connector
     };
     //console.log('Onboard Payload external:', payload1);
     
@@ -2095,7 +2128,14 @@ fetchAgenciesWithAgents(): void {
       ai_foundation: form.ai_foundation,
       save_history: form.saveHistory,
       session_start_url: form.session_start_url,
-      session_end_url: form.session_end_url
+      session_end_url: form.session_end_url,
+      connector: form.connector,
+      internal_tool: form.internal_tool,
+      Iscustomtool: !!form.connector,
+      modified_by: {
+        "email":this.loggedUser?.Email,
+        "name":this.loggedUser?.UserName,
+      }
     };
     //console.log('Edit Payload:', payload);
     const alreadyExistsByName = this.allAgents.some(
@@ -2558,6 +2598,7 @@ fetchAgenciesWithAgents(): void {
     });
     const mcpEnabled =
       agent.mcp_connector_id && agent.mcp_connector_id !== 'None';
+    const connector = (agent.internal_tool as IAgent['internal_tool'])?.[0]?.connection_id || '';
     this.agentForm.patchValue({
       name: agent.name || '',
       agent_owner: agent.agent_owner || '',
@@ -2570,7 +2611,7 @@ fetchAgenciesWithAgents(): void {
       agent_goal: agent.agent_goal || '',
       prompt_template: agent.prompt_template || '',
       agent_prompt: agent.agent_prompt || '',
-      ref_output: JSON.stringify(agent.ref_output, null, 2) || '',
+      ref_output: (typeof agent.ref_output === 'object' ? JSON.stringify(agent.ref_output, null, 2) : decodeURIComponent(agent.ref_output))  || '',
       example: agent.example || '',
       avatar: agent.avatar || '',
       agent_api_url: agent.agent_api_url || '',
@@ -2610,7 +2651,13 @@ fetchAgenciesWithAgents(): void {
       foundation_guardrails_ai_value: agent.foundation_guardrails_ai || '',
       session_start_url: agent.session_start_url || '',
       session_end_url: agent.session_end_url || '',
+      connector,
+      internal_tool: (agent.internal_tool as IAgent['internal_tool'])?.map(i => i.tool) || [],
+      Iscustomtool: !!connector
     });
+    if(connector) {
+      this.connectorId.set(connector)
+    }
     //console.log('Patched form values:', this.agentForm.getRawValue());
 
     // Populate selected checkboxes
@@ -4592,7 +4639,11 @@ deleteAgent(): void {
       const payload = {
         agent_id: this.agentToDelete._id,
         reason: this.deleteAgentForm.get('reason')?.value,
-        approver_email: this.deleteAgentForm.get('approverEmail')?.value
+        approver_email: this.deleteAgentForm.get('approverEmail')?.value,
+        modified_by: {
+          "email":this.loggedUser?.Email,
+          "name":this.loggedUser?.UserName,
+        }
       };
       this._loadingService.show();
       //console.log('Requesting deletion for agent with ID:', this.agentToDelete._id, 'Payload:', payload);
@@ -5118,12 +5169,14 @@ addActionCreateNew(): void {
           'agent_provider_type',
           'agent_type_id',
           'role_id',
+          'connector',
+          'internal_tool'
         ];
         const externalExistingControls = [
           'agent_api_url',
           'agent_api_key',
           'user_id',
-          'agent_session_id',
+          'agent_session_id'
         ];
         if (this.isVoiceAgent) {
           externalExistingControls.push("session_start_url", "session_end_url")
@@ -6505,7 +6558,11 @@ addActionCreateNew(): void {
       ai_foundation: formValue.ai_foundation,
       save_history: formValue.saveHistory,
       session_start_url: formValue.session_start_url,
-      session_end_url: formValue.session_end_url
+      session_end_url: formValue.session_end_url,
+      modified_by: {
+        "email":this.loggedUser?.Email,
+        "name":this.loggedUser?.UserName,
+      },
     };
 
     console.log('Final Payload for submission:', payload);
@@ -6652,7 +6709,7 @@ addActionCreateNew(): void {
       } else {
         this.createNewActions.push(this.createAction());
       }
-      this.calculateTotal();
+      this.calculateTotalCreateNew();
       this.createNewActions.updateValueAndValidity();
     }
 
@@ -6663,4 +6720,60 @@ addActionCreateNew(): void {
   getAvatarUrl(d: unknown) {
     return (d && typeof d === 'string')  ? d : 'assets/img/Agent_Profile_Icon.svg'
   }
+
+  connectorId = signal('');
+
+  onConnectorSelect(id: string) {
+    this.connectorId.set(id)
+    this.agentForm.patchValue({ internal_tool: [] })
+  }
+
+  toolOptions = computed(() => {
+    if (this.toolsQuery.error()) return [];
+
+    const data =  this.toolsQuery
+          .value()
+          ?.data?.[this.connectorId()];
+
+    if(!data) return []
+      
+   
+
+    if(data.tools_order?.length) {
+
+      const map = data.active_tools.reduce<Record<string,string>>((a,b) => {
+        a[b.tool_action_name] = b._id;
+        return a
+      },{})
+
+      return  data.tools_order?.map((label) => ({
+        label,
+        value: map[label],
+      }))
+    }
+
+    return data.active_tools?.map(item => ({
+      label: item.tool_action_name,
+      value: item._id
+    })) || []
+  });
+
+  connectorsOptions = computed<TOption[]>(() => {
+    const arr = !this.connectionQuery.error() && this.connectionQuery.value()?.data?.flatMap((item) =>
+          item.connections.map((connection) => ({
+            label: connection.connection_name,
+            value: connection.connection_id,
+            data: item.connector_type,
+          })),
+        );
+
+    return arr && arr.length ? [{ label: 'Select', value: '' }, ...arr] : []
+  });
+  connectionQuery = rxResource({
+    stream: () => this._marketService.fetchConnection(),
+  });
+  toolsQuery = rxResource({
+    params: () => this.connectorId() || undefined,
+    stream: ({ params }) => this._marketService.getConnectionData(params),
+  });
 }

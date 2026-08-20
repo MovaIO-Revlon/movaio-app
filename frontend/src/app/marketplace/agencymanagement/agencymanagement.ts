@@ -184,6 +184,7 @@ export class AgencyManagement implements OnInit, AfterViewInit {
   allAgencies: any[] = [];
   uniqueAgencyDescs: string[] = [];
   teamManagementData: any[] = [];
+  personalTeamManagementData: any[] = [];
   filteredSelectedAgents: any[] = [];
   filteredAgents: any[] = [];
   IsAgencyEditClose: boolean = false;
@@ -408,6 +409,14 @@ initializeCharts(): void {
     this.loggedUser = this._stateService.getLoginDetails();
     this.TeamName = this.loggedUser?.Team;
 
+    const activeProjectDetail = this.loggedUser?.ProjectDtl?.find(
+      (p: any) => p.prj_name === this.loggedUser?.ActiveProject
+    );
+
+    // 2. Extract Team Name and Role from the active project detail
+    this.TeamName = activeProjectDetail?.team_name;
+    const userRole = activeProjectDetail?.role_name || '';
+
     this.fetchAgenciesWithAgents();
     this.fetchAgencyStatistics();
 
@@ -415,6 +424,28 @@ initializeCharts(): void {
     this.initFilterForm();
 
     this.teamManagementData = this._stateService.getTeamManagementData();
+    
+
+    // 4. Check if Super Admin
+    const isSuperAdmin = userRole.toLowerCase().trim() === 'super admin';
+
+    // 5. Assign Personal Team Data
+    if (isSuperAdmin) {
+      // Super Admin gets all teams
+      this.personalTeamManagementData = [...this.teamManagementData];
+    } else {
+      // Other roles get only their active team
+      this.personalTeamManagementData = this.teamManagementData.filter((team: any) => {
+        const teamName = team.team_name || team.TeamName || team.name;
+        return teamName?.toLowerCase() === this.TeamName?.toLowerCase();
+      });
+    }
+
+    console.log('Active Team Name:', this.TeamName);
+    console.log('User Role:', userRole);
+    console.log('Is Super Admin:', isSuperAdmin);
+    console.log('All Team Management Data:', this.teamManagementData);
+    console.log('Personal Team Data:', this.personalTeamManagementData);
 
     document.addEventListener('fullscreenchange', () => {
       this.cdr.detectChanges();

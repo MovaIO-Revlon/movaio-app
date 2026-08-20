@@ -23,6 +23,7 @@ ALLOWED_HEADERS = {"content-type", "user-agent", "accept"}
 
 MAX_STR_LEN = 120
 MAX_ITEMS = 10
+MAX_LIST_ITEMS = 5
 MAX_DEPTH = 3
 
 
@@ -76,11 +77,11 @@ def truncate_for_log(obj: Any, *, depth: int = 0) -> Any:
 
     if isinstance(obj, (list, tuple)):
         truncated = [
-            truncate_for_log(item, depth=depth + 1) for item in obj[:MAX_ITEMS]
+            truncate_for_log(item, depth=depth + 1) for item in obj[:MAX_LIST_ITEMS]
         ]
 
-        if len(obj) > MAX_ITEMS:
-            truncated.append(f"...[{len(obj) - MAX_ITEMS} more items]")
+        if len(obj) > MAX_LIST_ITEMS:
+            truncated.append(f"...[{len(obj) - MAX_LIST_ITEMS} more items]")
         return truncated
 
     if isinstance(obj, dict):
@@ -174,7 +175,7 @@ def parse_file(res: Response, status: int) -> list[str]:
         f"body={body}",
     ]
 
-def log_data(request_id: str, message: str, data = None, type: Literal['info', 'error', 'warning', 'debug'] = 'info') -> list[str]:
+def log_data(request_id: str, message: str, data = None, type: Literal['info', 'error', 'warning', 'debug'] = 'info', status: int = None) -> list[str]:
     desc = to_log_string(message)
     body = truncate_for_log(data)
     body = to_log_string(sanitize(body))
@@ -193,6 +194,7 @@ def log_data(request_id: str, message: str, data = None, type: Literal['info', '
         f"project={project}",
         f"desc={desc}",
         f"body={body}",
+        f"status={status}",
     ])
 
     if type == 'info':

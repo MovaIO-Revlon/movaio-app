@@ -1,22 +1,18 @@
 import {
   Component,
-  OnInit,
   ChangeDetectorRef,
   AfterViewInit,
   ViewChild,
-  ElementRef,
+  ElementRef
 } from '@angular/core';
 import { NgxSpinnerService } from 'ngx-spinner';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
-import { HomeService } from '../../services/home.service';
 import { LoginService } from '../../services/login.service';
 import { AIInfuseStateService } from '../../services/aiinfuse-state.service';
-import { Header } from '../../header/header';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { interval, Subscription } from 'rxjs';
 import { FormsModule } from '@angular/forms';
-import * as FileSaver from 'file-saver';
 import { secommendcenter } from '../../services/secommedcenter.service';
 import { SemarketplaceService } from '../../services/semarketplace.service';
 
@@ -32,7 +28,6 @@ export class Testcase implements AfterViewInit {
   @ViewChild('loadalert') loadalert?: ElementRef;
   @ViewChild('scrollContainer') scrollContainer!: ElementRef;
 
-  captcha: boolean = false;
   loggedUser: any;
   userName: any;
   employeeId: any;
@@ -371,16 +366,6 @@ export class Testcase implements AfterViewInit {
   UserOnboard(): void {
     // Navigate to the user onboarding page
     this._router.navigate(['/commandcenter/useronboard']);
-  }
-  doLogOut(): void {
-    this._stateService.clearLoginDetails();
-    this._stateService.clearLoginOTPDetails();
-    this._stateService.clearLogoutOTPDetails();
-    this._loginservice.getReCaptchaConfig().subscribe((res) => {
-      this.captcha = res.data.OTPRecaptcha;
-      this._stateService.setLogoutOTPDetails(this.captcha);
-      this._router.navigate(['/']);
-    });
   }
 
   // Call this whenever isDisabled might change

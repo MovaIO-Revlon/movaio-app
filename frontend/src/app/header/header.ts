@@ -3,6 +3,7 @@ import {
   ChangeDetectorRef,
   Component,
   ElementRef,
+  HostListener,
   OnInit,
   ViewChild,
 } from '@angular/core';
@@ -20,7 +21,6 @@ import {
 import { NgxSpinnerService } from 'ngx-spinner';
 import { CommonModule, DatePipe } from '@angular/common';
 import { HomeService } from '../services/home.service';
-import { LoginService } from '../services/login.service';
 import { Router, RouterModule } from '@angular/router';
 import { AIInfuseStateService } from '../services/aiinfuse-state.service';
 // import config from '../../assets/config/config.json';
@@ -30,6 +30,7 @@ import { RolePrivilegeMappingService } from '../services/role-privilege-mapping.
 import { RolePrivilegeMapping } from '../role-privilege-mapping/role-privilege-mapping';
 import { getApiError } from '../utils';
 import { Popover } from '../components/popover/popover';
+import { logout } from '../services/auth.interceptor';
 
 declare var $: any;
 declare var bootstrap: any;
@@ -101,7 +102,6 @@ export class Header implements OnInit, AfterViewInit {
   passwordError = '';
   popupClose: boolean = false;
   HoursSpentDtls: string = '';
-  captcha: boolean = false;
   isEmpCaptionVisible: boolean = true;
   isMultipleOnboardVisible: boolean = false;
   selectedFile: File | undefined;
@@ -178,6 +178,10 @@ export class Header implements OnInit, AfterViewInit {
   isPrivilegeDeleteLogs: boolean = false;
   isPrivilegeRefreshLogs: boolean = false;
   isPrivilegeExecuteLogs: boolean = false;
+  showNotifications = false;
+  notificationRequestsCount: number = 0;
+  notificationActivitiesCount: number = 0;
+  notifications: any[] = [];
 
   constructor(
     private _loadingService: NgxSpinnerService,
@@ -186,7 +190,6 @@ export class Header implements OnInit, AfterViewInit {
     private fb: FormBuilder,
     private datePipe: DatePipe,
     private _router: Router,
-    private _loginservice: LoginService,
     private changeDetectorRef: ChangeDetectorRef,
     private _role: RolePrivilegeMappingService
   ) {
@@ -235,6 +238,26 @@ export class Header implements OnInit, AfterViewInit {
     return this._router.url.startsWith(routePrefix);
   }
 
+  toggleNotifications(event: Event): void {
+    event.stopPropagation();
+    this.showNotifications = !this.showNotifications;
+  }
+
+  closeNotifications(): void {
+    this.showNotifications = false;
+  }
+
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: Event): void {
+    const target = event.target as HTMLElement;
+    const dropdown = document.querySelector('.notifications-panel');
+    const trigger = target.closest('.notification-trigger');
+
+    if (dropdown && !dropdown.contains(target) && !trigger) {
+      this.showNotifications = false;
+    }
+  }
+
   home_link(): void {
     this._router.navigate(['/home']);
   }
@@ -279,6 +302,7 @@ export class Header implements OnInit, AfterViewInit {
     this.GetUserDetails();
     this.loadAllRolePrivileges(); // calling method to set all role privileges into shared service such that it can be utilised across everycomponent
     this.loadPrivileges()  // calling this method to load privileges of current component
+    this.loadNotifications();
     this.changeDetectorRef.detectChanges();
     this._loadingService.hide();
 
@@ -886,6 +910,8 @@ export class Header implements OnInit, AfterViewInit {
       
       this.loggedUser.Avatar = this.avatarPath;
       this.loggedUser.Role = this.roleDetail;
+      if (data?.PrjDetails)
+      this.loggedUser.ProjectDtl = data.PrjDetails;
       this._stateService.setLoginDetails(this.loggedUser);
     }
   }
@@ -1295,17 +1321,7 @@ export class Header implements OnInit, AfterViewInit {
   }
 
   async doLogOut(): Promise<void> {
-    this._stateService.clearLoginDetails();
-    this._stateService.clearLoginOTPDetails();
-    this._stateService.clearLogoutOTPDetails();
-    try {
-      const config = await this._loginservice.getReCaptchaConfig().toPromise();
-      this.captcha = !!config?.data?.OTPRecaptcha;
-      this._stateService.setLogoutOTPDetails(this.captcha);
-      this._router.navigate(['/']);
-    } catch (error) {
-      console.error('Error during logout', error);
-    }
+    logout(this._router)
     this.changeDetectorRef.detectChanges();
   }
 
@@ -1851,103 +1867,6 @@ export class Header implements OnInit, AfterViewInit {
     return this.loggedUser.Role;
   }
 
-  switchProject(prjName: string) {
-    if (!prjName) return;
-
-    this.projectTitle = prjName || this.loggedUser.ActiveProject;
-    this._loadingService.show();
-    const params = { prj_name: prjName };
-
-    this._homeService.switchProject(params).subscribe({
-      next: (res) => {
-        this._loadingService.hide();
-
-        if (res?.success) {
-          this.activeProject = prjName;
-
-          const userDetails = this.UserManagementGridData.find(
-            (user) => user.Email === this.loggedUser.Email
-          );
-          if (userDetails && userDetails.PrjDetails) {
-            const projectDetails = userDetails.PrjDetails.find(
-              (p: any) => p.prj_name === prjName || p.projectName === prjName
-            );
-            this.roleDetail =
-              projectDetails?.role_name ||
-              projectDetails?.roleName ||
-              this.loggedUser.Role;
-          } else {
-            this.roleDetail = this.loggedUser.Role;
-          }
-
-          this.loggedUser.ActiveProject = prjName;
-
-          this._stateService.setLoginDetails(this.loggedUser);
-
-          if (this._router.url === '/commandcenterdashboard') {
-            // Reload component without full page reload
-            this._router
-              .navigateByUrl('/', { skipLocationChange: true })
-              .then(() => {
-                this._router.navigate(['/commandcenterdashboard']);
-              });
-          } else {
-            // Navigate normally
-            this._router.navigate(['/commandcenterdashboard']);
-          }
-
-          this.cdr.detectChanges();
-
-          console.log('Project switched:', prjName);
-        }
-      },
-      error: (err) => {
-        this._loadingService.hide();
-        console.error('Error switching project:', err);
-
-        const error = getApiError(err);
-        if (error) {
-          this.activeProject = prjName;
-          const userDetails = this.UserManagementGridData.find(
-            (user) => user.Email === this.loggedUser.Email
-          );
-          console.log('User details for role lookup:', userDetails);
-          if (userDetails && userDetails.PrjDetails) {
-            const projectDetails = userDetails.PrjDetails.find(
-              (p: any) => p.prj_name === prjName || p.projectName === prjName
-            );
-            this.roleDetail =
-              projectDetails?.role_name ||
-              projectDetails?.roleName ||
-              this.loggedUser.Role;
-          } else {
-            this.roleDetail = this.loggedUser.Role;
-          }
-
-          this.loggedUser.ActiveProject = prjName;
-
-          this._stateService.setLoginDetails(this.loggedUser);
-
-          if (this._router.url === '/commandcenterdashboard') {
-            // Reload component without full page reload
-            this._router
-              .navigateByUrl('/', { skipLocationChange: true })
-              .then(() => {
-                this._router.navigate(['/commandcenterdashboard']);
-              });
-          } else {
-            // Navigate normally
-            this._router.navigate(['/commandcenterdashboard']);
-          }
-
-          this.cdr.detectChanges();
-
-          console.log('Project switched:', prjName);
-        }
-      },
-    });
-  }
-
   project_management_link(): void {
     this._router.navigate(['/managesubscription']);
   }
@@ -1966,4 +1885,26 @@ export class Header implements OnInit, AfterViewInit {
     }
     return path;
   }
+
+  loadNotifications(){
+    this._homeService.getNotificationsByUser(this.emailID).subscribe({
+      next: (response: any) => {
+        this.notifications = response.data;
+        this.notificationRequestsCount = this.notifications.filter(n => n.type === 'recieved_request' || n.type === 'sent_request').length;
+        this.notificationActivitiesCount = this.notifications.filter(n => n.type === 'activity').length;
+        this.cdr?.detectChanges();
+      },
+      error: (err) => {
+        console.error('Error loading notifications:', err);
+      }
+    });
+  }
+
+  openApprovalPage(data:any) {
+    // const urlToOpen = environment.baseUIUrl + '?redirectRoute=agentApproval&agentId=' + data.agent_id + '&approvalAction=' + data.action;
+    // window.open(urlToOpen, '_blank');
+    localStorage.setItem('agentId', data.agent_id);
+    localStorage.setItem('approvalAction', data.action);
+    this._router.navigate(['/agentApproval']);
+  } 
 }

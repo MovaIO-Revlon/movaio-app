@@ -104,8 +104,15 @@ class DatabaseManager:
             "otp_collection": database[self.config["MONGODB_OTP_COLLECTION"]],
             "mcp_files_collection": database[self.config["MCP_FILES_COLLECTION"]],
             "rate_limiting_collection": database[self.config["Rate_Limiting_COLLECTION"]],
-            "prompt_repo": database[self.config["MONGODB_PROMPT_REPO_COLLECTION"]] 
-
+            "prompt_repo": database[self.config["MONGODB_PROMPT_REPO_COLLECTION"]],
+            "tool_management_collection": database[self.config["TOOL_MANAGEMENT_COLLECTION"]],
+            "connections_collection": database[self.config["CONNECTIONS_COLLECTION"]],
+            "active_tool_collection": database[self.config["ACTIVE_TOOL_COLLECTION"]],
+            "user_notification_collection": database[self.config["USER_NOTIFICATION_COLLECTION"]],
+            "agent_approval_request_collection": database[self.config["AGENT_APPROVAL_REQUEST_COLLECTION"]],
+            "external_applications_collection": database[self.config["EXTERNAL_APPLICATIONS_COLLECTION"]]
+            
+            
         }
     
     def _get_or_create_dynamic_database(self, db_name):

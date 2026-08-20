@@ -5,13 +5,16 @@
 }
 
 .root {
-  height: calc(100% - 5rem);
-  margin-top: 4.063rem;
+  height: calc(100% - 7.5rem);
   display: grid;
   gap: 0.625rem;
-  grid-template-columns: 3.313rem auto;
+  grid-template-columns: auto;
   padding: 0.8rem;
   transition: grid-template-columns ease-in-out 100ms;
+}
+
+.root:has(.sidebar) {
+  grid-template-columns: 3.313rem auto;
 }
 
 .content {
@@ -20,7 +23,7 @@
   border: 1px solid var(--border-color);
   padding: 0.5rem 1rem;
   overflow: hidden;
-    display: flex;
+  display: flex;
   flex-direction: column;
 }
 
@@ -97,8 +100,8 @@
 }
 
 .mcp-card .card-body strong {
- font-weight: 500;
- color: #262E2B;
+  font-weight: 500;
+  color: #262e2b;
 }
 
 .sidebar {
@@ -111,8 +114,8 @@
 }
 
 .root:has(.sidebar.open) {
-   grid-template-columns: 18rem auto;
-   transition: grid-template-columns ease-in-out 100ms;
+  grid-template-columns: 18rem auto;
+  transition: grid-template-columns ease-in-out 100ms;
 }
 
 .sidebar .title {
@@ -124,7 +127,7 @@
   height: 2.8rem;
 }
 
-.sidebar.open{
+.sidebar.open {
   overflow-y: scroll;
 }
 
@@ -152,7 +155,7 @@
 
 .chart-card > summary {
   list-style: none;
-  display:flex;
+  display: flex;
   align-items: center;
   justify-content: space-between;
   font-size: 0.875rem;

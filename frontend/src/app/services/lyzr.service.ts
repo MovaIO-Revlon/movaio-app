@@ -32,7 +32,7 @@ export class LyzrService {
     );
   }
 
-  getLyzrTrace({ trace_id, request_id, agent_id,project }: ILyzrTraceDetailsQuery& { project?: string }) {
+  getLyzrTrace({ trace_id, request_id, agent_id, project }: ILyzrTraceDetailsQuery& { project?: string }) {
     const query = new URLSearchParams();
     query.append('agent_id', agent_id);
     query.append('request_id', request_id);

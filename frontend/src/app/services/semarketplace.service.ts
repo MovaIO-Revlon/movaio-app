@@ -5,9 +5,13 @@ import {
   ApiResponse,
   IAgency,
   IAgent,
+  IConnectionData,
+  IConnection,
   ISchemaForAgent,
   ISearchIndex,
-  IVoiceAgent,
+  ITool,
+  TConnectorType,
+  IFunctionJson,
 } from '../types';
 import { abort } from '../utils';
 
@@ -34,6 +38,12 @@ export class SemarketplaceService {
 
   getAgentDetails() {
     return this._http.post<ApiResponse<IAgent[]>>(`/GetAllAgents`, null);
+  }
+
+  getAgentDetailsById(agentId: string) {
+    return this._http.get<ApiResponse<IAgent>>(
+      `/GetAgentDetailsForApproval/${agentId}`,
+    );
   }
 
   updateAgentDetails(payload: any) {
@@ -193,10 +203,11 @@ export class SemarketplaceService {
     );
   }
 
-  getMCPConnectorsDetails(signal: AbortSignal) {
-    return this._http
-      .post<{ indexes: ISearchIndex[] }>(`/insights/opensearchindex`, null)
-      .pipe(abort(signal));
+  getMCPConnectorsDetails() {
+    return this._http.post<{ indexes: ISearchIndex[] }>(
+      `/insights/opensearchindex`,
+      null,
+    );
   }
 
   getColumnsForExcelUpload(params: FormData) {
@@ -253,6 +264,59 @@ export class SemarketplaceService {
       message: string;
       success: boolean;
     }>(`/getMCPStatistics`);
+  }
+
+  authenticateTool(params: {
+    client_id: string;
+    client_secret: string;
+    auth_url: string;
+    connector_type: string;
+  }) {
+    return this._http.post<ApiResponse<null>>(`/toolauthentication`, params);
+  }
+
+  saveConnection(params: {
+    connection_name: string;
+    connector: string;
+    user_id: string;
+    credentials?: Record<string, any>;
+    connector_id: string;
+    connection_id?: string;
+    auth: string;
+    custom_tool: {
+      id?: string;
+      action_name: string;
+      action_desc: string;
+      parameters: IFunctionJson;
+    }[];
+    tools_order: string[];
+  }) {
+    return this._http.post<ApiResponse<null>>(`/saveconnection`, params);
+  }
+
+  fetchConnection() {
+    return this._http.post<
+      ApiResponse<
+        {
+          connections: IConnection[];
+          connector_type: TConnectorType;
+        }[]
+      >
+    >(`/fetchconnection`, {});
+  }
+
+  removeConnector(id: string) {
+    return this._http.delete<ApiResponse<null>>(`/deleteconnection/${id}`);
+  }
+
+  getConnectionData(connectionId: string) {
+    return this._http.get<ApiResponse<Record<string, IConnectionData>>>(
+      `/getconnectiondata/${connectionId}`,
+    );
+  }
+
+  getAllTools() {
+    return this._http.get<ApiResponse<ITool[]>>(`/tools`);
   }
 
   getVoiceAgents() {
@@ -402,5 +466,18 @@ export class SemarketplaceService {
       `/agents/${agentId}/versions/${version}`,
     );
   }
+
+  agentApprovalAction(
+    agentId: string,
+    action: 'Approved' | 'Rejected',
+    approvalAction: string,
+  ) {
+    let params = {};
+    return this._http.post<ApiResponse<any[]>>(
+      `/approvalAPI/${agentId}/${approvalAction}/${action}`,
+      params,
+    );
+  }
+
   //#endregion
 }

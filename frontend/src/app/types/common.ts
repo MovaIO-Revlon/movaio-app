@@ -20,3 +20,5 @@ export type FormModel<T> = {
 };
 
 export type KeyOfUnion<T> = T extends T ? keyof T : never;
+
+export type ArrayIfy<T> = T extends unknown ? T[] : never;

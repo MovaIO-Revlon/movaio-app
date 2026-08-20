@@ -1,0 +1,520 @@
+<div class="root d-flex flex-column h-100">
+  <!-- Tab Navigation -->
+  <div class="bg-white border-bottom shadow-sm z-1">
+    <ul class="nav nav-tabs border-bottom-0 gap-2">
+      <li class="nav-item">
+        <button
+          class="nav-link border-0 border-bottom border-2 rounded-0 px-3 py-2 text-dark fw-medium"
+          [class.active-tab]="activeTab() === 'builder'"
+          [class.inactive-tab]="activeTab() !== 'builder'"
+          (click)="activeTab.set('builder')"
+        >
+          <i class="fa-solid fa-sliders me-2 text-muted"></i>Builder
+        </button>
+      </li>
+      <li class="nav-item">
+        <button
+          class="nav-link border-0 border-bottom border-2 rounded-0 px-3 py-2 text-dark fw-medium"
+          [class.active-tab]="activeTab() === 'json'"
+          [class.inactive-tab]="activeTab() !== 'json'"
+          (click)="activeTab.set('json')"
+        >
+          <i class="fa-solid fa-code me-2 text-muted"></i>JSON Editor
+        </button>
+      </li>
+      <li class="nav-item">
+        <button
+          class="nav-link border-0 border-bottom border-2 rounded-0 px-3 py-2 text-dark fw-medium"
+          [class.active-tab]="activeTab() === 'test'"
+          [class.inactive-tab]="activeTab() !== 'test'"
+          (click)="activeTab.set('test')"
+        >
+          <i class="fa-solid fa-play me-2 text-muted"></i>Run & Test
+        </button>
+      </li>
+    </ul>
+  </div>
+
+  <!-- Tab Content Area -->
+  <div
+    class="flex-fill overflow-auto custom-scrollbar position-relative pt-3"
+    style="height: 65dvh"
+  >
+    <!-- ================= TAB 1: BUILDER ================= -->
+    @if (activeTab() === "builder") {
+      <form [formGroup]="form" class="d-flex flex-column gap-3">
+        <!-- Basic Config -->
+        <details
+          dropdown
+          class="bg-white py-2 px-3 rounded-2 border shadow-sm"
+          open
+        >
+          <summary class="form-label fs-14 fw-semibold cursor-pointer mb-0">
+            <div class="d-flex flex-column flex-fill">
+              <span class="fs-5">Basic Config</span>
+              <small class="text-muted fw-normal"
+                >How this action is named and discovered</small
+              >
+            </div>
+          </summary>
+          <div class="row border-top pt-3 mt-2">
+            <div class="col-12 mb-3">
+              <custom-field
+                inputId="fname"
+                label="Action name"
+                [control]="form.controls.name"
+                hint="example TOOL__LIST_RECORDS"
+              />
+              <form-error controlName="name" />
+            </div>
+            <div class="col-12 mb-3">
+              <custom-field
+                inputId="fdesc"
+                type="textarea"
+                label="Description"
+                [control]="form.controls.description"
+              />
+              <form-error controlName="description" />
+            </div>
+            <div class="col-12 mb-3">
+              <custom-field
+                inputId="ftags"
+                label="Tags"
+                [control]="form.controls.tags"
+                hint="Comma-separated values."
+              />
+            </div>
+            <div class="col-md-6 mb-3">
+              <custom-field
+                inputId="fvis"
+                type="select"
+                label="Visibility"
+                [control]="form.controls.visibility"
+                [options]="visibilityOptions"
+              />
+            </div>
+            <div class="col-md-6 d-flex align-items-center mb-3">
+              <div class="form-check form-switch mt-3">
+                <input
+                  class="form-check-input"
+                  type="checkbox"
+                  role="switch"
+                  id="factive"
+                  formControlName="active"
+                />
+                <label
+                  class="form-check-label ms-2 small text-muted"
+                  for="factive"
+                >
+                  {{
+                    form.controls.active.value
+                      ? "Enabled — can be called"
+                      : "Disabled — hidden from callers"
+                  }}
+                </label>
+              </div>
+            </div>
+            <div class="col-md-4 mb-3">
+              <custom-field
+                inputId="fprotocol"
+                type="select"
+                label="Protocol"
+                [control]="form.controls.protocol"
+                [options]="protocolOptions"
+              />
+            </div>
+            <div class="col-md-4 mb-3">
+              <custom-field
+                inputId="fmethod"
+                type="select"
+                label="Method"
+                [control]="form.controls.method"
+                [options]="methodOptions"
+              />
+            </div>
+            <div class="col-md-4 mb-3">
+              <custom-field
+                inputId="fpath"
+                label="Path"
+                [control]="form.controls.path"
+              />
+              <form-error controlName="path" />
+            </div>
+            <div class="col-12 mb-3">
+              <custom-field
+                inputId="fserver"
+                label="Server URL"
+                [control]="form.controls.serverUrl"
+              />
+              <form-error controlName="serverUrl" />
+            </div>
+          </div>
+        </details>
+
+        <!-- Security & Authentication -->
+        <details
+          dropdown
+          class="bg-white py-2 px-3 rounded-2 border shadow-sm"
+          open
+        >
+          <summary class="form-label fs-14 fw-semibold cursor-pointer mb-0">
+            <div class="d-flex flex-column flex-fill">
+              <span class="fs-5">Security Schemes</span>
+              <small class="text-muted fw-normal"
+                >Configure API Key or OAuth2 parameters</small
+              >
+            </div>
+          </summary>
+          <div class="row border-top pt-3 mt-2">
+            <div class="col-12 mb-3">
+              <custom-field
+                inputId="sauthType"
+                type="select"
+                label="Authentication Type"
+                [control]="form.controls.securityScheme.controls.type"
+                [options]="authSchemeOptions"
+              />
+            </div>
+            @if (form.controls.securityScheme.controls.type.value !== "none") {
+              <div class="col-md-4 mb-3">
+                <custom-field
+                  inputId="sloc"
+                  label="Location"
+                  [control]="form.controls.securityScheme.controls.location"
+                />
+              </div>
+              <div class="col-md-4 mb-3">
+                <custom-field
+                  inputId="sname"
+                  label="Header/Param Name"
+                  [control]="form.controls.securityScheme.controls.name"
+                />
+              </div>
+              <div class="col-md-4 mb-3">
+                <custom-field
+                  inputId="sprefix"
+                  label="Prefix"
+                  [control]="form.controls.securityScheme.controls.prefix"
+                />
+              </div>
+            }
+            @if (
+              form.controls.securityScheme.controls.type.value === "oauth2"
+            ) {
+              <div class="col-md-6 mb-3">
+                <custom-field
+                  inputId="sclientId"
+                  label="Client ID"
+                  [control]="form.controls.securityScheme.controls.clientId"
+                  hint="Use {{ '{{ VAR }}' }} for secrets"
+                />
+              </div>
+              <div class="col-md-6 mb-3">
+                <custom-field
+                  inputId="sclientSecret"
+                  label="Client Secret"
+                  [control]="form.controls.securityScheme.controls.clientSecret"
+                  hint="Use {{ '{{ VAR }}' }} for secrets"
+                />
+              </div>
+              <div class="col-12 mb-3">
+                <custom-field
+                  inputId="sscope"
+                  type="textarea"
+                  label="Scopes"
+                  [control]="form.controls.securityScheme.controls.scope"
+                />
+              </div>
+              <div class="col-12 mb-3">
+                <custom-field
+                  inputId="sauthUrl"
+                  label="Authorize URL"
+                  [control]="form.controls.securityScheme.controls.authorizeUrl"
+                />
+              </div>
+              <div class="col-md-6 mb-3">
+                <custom-field
+                  inputId="sTokenUrl"
+                  label="Access Token URL"
+                  [control]="
+                    form.controls.securityScheme.controls.accessTokenUrl
+                  "
+                />
+              </div>
+              <div class="col-md-6 mb-3">
+                <custom-field
+                  inputId="sRefUrl"
+                  label="Refresh Token URL"
+                  [control]="
+                    form.controls.securityScheme.controls.refreshTokenUrl
+                  "
+                />
+              </div>
+            }
+          </div>
+        </details>
+
+        <!-- Parameters -->
+        <details
+          dropdown
+          class="bg-white py-2 px-3 rounded-2 border shadow-sm"
+          open
+        >
+          <summary class="form-label fs-14 fw-semibold cursor-pointer mb-0">
+            <div class="d-flex flex-column flex-fill">
+              <span class="fs-5">Parameters</span>
+              <small class="text-muted fw-normal"
+                >Query, Path, Header and Body fields</small
+              >
+            </div>
+          </summary>
+          <div
+            formArrayName="groups"
+            class="d-flex flex-column gap-3 border-top pt-3 mt-2"
+          >
+            @for (
+              group of groups.controls;
+              track group;
+              let groupIndex = $index
+            ) {
+              <div
+                [formGroupName]="groupIndex"
+                class="card border rounded-3"
+                [class.opacity-50]="!group.value.enabled"
+              >
+                <div
+                  class="card-header bg-white d-flex flex-wrap align-items-center gap-3 p-3"
+                >
+                  <div class="form-check form-switch m-0">
+                    <input
+                      class="form-check-input"
+                      type="checkbox"
+                      formControlName="enabled"
+                    />
+                  </div>
+                  <div class="flex-grow-1">
+                    <span class="fw-bold d-block">{{ group.value.key }}</span>
+                    <small class="text-muted">{{ group.value.label }}</small>
+                  </div>
+                  @if (!group.value.locked) {
+                    <button
+                      type="button"
+                      class="btn btn-sm btn-outline-danger border-0"
+                      (click)="removeGroup(groupIndex)"
+                    >
+                      ✕
+                    </button>
+                  }
+                </div>
+                <div class="card-body p-3">
+                  <div
+                    formArrayName="properties"
+                    class="d-flex flex-column gap-2 mb-3"
+                  >
+                    @for (
+                      prop of getProperties(groupIndex).controls;
+                      track prop;
+                      let propIndex = $index
+                    ) {
+                      <div
+                        [formGroupName]="propIndex"
+                        class="d-flex gap-2 align-items-start"
+                      >
+                        <div class="d-flex flex-column w-25">
+                          <input
+                            type="text"
+                            class="form-control form-control-sm font-monospace w-100"
+                            formControlName="name"
+                            placeholder="param_name"
+                          />
+                          <form-error controlName="name" />
+                        </div>
+                        <div class="d-flex flex-column w-25">
+                          <select
+                            class="form-select form-select-sm w-100"
+                            formControlName="type"
+                          >
+                            @for (opt of typeOptions; track opt.value) {
+                              <option [value]="opt.value">
+                                {{ opt.label }}
+                              </option>
+                            }
+                          </select>
+                        </div>
+                        <div class="d-flex flex-column w-50">
+                          <input
+                            type="text"
+                            class="form-control form-control-sm w-100"
+                            formControlName="description"
+                            placeholder="Description"
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          class="btn btn-sm btn-light text-danger"
+                          (click)="removeProperty(groupIndex, propIndex)"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    }
+                  </div>
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-outline-primary border-dashed fw-medium"
+                    (click)="addProperty(groupIndex)"
+                  >
+                    + Add parameter
+                  </button>
+                </div>
+              </div>
+            }
+          </div>
+        </details>
+      </form>
+    }
+
+    <!-- ================= TAB 2: JSON EDITOR ================= -->
+    @if (activeTab() === "json") {
+      <div class="d-flex flex-column h-100">
+        <div
+          class="bg-white px-3 py-2 fw-semibold border shadow-sm rounded-top d-flex justify-content-between align-items-center"
+        >
+          <span>Function JSON</span>
+          <button
+            class="btn btn-sm btn-warning fw-bol text-white"
+            (click)="applyJson()"
+          >
+            Sync to Form ↺
+          </button>
+        </div>
+
+        @if (jsonError()) {
+          <div
+            class="bg-danger text-white px-3 py-2 fs-14 fw-medium border-start border-end"
+          >
+            ⚠ {{ jsonError() }}
+          </div>
+        }
+
+        <textarea
+          [formControl]="jsonInput"
+          class="form-control flex-fill rounded-bottom rounded-top-0 border shadow-sm bg-dark font-monospace p-3 fs-14 custom-scrollbar"
+          style="resize: none; color: #d8d8de !important"
+          spellcheck="false"
+          placeholder="Paste JSON schema here..."
+        ></textarea>
+      </div>
+    }
+
+    <!-- ================= TAB 3: RUN & TEST ================= -->
+    @if (activeTab() === "test") {
+      <div class="row h-100 mx-auto" style="max-width: calc(100% - 1px)">
+        <!-- Left: Variables Input -->
+        <div class="col-md-5 d-flex flex-column h-100">
+          <div class="card shadow-sm border h-100 d-flex flex-column">
+            <div
+              class="card-header bg-white fw-semibold py-3 d-flex justify-content-between align-items-center"
+            >
+              <span>Test Variables</span>
+              <button
+                class="btn btn-sm btn-warning text-white fw-bold px-3"
+                [disabled]="isTesting()"
+                (click)="runTest()"
+              >
+                @if (isTesting()) {
+                  <span class="spinner-border spinner-border-sm me-1"></span>
+                  Running...
+                } @else {
+                  <i class="fa-solid fa-play me-1"></i> Run Request
+                }
+              </button>
+            </div>
+            <div class="card-body p-0 d-flex flex-column">
+              <div class="bg-light px-3 py-2 text-muted small border-bottom">
+                Define variables used in your schema (e.g.,
+                <code>{{ "{{ SECRET_KEY }}" }}</code>) in valid JSON format.
+              </div>
+              <textarea
+                [formControl]="testVariablesInput"
+                class="form-control flex-fill rounded-0 border-0 font-monospace p-3 fs-14 custom-scrollbar"
+                style="resize: none"
+                spellcheck="false"
+                placeholder='{&#10;  "AIPOLABS_GMAIL_CLIENT_ID": "mock-client-id",&#10;  "USER_ID": "12345"&#10;}'
+              ></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Request / Response Results -->
+        <div class="col-md-7 d-flex flex-column h-100 mt-3 mt-md-0">
+          <div class="card shadow-sm border h-100 d-flex flex-column">
+            <div class="card-header bg-white fw-semibold py-3">
+              Execution Results
+            </div>
+            <div
+              class="card-body p-0 overflow-auto bg-dark custom-scrollbar d-flex flex-column position-relative"
+            >
+              @if (!testResponse()) {
+                <div
+                  class="d-flex flex-column align-items-center justify-content-center h-100 text-muted p-5 text-center"
+                >
+                  <i
+                    class="fa-solid fa-satellite-dish fs-1 mb-3 opacity-50"
+                  ></i>
+                  <p class="mb-0">
+                    Click <strong>Run Request</strong> to execute your schema
+                    through the backend proxy.
+                  </p>
+                </div>
+              } @else {
+                <!-- Request Summary -->
+                <div class="border-bottom border-secondary p-3">
+                  <div class="d-flex align-items-center gap-2 mb-2">
+                    <span class="badge bg-primary">{{
+                      testResponse().req.method
+                    }}</span>
+                    <span class="font-monospace text-light text-break fs-14">{{
+                      testResponse().req.url
+                    }}</span>
+                  </div>
+                  <div class="text-muted small">
+                    <strong>Headers:</strong>
+                    {{ testResponse().req.headers | json }}
+                  </div>
+                </div>
+
+                <!-- Response Body -->
+                <div class="p-3 flex-fill">
+                  <div
+                    class="d-flex justify-content-between align-items-center mb-2"
+                  >
+                    <span class="text-light fw-medium fs-14"
+                      >Response Body</span
+                    >
+                    <div class="d-flex gap-2">
+                      <span
+                        class="badge"
+                        [class.bg-success]="testResponse().res.status === 200"
+                        [class.bg-danger]="testResponse().res.status !== 200"
+                      >
+                        {{ testResponse().res.status }}
+                      </span>
+                      <span class="badge bg-secondary"
+                        >{{ testResponse().res.time }}ms</span
+                      >
+                    </div>
+                  </div>
+                  <pre
+                    class="m-0 font-monospace fs-14"
+                    style="color: #a6e22e"
+                  ><code>{{ testResponse().res.body | json }}</code></pre>
+                </div>
+              }
+            </div>
+          </div>
+        </div>
+      </div>
+    }
+  </div>
+</div>

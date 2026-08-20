@@ -92,7 +92,7 @@ export function fileValidator(
   imports: [CommonModule, ReactiveFormsModule, TooltipDirective, FormError],
   template: `<form [formGroup]="form" novalidate (ngSubmit)="onSubmit()">
     <div class="row" style="min-height:340px;">
-      <div class="col-md-6 border-end pe-4">
+      <div class="col-lg-6 border-end pe-4">
         <div class="mb-2 fw-bold fs-14">
           Upload File<span class="text-danger">*</span>
         </div>
@@ -200,7 +200,7 @@ export function fileValidator(
         </div>
       </div>
 
-      <div class="col-md-6 ps-4">
+      <div class="col-lg-6 ps-4">
         <div class="mb-3">
           <label
             class="form-label fw-bold fs-14"

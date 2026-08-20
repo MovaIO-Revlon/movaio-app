@@ -1,3 +1,5 @@
+# Backup files
+Working_Source_Backup_*
 # Byte-compiled / optimized / DLL files
 __pycache__/
 .env
@@ -9,3 +11,5 @@ __pycache__/
 /backend/.scannerwork/
 /backend/.vscode/
 /backend/__pycache__/
+*.zip
+*Backup*

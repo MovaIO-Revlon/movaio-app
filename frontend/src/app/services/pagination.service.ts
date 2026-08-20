@@ -1,10 +1,15 @@
 import { Injectable, computed, signal } from '@angular/core';
+import { ArrayIfy } from '../types';
 
+type TFilterMethod<T, F> = (
+  item: ArrayIfy<T> | never[],
+  filters: F,
+) => ArrayIfy<T> | never[];
 export interface PagerConfig<T, F extends object> {
   pageSizeOptions?: number[];
   defaultPageSize?: number;
   filters?: F;
-  filterMethod?: (item: T[], filters: F) => T[];
+  filterMethod?: TFilterMethod<T, F>;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -30,7 +35,10 @@ export class PagerService<T, F extends object> {
 
   filteredData = computed(
     () =>
-      this.config().filterMethod?.(this.data(), this.filters()) || this.data(),
+      this.config().filterMethod?.(
+        this.data() as ArrayIfy<T>,
+        this.filters(),
+      ) || this.data(),
   );
 
   totalRecords = computed(() => this.filteredData().length);

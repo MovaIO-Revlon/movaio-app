@@ -614,6 +614,10 @@ export class Logs implements AfterViewInit, OnDestroy {
             project: this.filter['project']?.[0] || '',
           };
 
+          if (!lyzrDetails.project) {
+            lyzrDetails.project = this.state.getLoginDetails()?.ActiveProject || 'master'
+          }
+
           console.log('Extracted agents from events:', agents); // Debug log
         }
       } else if (path.includes('insights')) {
@@ -703,6 +707,11 @@ export class Logs implements AfterViewInit, OnDestroy {
           project: this.filter['project']?.[0] || '',
         };
 
+        if (!lyzrDetails.project) {
+          lyzrDetails.project = this.state.getLoginDetails()?.ActiveProject || 'master'
+        }
+
+
         console.log('Extracted insights trace details:', lyzrDetails); // Debug log
       } else {
         // For chatbotagent, use the original logic
@@ -763,7 +772,12 @@ export class Logs implements AfterViewInit, OnDestroy {
       lyzrDetails = this.getLyzrDetails(log, response);
       if (lyzrDetails) {
         lyzrDetails.project = this.filter['project']?.[0] || '';
+        
+        if (!lyzrDetails.project) {
+          lyzrDetails.project = this.state.getLoginDetails()?.ActiveProject || 'master'
+        }
       }
+
     }
 
     const durationStr =

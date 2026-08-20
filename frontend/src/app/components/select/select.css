@@ -22,6 +22,12 @@
   cursor: pointer;
 }
 
+.label.disabled-trigger {
+  opacity: var(--disabled-opacity, 0.5);
+  pointer-events: none;
+  cursor: not-allowed;
+}
+
 .label > span:nth-child(1) {
   min-width: 0;
   white-space: nowrap;

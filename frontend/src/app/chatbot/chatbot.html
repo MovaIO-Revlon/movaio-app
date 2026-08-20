@@ -2708,6 +2708,7 @@ CASE 2: Use the new universal inline logic for all other cases
           class="btn btn-sm btn-outline-secondary"
           type="button"
           (click)="handleDownload(onClick, true)"
+          [disabled]="currentView === 'explanation'"
           title="Download"
         >
           <i class="fa-solid fa-download"></i>
@@ -2771,17 +2772,26 @@ CASE 2: Use the new universal inline logic for all other cases
       <div class="modal-body">
         <p class="mb-3">Do you want to customize the title before saving?</p>
 
-        <!-- Title Input (conditionally shown) -->
+         <!-- Title Input (conditionally shown) -->
         <div class="mb-3" *ngIf="isEditingTitle">
           <label class="form-label fw-semibold">Prompt Title</label>
-          <input 
-            type="text" 
-            class="form-control" 
-            [(ngModel)]="repoTitle" 
-            placeholder="Enter title"
-            (keyup.enter)="saveWithCustomTitle()"
-          />
+         <input 
+  type="text" 
+  class="form-control" 
+  [(ngModel)]="repoTitle" 
+  placeholder="Enter title"
+  (blur)="validateRepoTitle()"
+  (input)="onRepoTitleInput()" 
+/>
+
+<div *ngIf="isTitleDuplicateError" class="text-danger fs-13 mt-1">
+  {{ titleDuplicateMessage }}
+</div>
+<div *ngIf="isTitleCharLimitError" class="text-danger fs-13">
+  {{ titleCharLimitMessage }}
+</div>
         </div>
+
 
         <!-- Action Buttons -->
         <div class="d-flex gap-2 justify-content-end">

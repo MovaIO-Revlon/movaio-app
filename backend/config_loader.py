@@ -14,22 +14,6 @@ class ConfigLoader:
         self._setup_paths()
         self._setup_mongo()
         self._setup_config_vars()
-
-        #host = self.config["MONGODB_HOST"]
-        #port = self.config["MONGODB_PORT"]
-        #auth_db = self.config["MONGODB_AUTH_DB"] # Database where the user is created
-            
-        #print("ENV USER--Config:", os.getenv("MONGO_USERNAME"))
-        #print("ENV PASS EXISTS--Config:", os.getenv("MONGO_PASSWORD") is not None)
-
-        #musername = os.getenv('MONGO_USERNAME')
-        #mpassword = os.getenv('MONGO_PASSWORD')
-
-        #default_uri = f"mongodb://{musername}:{mpassword}@{host}:{port}/?authSource={auth_db}"
-            
-        # 4. Connect (uses config value if provided, otherwise falls back to default_uri)
-        #print(f"Connecting to MongoDB with URI: {default_uri}")  # Debugging line
-        #self.mongo_client = MongoClient(default_uri)
         self.mongo_client = MongoClient(self.config.get("MONGODB_CONNECTION", "mongodb://localhost:27017/"))
         self.main_db = self.mongo_client[self.config.get("MONGODB_COLLECTION_NAME_MASTER", "dev_qa")]
         self.encryption_key = self.config["Encryption_key"]
@@ -64,7 +48,8 @@ class ConfigLoader:
     
     def _setup_config_vars(self):
         self.SECRET_KEY = self.config["SECRET_KEY"]
-        
+        self.SESSION_TOKEN_SECRET = self.config["SESSION_TOKEN_SECRET"]
+        self.JWT_SECRET_KEY = self.config.get("JWT_SECRET_KEY", "")
         
         self.OTP_RECAPTCHA = self.config["OTP_RECAPTCHA"]
         self.OTP_EXTERNAL_SERVICE = self.config["OTP_EXTERNAL_SERVICE"]
@@ -99,6 +84,11 @@ class ConfigLoader:
         self.AUTOMATION_LIBRARY_COLLECTION = self.config.get("AUTOMATION_LIBRARY_COLLECTION")
         self.AUTOMATION_SCRIPT_TYPES_COLLECTION = self.config.get("AUTOMATION_SCRIPT_TYPES_COLLECTION")
         self.AGENT_VERSION_HISTORY_COLLECTION = self.config.get("AGENT_VERSION_HISTORY_COLLECTION")
+        self.TOOL_MANAGEMENT_COLLECTION = self.config.get("TOOL_MANAGEMENT_COLLECTION")
+        self.CONNECTIONS_COLLECTION = self.config.get("CONNECTIONS_COLLECTION")
+        self.USER_NOTIFICATION_COLLECTION = self.config.get("USER_NOTIFICATION_COLLECTION")
+        self.AGENT_APPROVAL_REQUEST_COLLECTION = self.config.get("AGENT_APPROVAL_REQUEST_COLLECTION")
+        self.EXTERNAL_APPLICATIONS_COLLECTION = self.config.get("EXTERNAL_APPLICATIONS_COLLECTION")
         self.ISNEWPORT = self.config.get("IsNewPort")
         self.OTP_TEMPLATE_NAME = self.config.get("OTP_TEMPLATE_NAME")
         self.WELCOME_TEMPLATE_NAME = self.config.get("WELCOME_TEMPLATE_NAME")

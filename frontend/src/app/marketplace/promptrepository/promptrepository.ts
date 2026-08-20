@@ -148,6 +148,9 @@ export class Promptrepository {
   isTriggerHovered: boolean = false;
   lastHoveredAgentId: string | null = null;
   pendingAgentId: string | null = null;
+  editModalTitleError: string = '';
+  promptTitleError: string = '';
+  promptContentError: string = '';
 
 
   ngOnInit(): void {
@@ -749,6 +752,7 @@ fetchAgenciesWithAgents(): void {
      
       setTimeout(() => {
         this.autoFixNoTitlePrompts();
+        this.recoverDuplicateTitles();
       }, 800);
       
 
@@ -1030,7 +1034,9 @@ getLastExecutedTime(lastUsed: string | null | undefined, executionCount: number 
 
   cancelAddPrompt() {
     this.showAddPrompt = false;
-    // Trigger change detection
+    this.promptTitleError = '';
+    this.promptContentError = '';
+    this.currentAgent = null;
     this.cdr.detectChanges();
   }
 
@@ -1075,6 +1081,7 @@ cancelEditQuery(agent: Agent, query: any) {
   query.isEditing = false;
   delete query.editTitle;
   delete query.editPrompt;
+  delete query.editTitleError; 
   
   // Trigger change detection
   this.cdr.detectChanges();
@@ -1083,6 +1090,18 @@ cancelEditQuery(agent: Agent, query: any) {
 saveEditedQuery(agent: Agent, query: any) {
   if (!query.editTitle?.trim() || !query.editPrompt?.trim()) {
     this.showToast('error', 'Title and prompt content are required!');
+    return;
+  }
+
+   if (query.editTitle.trim().length < 5) {
+    query.editTitleError = 'Title must be at least 5 characters long.';
+    this.cdr.detectChanges();
+    return;
+  }
+
+  if (this.isTitleGloballyDuplicate(query.editTitle, query._id)) {
+    query.editTitleError = 'This title already exists in the repository. Please use a different title.';
+    this.cdr.detectChanges();
     return;
   }
 
@@ -1212,6 +1231,11 @@ private findOriginalQuery(agent: any, editedQuery: any): any {
 confirmEdit() {
   if (!this.queryToEdit || !this.agentToEdit) return;
 
+  if (this.isTitleGloballyDuplicate(this.editForm.promptTitle, this.queryToEdit._id)) {
+    this.editModalTitleError = 'This title already exists in the repository. Please use a different title.';
+    return;
+  }
+
   this.isEditing = true;
   this._loadingService.show();
 
@@ -1281,6 +1305,7 @@ clearEditModal() {
     promptTitle: '',
     prompt: ''
   };
+  this.editModalTitleError = '';
 }
 
 deletePrompt(event: Event, query: any, agent: Agent) {
@@ -1353,6 +1378,7 @@ clearDeleteModal() {
 
   openNewPRModal() {
     this.resetForm();
+    this.promptTitleError = '';
     this.filteredAgentsForModal = [];
 
     const modalElement = document.getElementById('newPRModal');
@@ -1363,6 +1389,9 @@ clearDeleteModal() {
   }
 
   showAddPromptForm(agent?: any) {
+    this.promptTitleError = '';
+    this.promptContentError = '';
+
     if (agent) {
       // Make sure we store the complete agent object
       this.currentAgent = agent;
@@ -1410,6 +1439,12 @@ clearDeleteModal() {
 
   if (!form.promptTitle?.trim() || !form.prompt?.trim()) {
     this.showToast('error', 'Prompt Title and Prompt content are required!');
+    return;
+  }
+
+  if (this.isTitleGloballyDuplicate(form.promptTitle)) {
+    this.promptTitleError = 'This title already exists in the repository. Please use a different title.';
+    this.cdr.detectChanges();
     return;
   }
 
@@ -1703,10 +1738,6 @@ clearFilters() {
   this.cdr.detectChanges();
 }
 
-// Add these properties (already present)
-promptTitleError: string = '';
-promptContentError: string = '';
-
 // Updated Validation Method
 isValidPromptContent(value: string): boolean {
   if (!value || value.trim().length === 0) return false;
@@ -1731,6 +1762,9 @@ validatePromptFields(): boolean {
 
   if (!title) {
     this.promptTitleError = 'Prompt Title is required.';
+    isValid = false;
+  } else if (title.length < 5) {
+    this.promptTitleError = 'Title must be at least 5 characters long.';
     isValid = false;
   } else if (!this.isValidPromptContent(title)) {
     this.promptTitleError = 'Please give proper content for title. Only numbers and special characters are not allowed.';
@@ -1764,16 +1798,16 @@ resetForm() {
 }
 
 // Real-time validation for individual fields (called on blur)
-onTitleBlur() {
-  const title = this.newPRForm.promptTitle?.trim();
-  if (!title) {
-    this.promptTitleError = 'Prompt Title is required.';
-  } else if (!this.isValidPromptContent(title)) {
-    this.promptTitleError = 'Please give proper content for title. Only numbers and special characters are not allowed.';
-  } else {
-    this.promptTitleError = '';
-  }
-}
+// onTitleBlur() {
+//   const title = this.newPRForm.promptTitle?.trim();
+//   if (!title) {
+//     this.promptTitleError = 'Prompt Title is required.';
+//   } else if (!this.isValidPromptContent(title)) {
+//     this.promptTitleError = 'Please give proper content for title. Only numbers and special characters are not allowed.';
+//   } else {
+//     this.promptTitleError = '';
+//   }
+// }
 
 onPromptBlur() {
   const prompt = this.newPRForm.prompt?.trim();
@@ -2248,6 +2282,120 @@ getAssessmentRationale(query: any, assessmentName: string): string {
   }
   
   return '';
+}
+
+// Recover duplicate titles on page load
+recoverDuplicateTitles(): void {
+  console.log('🔄 Starting duplicate title recovery...');
+
+  const payload = {
+    dry_run: false  
+  };
+
+  this.promptRepoService.deduplicatePromptTitles(payload).subscribe({
+    next: (response) => {
+      if (response?.success) {
+        const data = response.data || response;
+        console.log('✅ Duplicate title recovery completed:', data);
+
+        if (data.total_updated && data.total_updated > 0) {
+         console.log('${data.total_updated} duplicate prompt titles were fixed.');
+          // Refresh UI to show updated titles
+          setTimeout(() => {
+            this.fetchAgencies();
+          }, 1200);
+        } else {
+          console.log('No duplicates found.');
+        }
+      }
+    },
+    error: (err) => {
+      console.error('Duplicate title recovery failed:', err);
+    }
+  });
+}
+
+isTitleGloballyDuplicate(title: string, excludeId?: string): boolean {
+  if (!title?.trim() || !this.apiData?.length) return false;
+  
+  const normalizedTitle = title.toLowerCase().trim();
+  
+  for (const agency of this.apiData) {
+    if (!agency.agents?.length) continue;
+    
+    for (const agent of agency.agents) {
+      if (!agent.queries?.length) continue;
+      
+      const found = agent.queries.some((q: any) => 
+        q.prompt_title?.toLowerCase().trim() === normalizedTitle && 
+        q._id !== excludeId
+      );
+      
+      if (found) return true;
+    }
+  }
+  
+  return false;
+}
+
+// For inline add in agency modal AND new PR modal
+onTitleBlur() {
+  const title = this.newPRForm.promptTitle?.trim();
+  this.promptTitleError = '';
+  
+  if (!title) {
+    this.promptTitleError = 'Title is required.';
+    return;
+  }
+  
+   if (title.length < 5) {
+    this.promptTitleError = 'Title must be at least 5 characters long.';
+    return;
+  }
+
+  if (this.isTitleGloballyDuplicate(title)) {
+    this.promptTitleError = 'This title already exists in the repository. Please use a different title.';
+  }
+}
+
+// For inline edit in agency modal (inside accordion)
+onEditInlineTitleBlur(agent: Agent, query: any) {
+  const title = query.editTitle?.trim();
+  query.editTitleError = '';
+  
+  if (!title) {
+    query.editTitleError = 'Title is required.';
+    return;
+  }
+    if (title.length < 5) {
+    query.editTitleError = 'Title must be at least 5 characters long.';  // ✅ Fixed!
+    return;
+  }
+  
+  // Pass excludeId to skip the current query being edited
+  if (this.isTitleGloballyDuplicate(title, query._id)) {
+    query.editTitleError = 'This title already exists in the repository. Please use a different title.';
+  }
+}
+
+// For edit confirm modal (separate edit modal)
+onEditModalTitleBlur() {
+  const title = this.editForm.promptTitle?.trim();
+  this.editModalTitleError = '';
+  
+  if (!title) {
+    this.editModalTitleError = 'Title is required.';
+    return;
+  }
+
+   if (title.length < 5) {
+    this.promptTitleError = 'Title must be at least 5 characters long.';
+    return;
+  }
+  
+  if (this.queryToEdit && this.isTitleGloballyDuplicate(title, this.queryToEdit._id)) {
+    this.editModalTitleError = 'This title already exists in the repository. Please use a different title.';
+  }
 }
 
 }

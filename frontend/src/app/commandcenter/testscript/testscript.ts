@@ -1,4 +1,4 @@
-import { Component, OnInit,ChangeDetectorRef } from '@angular/core';
+import { Component,ChangeDetectorRef } from '@angular/core';
 import { NgxSpinnerService } from 'ngx-spinner';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
@@ -13,7 +13,6 @@ import { Header } from '../../header/header';
   styleUrl: './testscript.css'
 })
 export class Testscript {
-   captcha: boolean = false;
   loggedUser: any;
   userName: any;
   employeeId: any;
@@ -54,15 +53,4 @@ export class Testscript {
     // Navigate to the user onboarding page
     this._router.navigate(['/commandcenter/useronboard']);
   }
-  doLogOut(): void {
-    this._stateService.clearLoginDetails();
-    this._stateService.clearLoginOTPDetails();
-    this._stateService.clearLogoutOTPDetails();
-    this._loginservice.getReCaptchaConfig().subscribe(res => {
-      this.captcha = res.data.OTPRecaptcha;
-      this._stateService.setLogoutOTPDetails(this.captcha);
-      this._router.navigate(["/"]);
-    });
-  }
-
 }

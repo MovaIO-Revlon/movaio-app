@@ -113,40 +113,35 @@ class Validator {
 
   max(length: number, message?: string): this {
     this.addRule((control: AbstractControl): ValidationErrors | null => {
-      if (!control.value) return null;
-
       const value = control.value;
-      const actualLength =
-        typeof value === 'string'
-          ? value.length
-          : Array.isArray(value)
-            ? value.length
-            : typeof value === 'number'
-              ? value
-              : 0;
 
-      if (actualLength > length) {
-        const baseMsg =
-          message ||
-          (typeof value === 'string'
-            ? 'Must be at most'
-            : Array.isArray(value)
-              ? 'Must have at most'
-              : 'Must be at most');
+      if (value === null || value === undefined || value === '') return null;
 
-        const unit =
-          typeof value === 'string'
-            ? ' characters'
-            : Array.isArray(value)
-              ? ' items'
-              : '';
+      if (typeof value === 'string') {
+        if (value.length > length) {
+          const unit = length === 1 ? 'character' : 'characters';
+          const defaultMsg = `Must be at most ${length} ${unit} (${value.length}/${length})`;
 
-        const msg = `${baseMsg} ${length}${unit} (${actualLength}/${length})`;
+          return { max: message || defaultMsg };
+        }
+      } else if (Array.isArray(value)) {
+        if (value.length > length) {
+          const unit = length === 1 ? 'item' : 'items';
+          const defaultMsg = `Must have at most ${length} ${unit} (${value.length}/${length})`;
 
-        return { max: msg };
+          return { max: message || defaultMsg };
+        }
+      } else if (typeof value === 'number') {
+        if (value > length) {
+          const defaultMsg = `Must be at most ${length}`;
+
+          return { max: message || defaultMsg };
+        }
       }
+
       return null;
     }, 20);
+
     return this;
   }
 

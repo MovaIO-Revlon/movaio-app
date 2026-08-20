@@ -1,0 +1,349 @@
+{
+  "functions": [
+    {
+      "name": "SERVICENOW__LIST_INCIDENTS",
+      "description": "Returns incident records from the ServiceNow incident table. Only fetch the incidents for that particular email. sysparm_query=caller_id.email use this filter everytime when user ask for the incident list or related query",
+      "tags": [
+        "servicenow",
+        "incident",
+        "itsm"
+      ],
+      "visibility": "public",
+      "active": true,
+      "protocol": "rest",
+      "protocol_data": {
+        "method": "GET",
+        "path": "/api/now/table/incident",
+        "server_url": "{{ server_url }}"
+      },
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "object",
+            "description": "Query parameters supported by the ServiceNow Table API. If no filters mentioned don't mention the query object. Always fetch last 10 records if no filters are mentioned. If the user provide the incident id and have to fetch sys_id for later process use ?sysparm_query=number={IncidentId}&sysparm_fields=sys_id&sysparm_limit=1 filter for the list api in query. ",
+            "properties": {
+              "sysparm_query": {
+                "type": "string",
+                "description": "Encoded query filter, for example active=true"
+              },
+              "sysparm_fields": {
+                "type": "string",
+                "description": "Comma-separated list of fields to return"
+              },
+              "sysparm_limit": {
+                "type": "integer",
+                "description": "Maximum number of records to return"
+              }
+            },
+            "required": [],
+            "visible": [
+              "sysparm_query",
+              "sysparm_fields",
+              "sysparm_limit"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [],
+        "visible": [
+          "query"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "SERVICENOW__CREATE_INCIDENT",
+      "description": "Creates a new incident record in ServiceNow.",
+      "visibility": "public",
+      "active": true,
+      "protocol": "rest",
+      "protocol_data": {
+        "method": "POST",
+        "path": "/api/now/table/incident",
+        "server_url": "{{ server_url }}"
+      },
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "body": {
+            "type": "object",
+            "description": "Incident payload",
+            "properties": {
+              "short_description": {
+                "type": "string",
+                "description": "A brief summary of the incident. If not mentioned brief summary will be generated from the description."
+              },
+              "description": {
+                "type": "string",
+                "description": "Detailed description of the incident"
+              },
+              "impact": {
+                "type": "string",
+                "description": "The impact of the incident. This depends on the urgency. If user mention it specifically then use that. If not and user mentioned priority or urgency then use that. If not make it low impact.1 - High, 2 - Medium, 3 - Low"
+              },
+              "urgency": {
+                "type": "string",
+                "description": "The urgency of the incident. This is important. If user mentioned priority then use that. If not make it low priority.1 - High, 2 - Medium, 3 - Low"
+              },
+              "state": {
+                "type": "string",
+                "description": "The state of the incident. "
+              },
+              "caller_id": {
+                "type": "string",
+                "description": "The user who raised the incident. Pick the email from the user data. The email id may be encrypted, just pass the same to the payload."
+              }
+            },
+            "required": [
+              "short_description",
+              "urgency",
+              "caller_id"
+            ],
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "body"
+        ],
+        "visible": [
+          "body"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "SERVICENOW__GET_INCIDENT_BY_ID",
+      "description": "Returns a single incident record by sys_id. If user mention Incident id then call the list api and then fetch the sysid from them.",
+      "visibility": "public",
+      "active": true,
+      "protocol": "rest",
+      "protocol_data": {
+        "method": "GET",
+        "path": "/api/now/table/incident/{sys_id}",
+        "server_url": "{{ server_url }}"
+      },
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "sys_id": {
+            "type": "string",
+            "description": "The ServiceNow sys_id of the incident"
+          }
+        },
+        "required": [
+          "sys_id"
+        ],
+        "visible": [
+          "sys_id"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "SERVICENOW__UPDATE_INCIDENT",
+      "description": "Updates an existing incident record. Use the same body parameters of create incident api to update the incident. If user mention Incident id then call the list api and then fetch the sysid from them.",
+      "visibility": "public",
+      "active": true,
+      "protocol": "rest",
+      "protocol_data": {
+        "method": "PUT",
+        "path": "/api/now/table/incident/{sys_id}",
+        "server_url": "{{ server_url }}"
+      },
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "sys_id": {
+            "type": "string",
+            "description": "The ServiceNow sys_id of the incident"
+          },
+          "body": {
+            "type": "object",
+            "description": "Fields to update on the incident",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "sys_id",
+          "body"
+        ],
+        "visible": [
+          "sys_id",
+          "body"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "SERVICENOW__LIST_CHANGE_REQUESTS",
+      "description": "Returns change request records from ServiceNow.",
+      "visibility": "public",
+      "active": true,
+      "protocol": "rest",
+      "protocol_data": {
+        "method": "GET",
+        "path": "/api/now/table/change_request",
+        "server_url": "{{ server_url }}"
+      },
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "object",
+            "description": "Query parameters for change requests",
+            "properties": {
+              "sysparm_query": {
+                "type": "string"
+              },
+              "sysparm_limit": {
+                "type": "integer"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "SERVICENOW__CREATE_CHANGE_REQUEST",
+      "description": "Creates a new change request record in ServiceNow.",
+      "visibility": "public",
+      "active": true,
+      "protocol": "rest",
+      "protocol_data": {
+        "method": "POST",
+        "path": "/api/now/table/change_request",
+        "server_url": "{{ server_url }}"
+      },
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "body": {
+            "type": "object",
+            "description": "Change request payload",
+            "properties": {
+              "short_description": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              },
+              "category": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "short_description"
+            ],
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "body"
+        ],
+        "visible": [
+          "body"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "SERVICENOW__LIST_USERS",
+      "description": "Returns user records from ServiceNow.",
+      "visibility": "public",
+      "active": true,
+      "protocol": "rest",
+      "protocol_data": {
+        "method": "GET",
+        "path": "/api/now/table/sys_user",
+        "server_url": "{{ server_url }}"
+      },
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "object",
+            "description": "Query parameters for users",
+            "properties": {
+              "sysparm_query": {
+                "type": "string"
+              },
+              "sysparm_limit": {
+                "type": "integer"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "SERVICENOW__DELETE_INCIDENT",
+      "description": "Deletes an incident record from ServiceNow.",
+      "visibility": "public",
+      "active": true,
+      "protocol": "rest",
+      "protocol_data": {
+        "method": "DELETE",
+        "path": "/api/now/table/incident/{sys_id}",
+        "server_url": "{{ server_url }}"
+      },
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "sys_id": {
+            "type": "string",
+            "description": "The ServiceNow sys_id of the incident"
+          }
+        },
+        "required": [
+          "sys_id"
+        ],
+        "visible": [
+          "sys_id"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "SERVICENOW__GET_ASSIGNMENT_GROUPS",
+      "description": "Returns assignment group records from ServiceNow. Call this whenever a user wants to create an incident and needs to know the assignment group. Get all the groups without any filters and get only 'name','description','sys_id' fields.",
+      "visibility": "public",
+      "active": true,
+      "protocol": "rest",
+      "protocol_data": {
+        "method": "GET",
+        "path": "/api/now/table/sys_user_group",
+        "server_url": "{{ server_url }}"
+      },
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "object",
+            "description": "Query parameters for assignment groups",
+            "properties": {
+              "sysparm_query": {
+                "type": "string"
+              },
+              "sysparm_limit": {
+                "type": "integer"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "body"
+        ],
+        "visible": [
+          "body"
+        ],
+        "additionalProperties": false
+      }
+    }
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "name": "SERVICENOW",
+  "display_name": "SERVICENOW",
+  "logo": "https://upload.wikimedia.org/wikipedia/commons/8/83/ServiceNow_logo.svg",
+  "provider": "ServiceNow",
+  "version": "1.0.0",
+  "description": "ServiceNow REST API connector for incidents, change requests, problems, users, and configuration items.",
+  "security_schemes": {
+    "oauth2_client_credentials": {
+      "type": "oauth2",
+      "flow": "client_credentials",
+      "token_url": "{{ server_url }}/oauth_token.do",
+      "client_id": "{{ client_id }}",
+      "client_secret": "{{ client_secrets }}"
+    }
+  },
+  "default_security_credentials_by_scheme": {},
+  "categories": [
+    "ITSM",
+    "Operations"
+  ],
+  "visibility": "public",
+  "active": true,
+  "secrets": {
+    "SERVICENOW_INSTANCE_URL": "{{ auth_url }}",
+    "SERVICENOW_TOKEN_URL": "{{ auth_url }}/oauth_token.do",
+    "SERVICENOW_CLIENT_ID": "{{ client_id }}",
+    "SERVICENOW_CLIENT_SECRET": "{{ client_secrets }}"
+  },
+  "functions_file": "function.json"
+}

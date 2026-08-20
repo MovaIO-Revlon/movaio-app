@@ -55,7 +55,7 @@ export async function checkForFetchError(response: Response) {
   });
 }
 
-export function getDefaultHeaders(router: Router, sessionId: string) {
+export function getDefaultHeaders(router: Router) {
   let route = router.routerState.snapshot.root;
 
   while (route.firstChild) route = route.firstChild;
@@ -67,10 +67,6 @@ export function getDefaultHeaders(router: Router, sessionId: string) {
   headers.set('Content-Type', 'application/json');
   headers.set('Accept', 'text/event-stream');
   headers.set('X-Source', label || 'unknown');
-
-  if (sessionId) {
-    headers.set('X-Session-Id', sessionId);
-  }
 
   return headers;
 }

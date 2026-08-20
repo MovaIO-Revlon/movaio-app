@@ -5,8 +5,16 @@ import { ILogQuery, TLogQueryResponse } from '../types';
 import { Observable } from 'rxjs';
 import { DatePipe } from '@angular/common';
 import { Router } from '@angular/router';
-import { handleAuthError } from './auth.interceptor';
 import { getDefaultHeaders } from '../utils';
+import { fetchWithAuth } from './auth.interceptor';
+
+function handleAuthError(status: number, router: Router) {
+  if (status === 401) {
+    localStorage.clear();
+    sessionStorage.clear();
+    router.navigate(['/']);
+  }
+}
 
 @Injectable({
   providedIn: 'root',
@@ -14,15 +22,17 @@ import { getDefaultHeaders } from '../utils';
 export class LogsService {
   private baseURL: string = environment.apiUrl;
 
-  constructor(private router: Router, private userState: AIInfuseStateService) {
-  }
+  constructor(
+    private router: Router,
+    private userState: AIInfuseStateService,
+  ) {}
 
   getLogs(query: ILogQuery, ctx: { es?: AbortController }) {
     const searchParams = new URLSearchParams();
 
     searchParams.append(
       'timezone',
-      Intl.DateTimeFormat().resolvedOptions().timeZone
+      Intl.DateTimeFormat().resolvedOptions().timeZone,
     );
 
     if (query.project) {
@@ -40,13 +50,13 @@ export class LogsService {
       if (sorted.length > 0)
         searchParams.append(
           'from_date',
-          new DatePipe('en-US').transform(sorted[0], 'yyyy-MM-dd') || ''
+          new DatePipe('en-US').transform(sorted[0], 'yyyy-MM-dd') || '',
         );
 
       if (sorted.length > 1)
         searchParams.append(
           'to_date',
-          new DatePipe('en-US').transform(sorted[1], 'yyyy-MM-dd') || ''
+          new DatePipe('en-US').transform(sorted[1], 'yyyy-MM-dd') || '',
         );
     }
 
@@ -55,8 +65,8 @@ export class LogsService {
     return new Observable<TLogQueryResponse>((observer) => {
       ctx.es = new AbortController();
 
-      fetch(`${this.baseURL}/api/logs?${searchParams}`, {
-        headers: getDefaultHeaders( this.router, this.userState.getLoginDetails()?.SessionId),
+      fetchWithAuth(`${this.baseURL}/api/logs?${searchParams}`, {
+        headers: getDefaultHeaders(this.router),
         signal: ctx.es.signal,
       })
         .then((res) => {

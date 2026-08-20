@@ -429,9 +429,14 @@
 
         <div class="mb-3">
           <label class="form-label fw-semibold">User Prompt Title <span class="text-danger">*</span></label>
-          <input type="text" class="form-control"
-                 [(ngModel)]="query.editTitle"
-                 placeholder="Enter user prompt title" />
+<input type="text" class="form-control"
+       [(ngModel)]="query.editTitle"
+       (input)="query.editTitleError = ''"
+       (blur)="onEditInlineTitleBlur(agent, query)"
+       placeholder="Enter user prompt title" />
+<div *ngIf="query.editTitleError" class="text-danger fs-13 mt-1">
+  {{ query.editTitleError }}
+</div>
         </div>
 
         <div class="mb-3">
@@ -447,9 +452,10 @@
             Cancel
           </button>
           <button type="button" class="btn btn-orange"
-                  (click)="saveEditedQuery(agent, query)">
-            Save Changes
-          </button>
+        [disabled]="!!query.editTitleError"
+        (click)="saveEditedQuery(agent, query)">
+  Save Changes
+</button>
         </div>
       </div>
     </ng-container>
@@ -753,7 +759,14 @@
       <div class="modal-body">
         <div class="mb-3">
           <label class="form-label">User Prompt Title <span class="text-danger">*</span></label>
-          <input type="text" class="form-control" [(ngModel)]="editForm.promptTitle" placeholder="Enter user prompt title" />
+          <input type="text" class="form-control"
+       [(ngModel)]="editForm.promptTitle"
+       (input)="editModalTitleError = ''"
+       (blur)="onEditModalTitleBlur()"
+       placeholder="Enter user prompt title" />
+<div *ngIf="editModalTitleError" class="text-danger fs-13 mt-1">
+  {{ editModalTitleError }}
+</div>
         </div>
         <div class="mb-3">
           <label class="form-label">User Prompt <span class="text-danger">*</span></label>
@@ -764,7 +777,7 @@
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" (click)="cancelEdit()">
           Cancel
         </button>
-        <button type="button" class="btn bg-orange text-white" [disabled]="isEditing || !editForm.promptTitle.trim() || !editForm.prompt.trim()" (click)="confirmEdit()">
+        <button type="button" class="btn bg-orange text-white" [disabled]="isEditing || !editForm.promptTitle.trim() || !editForm.prompt.trim() || !!editModalTitleError" (click)="confirmEdit()">
           <span *ngIf="isEditing" class="spinner-border spinner-border-sm me-2"></span>
           Save Changes
         </button>

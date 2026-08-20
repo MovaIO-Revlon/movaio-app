@@ -80,12 +80,13 @@ export class ConnectorsChart {
       ppt: 0,
       pdf: 0,
       team_dynamix: 0,
-      service_now: 0,
+      ServiceNow: 0,
       jira: 0,
       azure_devops: 0,
       rally: 0,
       github: 0,
       svn: 0,
+      OneDrive: 0,
     };
 
     data.forEach((item) => {

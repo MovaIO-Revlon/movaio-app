@@ -10,15 +10,18 @@ import { FormsModule } from '@angular/forms';
 import { NgxSpinnerService } from 'ngx-spinner';
 import { HomeService } from '../services/home.service';
 import { ChangeDetectorRef } from '@angular/core';
-import { finalize,forkJoin } from 'rxjs';
+import { finalize, forkJoin } from 'rxjs';
 import { Header } from '../header/header';
 import { TooltipDirective } from '../custom-tooltip/tooltip.directive';
 import { AIInfuseStateService } from '../services/aiinfuse-state.service';
 import { environment as config } from '../../environments/environment';
 import { Router } from '@angular/router';
-import { V } from '../utils';
+import { ACCESS_TOKEN_KEY, getCookie, V } from '../utils';
 import { FormError } from "../components/form-error/form-error";
 import { IProject, IProjectDetails } from '../types';
+import { HostListener } from '@angular/core';
+import { ExternalAppServices } from '../services/external-app.services';
+import { setToken } from '../services/auth.interceptor';
 
 declare var bootstrap: any;
 
@@ -31,15 +34,14 @@ declare var bootstrap: any;
     ReactiveFormsModule,
     Header,
     TooltipDirective,
-    FormError,
-],
+  ],
   templateUrl: './projectmanagement.html',
   styleUrls: ['./projectmanagement.css'],
 })
 export class Projectmanagement implements OnInit {
   @ViewChild('successToast') successToast?: ElementRef;
   @ViewChild('errorToast') errorToast?: ElementRef;
-  
+
   // Projects & search
   projects: any[] = [];
   filteredProjects: any[] = [];
@@ -86,10 +88,10 @@ export class Projectmanagement implements OnInit {
   activeProject: string = '';
   UserName: string = '';
   userSubscriptionDetails: any[] = [];
-  masterDatabase:string = config.masterDatabase;
+  masterDatabase: string = config.masterDatabase;
   masterprojectName = config.masterprojectName;
   masterdatabaseName = config.masterdatabaseName;
-  masterProjectDisplayName:string = config.masterProjectDisplayName;
+  masterProjectDisplayName: string = config.masterProjectDisplayName;
   UserManagementData: any[] = [];
   refreshingProjectNames = new Set<string>();
   isPrivilegeView: boolean = false;
@@ -97,6 +99,19 @@ export class Projectmanagement implements OnInit {
   isPrivilegeDelete: boolean = false;
   isPrivilegeRefresh: boolean = false;
   isPrivilegeExecute: boolean = false;
+  showApiKey: { [key: string]: boolean } = {};
+  availableExtApps: any[] = [];
+  selectedExtApp: string = '';
+  showCredentialPopup: string | null = null;
+  credentialsEnabled: boolean = true;
+  credentialPopupPosition: 'above' | 'below' = 'above';
+  credentialPopupAlign: 'right' | 'left' | 'center' = 'right';
+  showMappedUsersConfirmModal: boolean = false;
+  mappedUsersForConfirm: any[] = [];
+  mappedUsersConfirmAction: 'update' | 'delete' = 'update';
+  pendingUpdateProjectData: any = null;
+  currentUserTeam: string = '';
+  currentUserRole: string = '';
 
   constructor(
     private fb: FormBuilder,
@@ -104,7 +119,8 @@ export class Projectmanagement implements OnInit {
     private _loadingService: NgxSpinnerService,
     private _router: Router,
     private cdr: ChangeDetectorRef,
-    private _stateService: AIInfuseStateService
+    private _stateService: AIInfuseStateService,
+    private externalAppService: ExternalAppServices
   ) {
     this.projectForm = this.fb.group({
       projectName: ['', Validators.required],
@@ -112,7 +128,6 @@ export class Projectmanagement implements OnInit {
       dateCreated: [''],
       dateUpdated: [''],
       app_url: ['', V.string("Application URL").url().build()],
-      // project_db_name: ['', Validators.required]
       project_db_name: [
         '',
         [
@@ -132,21 +147,121 @@ export class Projectmanagement implements OnInit {
     var Name = this.loggedUser?.UserName?.split(' ') || '';
     this.UserName = Name[0] || 'User';
 
-    const userRoleDtls = this.loggedUser.ProjectDtl?.find((p: any) => 
-    p.prj_name?.trim().toLowerCase() === this.loggedUser.ActiveProject?.trim().toLowerCase())?.role_name || "Super Admin";
+    const userRoleDtls = this.loggedUser.ProjectDtl?.find((p: any) =>
+      p.prj_name?.trim().toLowerCase() === this.loggedUser.ActiveProject?.trim().toLowerCase()
+    )?.role_name || "Super Admin";
 
     this.roleDetail = userRoleDtls;
     this.activeProject = this.loggedUser.ActiveProject || this.masterProjectDisplayName;
     this.userSubscriptionDetails = this.loggedUser.ProjectDtl;
+    const activeProjectDetails = this.loggedUser.ProjectDtl?.find((p: any) =>
+      p.prj_name?.trim().toLowerCase() === this.loggedUser.ActiveProject?.trim().toLowerCase()
+    );
+    this.currentUserTeam = activeProjectDetails?.team_name || '';
+    this.currentUserRole = activeProjectDetails?.role_name || '';
 
     this.loadProjects();
-    this.loadTeamsAndRoles(); // Load teams and roles on component initialization
+    this.loadTeamsAndRoles();
+    this.loadExternalApps();
     this.loadPrivileges();
   }
 
+getExtAppName(app: any): string {
+    if (!app) return '';
+    // Prioritize 'name' since that's what the API returns
+    return app.name || app.Name || app.app_name || app.AppName || 
+           app.external_app_name || app.application_name || 'Unknown App';
+}
+
+getExtAppId(app: any): string {
+    if (!app) return '';
+    return app.application_id || app.ApplicationId || app.app_id || 
+           app.AppId || app._id || app.id || '';
+}
+
+  getProjectExtApp(project: any): any {
+    if (!project.teams) return null;
+    for (const team of project.teams) {
+      if (team.externalApp) return team.externalApp;
+    }
+    return null;
+  }
+
+  toggleProjectCredentials(project: any, event: Event): void {
+    event.stopPropagation();
+    const extApp = this.getProjectExtApp(project);
+    if (!extApp) return;
+
+    extApp.credentialsEnabled = !extApp.credentialsEnabled;
+    
+    const projectData = {
+      teams: project.teams
+    };
+    
+    this._homeService.updateProject(project._id, projectData).subscribe({
+      next: () => {
+        this.showToast('success', extApp.credentialsEnabled ? 'Credentials enabled successfully' : 'Credentials disabled successfully');
+      },
+      error: (error) => {
+        this.showToast('error', 'Failed to update credentials toggle');
+        extApp.credentialsEnabled = !extApp.credentialsEnabled;
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  loadExternalApps(): void {
+    this.externalAppService.getExternalApplications().subscribe({
+      next: (response) => {
+        if (response?.success && response?.data) {
+          this.availableExtApps = response.data;
+          console.log('Loaded external apps:', this.availableExtApps);
+        }
+      },
+      error: (error) => {
+        console.error('Error loading external apps:', error);
+        this.availableExtApps = [];
+      }
+    });
+  }
+
+  getSelectedExtAppDetails(): any {
+    if (!this.selectedExtApp) return null;
+    return this.availableExtApps.find(app => this.getExtAppId(app) === this.selectedExtApp);
+  }
+
+  getExtAppTooltipText(): string {
+  const app = this.getSelectedExtAppDetails();
+  if (!app) return '';
+
+  const lines: string[] = [];
+
+  if (app.application_type) {
+    lines.push(`App Type: ${app.application_type}`);
+  }
+  if (app.auth_method) {
+    lines.push(`Authorization method: ${app.auth_method}`);
+  }
+  if (app.allowed_apis?.length) {
+    lines.push(`Allowed API Categories: ${app.allowed_apis.join(', ')}`);
+  }
+  if (app.application_url) {
+    lines.push(`App URL: ${app.application_url}`);
+  }
+  if (app.description) {
+    lines.push(`Description: ${app.description}`);
+  }
+
+  return lines.join('\n') || 'No additional details';
+}
+
+  onExtAppChange(): void {
+  this.credentialsEnabled = !!this.selectedExtApp; // true when an app is selected
+}
+
   loadPrivileges() {
     this._stateService.getPrivilegesByPage('Subscription').subscribe({
-      next: (loaded_privileges:any) => {
+      next: (loaded_privileges: any) => {
         console.log('Loaded privileges for Project Management by page: ', loaded_privileges);
         if (loaded_privileges) {
           this.isPrivilegeView = loaded_privileges?.view || false;
@@ -195,13 +310,11 @@ export class Projectmanagement implements OnInit {
     this.cdr.detectChanges();
   }
 
-  /// Get full description for tooltip
   getFullDescription(project: any): string {
     const description = project.project_desc || project.description;
     return description || 'No description available';
   }
 
-  // Get truncated description for display
   getTruncatedDescription(project: any): string {
     const description = project.project_desc || project.description;
 
@@ -217,7 +330,6 @@ export class Projectmanagement implements OnInit {
     return description.substring(0, maxLength) + '...';
   }
 
-  // Check if tooltip should be shown
   shouldShowTooltip(project: any): boolean {
     const description = project.project_desc || project.description;
     return (
@@ -280,31 +392,49 @@ export class Projectmanagement implements OnInit {
 
   // ------------------ Load Teams and Roles ------------------
   loadTeamsAndRoles(): void {
-    // REMOVED: this._loadingService.show();
-
     forkJoin({
       teams: this._homeService.getAllTeams(),
       roles: this._homeService.getAllRoles(),
     }).subscribe({
       next: (response) => {
         // Handle teams response
+        let fetchedTeams: any[] = [];
+        let fetchedRoles: any[] = [];
+
         if (response.teams?.success) {
-          this.availableTeams = response.teams.data || [];
+          fetchedTeams = response.teams.data || [];
         }
-        // Handle roles response
         if (response.roles?.data) {
-          this.availableRoles = response.roles.data || [];
+          fetchedRoles = response.roles.data || [];
         }
 
-        console.log('Loaded teams:', this.availableTeams);
-        console.log('Loaded roles:', this.availableRoles);
+        const currentRole = this.roleDetail?.trim().toLowerCase();
+        const isAdmin = currentRole === 'super admin' || currentRole === 'admin';
 
-        // REMOVED: this._loadingService.hide();
+        if (isAdmin) {
+          // Load all for Admin
+          console.log('neoAdmin user - loading all teams and roles');
+          this.availableTeams = fetchedTeams;
+          this.availableRoles = fetchedRoles;
+        } else {
+          console.log('Current user team:', this.currentUserTeam);
+          console.log('Current user role:', this.currentUserRole);
+          console.log('fetchedTeams:', fetchedTeams);
+          console.log('fetchedRoles:', fetchedRoles);
+          // Filter using the class variables we saved in ngOnInit
+          this.availableTeams = fetchedTeams.filter((team: any) => 
+            team.TeamName?.trim().toLowerCase() === this.currentUserTeam.trim().toLowerCase()
+          );
+
+          this.availableRoles = fetchedRoles.filter((role: any) => 
+            role.RoleName?.trim().toLowerCase() === this.currentUserRole.trim().toLowerCase()
+          );
+        }
+
         this.cdr.detectChanges();
       },
       error: (error) => {
         console.error('Error loading teams and roles:', error);
-        // REMOVED: this._loadingService.hide();
         this.availableTeams = [];
         this.availableRoles = [];
       },
@@ -324,7 +454,6 @@ export class Projectmanagement implements OnInit {
           usersCount: p.UserCount || 0,
         }));
 
-        // Filter out master database projects
         //this.projects = this.filterOutMasterProjects(allProjects);
         this.filteredProjects = allProjects;
         this.cdr.detectChanges();
@@ -377,7 +506,7 @@ export class Projectmanagement implements OnInit {
   }
 
 
-loadProjects(): void {
+  loadProjects(): void {
     this._homeService.getAllProjects().subscribe({
       next: (response) => {
         const allProjects = (response.data || []).map((p: any) => ({
@@ -388,20 +517,20 @@ loadProjects(): void {
         }));
         console.log('All loaded projects:', allProjects);
 
-         let IsMatestProject = this.loggedUser.ProjectDtl?.map((p: any) => p.prj_name?.trim().toLowerCase() == this.masterDatabase.trim().toLowerCase()) || [];
+        let IsMatestProject = this.loggedUser.ProjectDtl?.map((p: any) => p.prj_name?.trim().toLowerCase() == this.masterDatabase.trim().toLowerCase()) || [];
 
-         console.log('Is user subscribed to master database project?', IsMatestProject);
+        console.log('Is user subscribed to master database project?', IsMatestProject);
 
         // Determine active status for each project
         const enrichedProjects = allProjects.map((project: any) => {
           let active = false;
           let greendot_active = false;
 
-          console.log('userSubscriptionDetails',this.userSubscriptionDetails)
+          console.log('userSubscriptionDetails', this.userSubscriptionDetails)
           greendot_active =
-              this.userSubscriptionDetails?.some(
-                (detail: any) => detail.prj_name === project.projectName
-              ) ?? false;
+            this.userSubscriptionDetails?.some(
+              (detail: any) => detail.prj_name === project.projectName
+            ) ?? false;
           if (this.isSuperAdminMaster()) {
             active = true; // Super admin: all active
           } else {
@@ -412,21 +541,21 @@ loadProjects(): void {
               ) ?? false;
           }
 
-          return { ...project, active , greendot_active};
+          return { ...project, active, greendot_active };
         });
 
         console.log('Enriched projects with active status:', enrichedProjects);
         if (this.roleDetail?.trim() !== 'Super Admin') {
 
-          if(IsMatestProject.length > 0){
+          if (IsMatestProject.length > 0) {
             this.projects = enrichedProjects;
           }
-          else{
+          else {
 
-          this.projects = this.filterOutMasterProjects(enrichedProjects);
+            this.projects = this.filterOutMasterProjects(enrichedProjects);
           }
         }
-         else {
+        else {
           this.projects = enrichedProjects;
         }
 
@@ -621,51 +750,82 @@ loadProjects(): void {
     if (this.availableTeams.length === 0 || this.availableRoles.length === 0) {
       this.loadTeamsAndRoles();
     }
+
+    // Ensure external apps are loaded
+    if (this.availableExtApps.length === 0) {
+      this.loadExternalApps();
+    }
   }
 
   openEditModal(project: any): void {
-    // Check if this is a master project before opening edit modal
-    if (this.isMasterProject(project)) {
-      this.showToast('error', 'Cannot edit master database AI Solution.');
-      return;
+  this.selectedProject = project;
+  this.selectedProjectId = project._id;
+  this.showEditModal = true;
+  this.currentStep = 1;
+
+  this.projectForm.patchValue({
+    projectName: project.projectName || '',
+    description: project.project_desc || project.description || '',
+    dateCreated: project.dateCreated || '',
+    dateUpdated: project.dateUpdated || '',
+    app_url: project.app_url || '',
+    project_db_name: project.database_name || project.project_db_name || '',
+  });
+
+  // Build map of external apps for name/url lookup only
+  const extAppsMap = new Map<string, any>();
+  (project.external_apps || []).forEach((app: any) => {
+    const id = app.application_id || app.app_id || '';
+    if (id) extAppsMap.set(id, app);
+  });
+
+  this.addedTeams = (project.teams || []).map((team: any) => {
+    let externalApp = null;
+
+    // Only use what is explicitly stored on the team
+    if (team.externalApp) {
+      const appId = team.externalApp.application_id || team.externalApp.app_id || '';
+      const fromProject = appId ? extAppsMap.get(appId) : null;
+
+      externalApp = {
+        application_id: appId,
+        app_name:
+          team.externalApp.app_name ||
+          fromProject?.application_name ||
+          fromProject?.name ||
+          'External App',
+        application_url: team.externalApp.application_url || fromProject?.application_url || '',
+        auth_method: team.externalApp.auth_method || fromProject?.auth_method || '',
+        application_type: team.externalApp.application_type || fromProject?.application_type || '',
+        credentialsEnabled: team.externalApp.credentialsEnabled !== false,
+      };
     }
+    // No automatic fallback – leave externalApp as null if the team doesn't have one
 
-    this.selectedProject = project;
-    this.selectedProjectId = project._id;
+    return {
+      teamName: team.teamName || team.TeamName || '',
+      roles: (team.roles || []).map((r: any) => ({
+        role: typeof r === 'string' ? r : r.role || r.roleName || r.RoleName || '',
+      })),
+      externalApp,
+    };
+  });
 
-    // Use backend field names directly
-    const description = project.project_desc || project.description || '';
-    const databaseName = project.database_name || ''; // Backend uses database_name
+  this.selectedTeam = '';
+  this.selectedRoles = [];
+  this.selectedExtApp = '';
+  this.credentialsEnabled = true;
+  this.teamSelectionInvalid = false;
+  this.teamsValidationShown = false;
 
-    this.projectForm.patchValue({
-      projectName: project.projectName,
-      description: description,
-      dateCreated: project.dateCreated,
-      dateUpdated: project.dateUpdated,
-      app_url: project.app_url,
-      project_db_name: databaseName, // Map backend's database_name to frontend's project_db_name
-    });
-
-    // Properly initialize addedTeams with existing teams
-    this.addedTeams = (project.teams || []).map((t: any) => ({
-      teamName: t.teamName || t.TeamName,
-      roles: t.roles || t.Roles || [],
-    }));
-
-    this.showEditModal = true;
-    this.currentStep = 1; // Reset to step 1 when opening edit modal
-
-    // Ensure teams and roles are loaded
-    if (this.availableTeams.length === 0 || this.availableRoles.length === 0) {
-      this.loadTeamsAndRoles();
-    }
-  }
+  this.cdr.detectChanges();
+}
 
   // Helper method to check if a project is a master project
   private isMasterProject(project: any): boolean {
     const MASTER_PROJECTS = {
       projectNames: this.masterprojectName,
-      databaseNames:this.masterdatabaseName
+      databaseNames: this.masterdatabaseName
     };
 
     const projectName = project.projectName?.toLowerCase().trim();
@@ -735,67 +895,105 @@ loadProjects(): void {
     this.isProjectNameDuplicate = false;
     this.isProjectDbNameDuplicate = false;
     this.duplicateCheckInProgress = false;
+    // Reset external app fields
+    this.selectedExtApp = '';
+    this.credentialsEnabled = false;
+    // Reset credential popup
+    this.showCredentialPopup = null;
   }
 
   // ------------------ Team & Roles ------------------
   addTeamAndRoles(): void {
-    // Validate team and roles before adding
     if (!this.selectedTeam || this.selectedTeam === '') {
-      this.teamSelectionInvalid = true;
-      return;
+        this.teamSelectionInvalid = true;
+        return;
     }
 
     if (this.selectedRoles.length === 0) {
-      this.teamSelectionInvalid = true;
-      return;
+        this.teamSelectionInvalid = true;
+        return;
     }
 
-    // Reset validation if everything is valid
     this.teamSelectionInvalid = false;
 
     if (this.selectedTeam && this.selectedRoles.length > 0) {
+      let externalApp = null;
+      if (this.selectedExtApp) {
+        const selectedApp = this.availableExtApps.find(
+            app => this.getExtAppId(app) === this.selectedExtApp
+        );
+        
+        console.log('>>> addTeamAndRoles - selectedExtApp:', this.selectedExtApp);
+        console.log('>>> addTeamAndRoles - found selectedApp:', selectedApp);
+        
+        externalApp = {
+          application_id: this.selectedExtApp,  // Use application_id (matches backend)
+          app_name: this.getExtAppName(selectedApp),
+          application_url: selectedApp?.application_url || '',
+          auth_method: selectedApp?.auth_method || '',
+          application_type: selectedApp?.application_type || '',
+          credentialsEnabled: this.credentialsEnabled,
+          credentials: null 
+        };
+        
+        console.log('>>> addTeamAndRoles - built externalApp:', externalApp);
+      }
+
       const team = {
         teamName: this.selectedTeam,
         roles: this.selectedRoles.map((role) => ({ role })),
+        externalApp: externalApp
       };
 
-      // Check if team already exists
       const existingTeamIndex = this.addedTeams.findIndex(
         (t) => t.teamName === team.teamName
       );
       if (existingTeamIndex > -1) {
-        // Update existing team's roles
         this.addedTeams[existingTeamIndex].roles = [
           ...this.addedTeams[existingTeamIndex].roles,
           ...team.roles,
         ];
-        // Remove duplicate roles
         this.addedTeams[existingTeamIndex].roles = this.addedTeams[
           existingTeamIndex
         ].roles.filter(
           (role: any, index: number, self: any[]) =>
             index === self.findIndex((r: any) => r.role === role.role)
         );
+        if (externalApp) {
+          this.addedTeams[existingTeamIndex].externalApp = externalApp;
+        }
       } else {
-        // Add new team
         this.addedTeams.push(team);
       }
 
+      console.log('>>> addedTeams after add:', JSON.stringify(this.addedTeams, null, 2));
+
       this.selectedTeam = '';
       this.selectedRoles = [];
+      this.selectedExtApp = '';
+      this.credentialsEnabled = false;
     }
-  }
+}
 
   removeTeam(index: number): void {
     this.addedTeams.splice(index, 1);
   }
 
   editTeam(index: number): void {
-    const team = this.addedTeams[index];
-    this.selectedTeam = team.teamName;
-    this.selectedRoles = team.roles.map((r: any) => r.role);
-    this.addedTeams.splice(index, 1);
+  const team = this.addedTeams[index];
+  this.selectedTeam = team.teamName;
+  this.selectedRoles = team.roles.map((r: any) => r.role);
+
+  if (team.externalApp) {
+    this.selectedExtApp = team.externalApp.application_id || team.externalApp.app_id || '';
+    this.credentialsEnabled = team.externalApp.credentialsEnabled !== false; // default ON
+  } else {
+    this.selectedExtApp = '';
+    this.credentialsEnabled = false;
   }
+
+  this.addedTeams.splice(index, 1);
+}
 
   onRoleSelectionChange(role: string, event: any): void {
     if (event.target.checked) {
@@ -835,34 +1033,68 @@ loadProjects(): void {
 
   // ------------------ CRUD Operations ------------------
   saveProject(): void {
-    // Check for duplicate names before saving
     this.checkProjectNameDuplicate();
-    this.checkProjectDbNameDuplicate(); // Add this line
+    this.checkProjectDbNameDuplicate();
 
     if (this.isProjectNameDuplicate || this.isProjectDbNameDuplicate) {
-      // Update this condition
       return;
     }
 
-    // Show validation for teams if none are added
     if (this.addedTeams.length === 0) {
       this.teamsValidationShown = true;
       return;
     }
 
     if (this.projectForm.valid && this.addedTeams.length > 0) {
-      // Prepare data in backend expected format
-      const projectData = {
+      // Extract external apps from teams
+      const externalApps = this.addedTeams
+        .filter(team => team.externalApp)
+        .map(team => {
+          const extAppId = team.externalApp.application_id || team.externalApp.app_id;
+          const appDetails = this.availableExtApps.find(
+              app => this.getExtAppId(app) === extAppId
+          );
+          return {
+            application_id: extAppId,
+            allowed_apis: appDetails?.allowed_apis || [],
+            credentialsEnabled: team.externalApp.credentialsEnabled !== false,
+          };
+        });
+
+      console.log('>>> saveProject - externalApps:', JSON.stringify(externalApps, null, 2));
+
+      const cleanTeams = this.addedTeams.map((team) => {
+  if (!team.externalApp) {
+    const { externalApp, ...rest } = team;
+    return rest;
+  }
+  return {
+    teamName: team.teamName,
+    roles: team.roles,
+    // keep the mapping so Edit can restore the correct app + toggle
+    externalApp: {
+      application_id: team.externalApp.application_id || team.externalApp.app_id,
+      app_name: team.externalApp.app_name,
+      credentialsEnabled: team.externalApp.credentialsEnabled !== false,
+    },
+  };
+});
+
+      const projectData: any = {
         projectName: this.projectForm.value.projectName,
         project_desc: this.projectForm.value.description,
         app_url: this.projectForm.value.app_url,
         description: this.projectForm.value.description,
         project_db_name: this.projectForm.value.project_db_name,
         database_name: this.projectForm.value.project_db_name,
-        teams: this.addedTeams,
+        teams: cleanTeams,
       };
 
-      console.log('Creating AI Solution with data:', projectData);
+      if (externalApps.length > 0) {
+        projectData.external_apps = externalApps;
+      }
+
+      console.log('>>> FINAL PAYLOAD:', JSON.stringify(projectData, null, 2));
 
       this._homeService.addProjectDetails(projectData).subscribe({
         next: () => {
@@ -877,58 +1109,513 @@ loadProjects(): void {
         },
       });
     }
+}
+
+updateProject(): void {
+  const projectId = this.selectedProject?._id || this.selectedProjectId;
+
+  if (!projectId) {
+    console.error('No AI Solution ID found for update');
+    return;
   }
 
-  updateProject(): void {
-    const projectId = this.selectedProject?._id || this.selectedProjectId;
+  if (this.projectForm.invalid) {
+    Object.keys(this.projectForm.controls).forEach((key) => {
+      this.projectForm.get(key)?.markAsTouched();
+    });
+    return;
+  }
 
-    if (!projectId) {
-      console.error('No AI Solution ID found for update');
-      return;
+  // ---- Detect teams / roles that are being removed ----
+  const originalTeams = this.selectedProject?.teams || [];
+  const newTeamNames = new Set(
+    this.addedTeams.map((t) => (t.teamName || '').toLowerCase())
+  );
+
+  const teamsBeingRemoved = originalTeams
+    .filter(
+      (t: any) =>
+        !newTeamNames.has((t.teamName || t.TeamName || '').toLowerCase())
+    )
+    .map((t: any) => t.teamName || t.TeamName);
+
+  const rolesBeingRemoved: { team: string; role: string }[] = [];
+
+  originalTeams.forEach((origTeam: any) => {
+    const newTeam = this.addedTeams.find(
+      (t) =>
+        (t.teamName || '').toLowerCase() ===
+        (origTeam.teamName || origTeam.TeamName || '').toLowerCase()
+    );
+
+    if (!newTeam) return;
+
+    const newRoles = new Set(
+      (newTeam.roles || []).map((r: any) => (r.role || '').toLowerCase())
+    );
+
+    (origTeam.roles || []).forEach((r: any) => {
+      const roleName = r.role || r.roleName || r.RoleName || '';
+      if (!newRoles.has(roleName.toLowerCase())) {
+        rolesBeingRemoved.push({
+          team: origTeam.teamName || origTeam.TeamName,
+          role: roleName,
+        });
+      }
+    });
+  });
+
+  // ---- Build the payload first ----
+  const externalApps = this.addedTeams
+    .filter((team) => team.externalApp)
+    .map((team) => {
+      const extAppId =
+        team.externalApp.application_id || team.externalApp.app_id;
+      const appDetails = this.availableExtApps.find(
+        (app) => this.getExtAppId(app) === extAppId
+      );
+      return {
+        application_id: extAppId,
+        allowed_apis: appDetails?.allowed_apis || [],
+        credentialsEnabled: team.externalApp.credentialsEnabled !== false,
+      };
+    });
+
+  const cleanTeams = this.addedTeams.map((team) => {
+    if (!team.externalApp) {
+      const { externalApp, ...rest } = team;
+      return rest;
     }
-
-    if (this.projectForm.invalid) {
-      Object.keys(this.projectForm.controls).forEach((key) => {
-        this.projectForm.get(key)?.markAsTouched();
-      });
-      return;
-    }
-
-    const projectData = {
-      projectName: this.projectForm.value.projectName,
-      project_desc: this.projectForm.value.description,
-      description: this.projectForm.value.description,
-      app_url: this.projectForm.value.app_url,
-      project_db_name: this.projectForm.value.project_db_name,
-      database_name: this.projectForm.value.project_db_name,
-      teams:
-        this.addedTeams.length > 0
-          ? this.addedTeams
-          : this.selectedProject?.teams || [],
+    return {
+      teamName: team.teamName,
+      roles: team.roles,
+      externalApp: {
+        application_id:
+          team.externalApp.application_id || team.externalApp.app_id,
+        app_name: team.externalApp.app_name,
+        credentialsEnabled: team.externalApp.credentialsEnabled !== false,
+      },
     };
+  });
 
-    console.log('Updating AI Solution with data:', projectData);
-    console.log('Project ID:', projectId);
+  const projectData: any = {
+    projectName: this.projectForm.value.projectName,
+    project_desc: this.projectForm.value.description,
+    description: this.projectForm.value.description,
+    app_url: this.projectForm.value.app_url,
+    project_db_name: this.projectForm.value.project_db_name,
+    database_name: this.projectForm.value.project_db_name,
+    teams: cleanTeams,
+  };
 
-    this._homeService.updateProject(projectId, projectData).subscribe({
-      next: (response) => {
-        console.log('Update successful:', response.data);
-        this.showToast('success', 'AI Solution updated successfully');
+  if (externalApps.length > 0) {
+    projectData.external_apps = externalApps;
+  }
 
-        // Close the Bootstrap modal
-        this.closeBootstrapModal('editProjectModal');
+  // ---- Check mapped users ----
+  const mappedUsers = this.getUsersMappedToProject(
+    this.selectedProject,
+    teamsBeingRemoved,
+    rolesBeingRemoved
+  );
 
-        // Reset form and load projects
-        this.resetForm();
-        this.loadProjects();
-      },
-      error: (error) => {
-          let errorMessage = error.error?.message || 'Failed to update AI Solution';
-          console.error('Error creating AI Solution:', error);
-          this.showToast('error', errorMessage);
-      },
+  if (mappedUsers.length > 0) {
+    // Show the nice modal instead of alert
+    this.mappedUsersForConfirm = mappedUsers;
+    this.mappedUsersConfirmAction = 'update';
+    this.pendingUpdateProjectData = { projectId, projectData };
+    this.showMappedUsersConfirmModal = true;
+    this.cdr.detectChanges();
+
+    // Open Bootstrap modal
+    setTimeout(() => {
+      const modalEl = document.getElementById('mappedUsersConfirmModal');
+      if (modalEl) {
+        const modal = new bootstrap.Modal(modalEl);
+        modal.show();
+      }
+    }, 50);
+    return;
+  }
+
+  // No mapped users → proceed immediately
+  this.executeUpdate(projectId, projectData);
+}
+
+/** Actual API call (shared by normal flow + confirm) */
+private executeUpdate(projectId: string, projectData: any): void {
+  console.log('>>> UPDATE FINAL PAYLOAD:', JSON.stringify(projectData, null, 2));
+
+  this._homeService.updateProject(projectId, projectData).subscribe({
+    next: (response) => {
+      console.log('Update successful:', response.data);
+      this.showToast('success', 'AI Solution updated successfully');
+      this.closeBootstrapModal('editProjectModal');
+      this.closeMappedUsersConfirmModal();
+      this.resetForm();
+      this.loadProjects();
+    },
+    error: (error) => {
+      let errorMessage =
+        error.error?.message || 'Failed to update AI Solution';
+      console.error('Error updating AI Solution:', error);
+      this.showToast('error', errorMessage);
+      this.closeMappedUsersConfirmModal();
+    },
+  });
+}
+ 
+getVisibleCredentials(project: any): any[] {
+  if (!project?.external_apps?.length) return [];
+
+  // User's team for this project
+  const userSub = (this.userSubscriptionDetails || []).find(
+    (s: any) =>
+      (s.prj_name || '').toLowerCase() === (project.projectName || '').toLowerCase()
+  );
+  if (!userSub) return [];
+
+  const userTeam = (userSub.team_name || '').toLowerCase();
+
+  // application_ids mapped to the user's team on this project
+  const teamAppIds = new Set(
+    (project.teams || [])
+      .filter(
+        (t: any) =>
+          (t.teamName || '').toLowerCase() === userTeam && t.externalApp
+      )
+      .map((t: any) => t.externalApp.application_id || t.externalApp.app_id)
+      .filter(Boolean)
+  );
+
+  if (teamAppIds.size === 0) return [];
+
+  return project.external_apps.filter((app: any) =>
+    teamAppIds.has(app.application_id || app.app_id)
+  );
+}
+
+hasCredentials(project: any): boolean {
+  if (!project?.external_apps?.length) return false;
+
+  // Must have at least one API key
+  const hasApiKey = project.external_apps.some((app: any) => !!app.api_key);
+  if (!hasApiKey) return false;
+
+  // If any team has an externalApp with credentialsEnabled === false → hide icon
+  const isDisabled = project.teams?.some(
+    (t: any) => t.externalApp && t.externalApp.credentialsEnabled === false
+  );
+
+  return !isDisabled;
+}
+
+toggleCredentialPopup(projectName: string, event?: Event): void {
+  if (event) {
+    event.stopPropagation();
+  }
+  
+  if (this.showCredentialPopup === projectName) {
+    this.showCredentialPopup = null;
+    return;
+  }
+  
+  this.showCredentialPopup = projectName;
+  
+  // Wait for DOM to update, then calculate position
+  setTimeout(() => {
+    this.calculatePopupPosition();
+  }, 10);
+}
+
+// Add this new method to calculate popup position
+calculatePopupPosition(): void {
+  const popupElement = document.querySelector('.credential-popup') as HTMLElement;
+  const triggerElement = document.querySelector('.cred-info-btn') as HTMLElement;
+  
+  if (!popupElement || !triggerElement) {
+    this.credentialPopupPosition = 'above';
+    this.credentialPopupAlign = 'right';
+    this.cdr.detectChanges();
+    return;
+  }
+  
+  const triggerRect = triggerElement.getBoundingClientRect();
+  const popupRect = popupElement.getBoundingClientRect();
+  const viewportHeight = window.innerHeight;
+  const viewportWidth = window.innerWidth;
+  
+  // Calculate available space above and below the trigger
+  const spaceAbove = triggerRect.top;
+  const spaceBelow = viewportHeight - triggerRect.bottom;
+  
+  // Calculate required space for popup (with some padding)
+  const popupHeight = popupRect.height || 250; // fallback height
+  const requiredSpace = popupHeight + 20; // 20px for margin
+  
+  // Determine vertical position
+  if (spaceAbove >= requiredSpace) {
+    // Enough space above - show popup above
+    this.credentialPopupPosition = 'above';
+  } else if (spaceBelow >= requiredSpace) {
+    // Enough space below - show popup below
+    this.credentialPopupPosition = 'below';
+  } else if (spaceBelow > spaceAbove) {
+    // Not enough space either way, but more space below
+    this.credentialPopupPosition = 'below';
+  } else {
+    // Default to above even if it might overflow slightly
+    this.credentialPopupPosition = 'above';
+  }
+  
+  // Calculate horizontal alignment
+  const popupWidth = popupRect.width || 381; // fallback width
+  const triggerCenterX = triggerRect.left + (triggerRect.width / 2);
+  
+  // Check if popup would overflow right edge
+  const spaceOnRight = viewportWidth - triggerRect.right;
+  const spaceOnLeft = triggerRect.left;
+  
+  if (spaceOnRight >= popupWidth) {
+    // Fits on the right (default)
+    this.credentialPopupAlign = 'right';
+  } else if (spaceOnLeft >= popupWidth) {
+    // Fits on the left
+    this.credentialPopupAlign = 'left';
+  } else if (triggerCenterX >= popupWidth / 2 && 
+             (viewportWidth - triggerCenterX) >= popupWidth / 2) {
+    // Can center it
+    this.credentialPopupAlign = 'center';
+  } else if (spaceOnRight > spaceOnLeft) {
+    // More space on right, align right but might need to shrink
+    this.credentialPopupAlign = 'right';
+  } else {
+    // More space on left
+    this.credentialPopupAlign = 'left';
+  }
+  
+  this.cdr.detectChanges();
+  
+  // Recalculate after position change to handle edge cases
+  setTimeout(() => {
+    this.adjustPopupPositionIfNeeded(popupElement);
+  }, 50);
+}
+
+// Add this method to fine-tune position after initial render
+private adjustPopupPositionIfNeeded(popupElement: HTMLElement): void {
+  if (!popupElement) return;
+  
+  const rect = popupElement.getBoundingClientRect();
+  const viewportHeight = window.innerHeight;
+  const viewportWidth = window.innerWidth;
+  
+  // If still overflowing vertically, add max-height and scroll
+  if (rect.top < 0 || rect.bottom > viewportHeight) {
+    const availableHeight = viewportHeight - 40; // 20px padding top and bottom
+    const maxScrollHeight = Math.min(availableHeight, 400); // cap at 400px
+    
+    if (rect.height > maxScrollHeight) {
+      popupElement.style.maxHeight = `${maxScrollHeight}px`;
+      popupElement.style.overflowY = 'auto';
+      
+      // Adjust position to stay within viewport
+      if (rect.top < 0) {
+        popupElement.style.top = '20px';
+        popupElement.style.bottom = 'auto';
+      } else if (rect.bottom > viewportHeight) {
+        popupElement.style.bottom = '20px';
+        popupElement.style.top = 'auto';
+      }
+    }
+  }
+  
+  // If overflowing horizontally, adjust
+  if (rect.left < 0) {
+    popupElement.style.left = '10px';
+    popupElement.style.right = 'auto';
+  } else if (rect.right > viewportWidth) {
+    popupElement.style.right = '10px';
+    popupElement.style.left = 'auto';
+  }
+}
+
+// Update the onDocumentClick to also close popup
+@HostListener('document:click', ['$event'])
+onDocumentClick(event: MouseEvent): void {
+  const target = event.target as HTMLElement;
+  if (this.showCredentialPopup &&
+      !target.closest('.cred-info-icon') &&
+      !target.closest('.credential-popup')) {
+    this.showCredentialPopup = null;
+  }
+}
+
+// Add window resize listener to recalculate position
+@HostListener('window:resize')
+onWindowResize(): void {
+  if (this.showCredentialPopup) {
+    this.calculatePopupPosition();
+  }
+}
+  closeCredentialPopup(): void {
+    this.showCredentialPopup = null;
+    this.showApiKey = {}; 
+  }
+
+copyAppCredentials(app: any, project: any, event: Event): void {
+  event.stopPropagation();
+  event.preventDefault();
+
+  let textToCopy = `External App: ${app.application_name || 'External App'}\n`;
+
+  if (app.endpoint_urls) {
+    textToCopy += `Endpoint URLs: ${app.endpoint_urls}\n`;
+  }
+
+  textToCopy += `Subscription ID: ${app.subscription_id || project.projectId || ''}\n`;
+
+  if (app.application_id) {
+    textToCopy += `Application ID: ${app.application_id}\n`;
+  }
+
+  // Always include User ID (app value or logged-in user)
+  const userId = app.user_id || this.getLoggedUserId();
+  if (userId && userId !== '—') {
+    textToCopy += `User ID: ${userId}\n`;
+  }
+
+  // Always include Role ID (app value or logged-in user for this project)
+  const roleId = app.role_id || this.getLoggedRoleId(project);
+  if (roleId && roleId !== '—') {
+    textToCopy += `Role ID: ${roleId}\n`;
+  }
+
+  if (app.api_key) {
+    textToCopy += `API Key: ${app.api_key}\n`;
+  }
+
+  this.copyToClipboard(textToCopy.trim(), event);
+}
+
+copyToClipboard(text: string, event: Event): void {
+  event.stopPropagation();
+  event.preventDefault();
+
+  if (!text) {
+    console.log('error', 'Nothing to copy');
+    return;
+  }
+
+  const button = event.currentTarget as HTMLElement;
+  const originalHTML = button?.innerHTML;
+
+  const showSuccess = () => {
+    if (button) {
+      button.innerHTML = '<i class="fa-solid fa-check"></i> Copied';
+      setTimeout(() => {
+        button.classList.remove('copied');
+        if (originalHTML) button.innerHTML = originalHTML;
+      }, 2000);
+    }
+    console.log('success', 'Credentials copied to clipboard');
+  };
+
+  const showError = () => {
+    console.log('error', 'Failed to copy to clipboard');
+  };
+
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(text)
+      .then(showSuccess)
+      .catch((err) => {
+        console.error('Clipboard API failed:', err);
+        this.fallbackCopy(text, event, showSuccess, showError);
+      });
+  } else {
+    this.fallbackCopy(text, event, showSuccess, showError);
+  }
+}
+
+fallbackCopy(
+  text: string,
+  event: Event,
+  onSuccess: () => void,
+  onError: () => void
+): void {
+  const textArea = document.createElement('textarea');
+  textArea.value = text;
+  textArea.style.position = 'fixed';
+  textArea.style.left = '-9999px';
+  textArea.style.top = '0';
+  textArea.setAttribute('readonly', '');
+  document.body.appendChild(textArea);
+
+  textArea.focus();
+  textArea.select();
+  textArea.setSelectionRange(0, text.length);
+
+  try {
+    const successful = document.execCommand('copy');
+    if (successful) {
+      onSuccess();
+    } else {
+      onError();
+    }
+  } catch (err) {
+    console.error('Fallback copy failed:', err);
+    onError();
+  } finally {
+    document.body.removeChild(textArea);
+  }
+}
+
+copyAllCredentials(project: any, event: Event): void {
+  event.stopPropagation();
+  event.preventDefault();
+
+  let textToCopy = '';
+
+  if (project.external_apps?.length) {
+    project.external_apps.forEach((app: any, index: number) => {
+      if (index > 0) textToCopy += '\n-------------------\n';
+
+      textToCopy += `External App: ${app.application_name || 'External App'}\n`;
+
+      if (app.endpoint_urls) {
+        textToCopy += `Endpoint URLs: ${app.endpoint_urls}\n`;
+      }
+
+      textToCopy += `Subscription ID: ${app.subscription_id || project.projectId || ''}\n`;
+
+      if (app.application_id) {
+        textToCopy += `Application ID: ${app.application_id}\n`;
+      }
+
+      // Always include User ID
+      const userId = app.user_id || this.getLoggedUserId();
+      if (userId && userId !== '—') {
+        textToCopy += `User ID: ${userId}\n`;
+      }
+
+      // Always include Role ID
+      const roleId = app.role_id || this.getLoggedRoleId(project);
+      if (roleId && roleId !== '—') {
+        textToCopy += `Role ID: ${roleId}\n`;
+      }
+
+      if (app.api_key) {
+        textToCopy += `API Key: ${app.api_key}\n`;
+      }
     });
   }
+
+  if (textToCopy.trim()) {
+    this.copyToClipboard(textToCopy.trim(), event);
+  } else {
+    this.showToast('error', 'No credentials available to copy');
+  }
+}
 
   closeBootstrapModal(modalId: string): void {
     const modalElement = document.getElementById(modalId);
@@ -937,7 +1624,6 @@ loadProjects(): void {
       if (modal) {
         modal.hide();
       } else {
-        // If no instance exists, create one and hide it
         const newModal = new bootstrap.Modal(modalElement);
         newModal.hide();
       }
@@ -973,7 +1659,7 @@ loadProjects(): void {
         next: () => {
           this.showToast('success', 'AI Solution deleted successfully');
           this.closeDeleteConfirmModal();
-          this.closeModal(); // Also close edit modal if open
+          this.closeModal(); 
           this.loadProjects();
         },
         error: (error) => {
@@ -1003,7 +1689,7 @@ loadProjects(): void {
     return true;
   }
 
-  switchProject(prjName: string) {
+    switchProject(prjName: string) {
     if (!prjName) return;
 
     this._loadingService.show();
@@ -1012,6 +1698,8 @@ loadProjects(): void {
     this._homeService.switchProject(params).subscribe({
       next: (res) => {
         this._loadingService.hide();
+
+        setToken({ accessToken: res.data.Token, refreshToken: res.data.RefreshToken })
 
         if (res?.success) {
           this.activeProject = prjName;
@@ -1032,6 +1720,7 @@ loadProjects(): void {
           }
 
           this.loggedUser.ActiveProject = prjName;
+          this.loggedUser.Role = this.roleDetail;
 
           this._stateService.setLoginDetails(this.loggedUser);
 
@@ -1095,7 +1784,7 @@ loadProjects(): void {
       },
     });
   }
-
+  
   isSuperAdminMaster(): boolean {
     return (
       this.roleDetail?.trim() === 'Super Admin' &&
@@ -1104,10 +1793,10 @@ loadProjects(): void {
     );
   }
 
-   // Tooltip text based on projectName
+  // Tooltip text based on projectName
   getProjectTooltip(projectName: string): string {
-    return projectName === this.masterDatabase 
-      ? 'Master AI Solution' 
+    return projectName === this.masterDatabase
+      ? 'Master AI Solution'
       : projectName;
   }
 
@@ -1117,8 +1806,8 @@ loadProjects(): void {
       ? "Master AI Solution"
       : projectName;
   }
-  
- onRefresh(project: any): void {
+
+  onRefresh(project: any): void {
     const name = project.projectName;
 
     if (!this.isMasterSubscription(name)) {
@@ -1153,18 +1842,172 @@ loadProjects(): void {
     }
   }
 
-  isAssignedSubscription(project: IProject ) {
-   const teamsAndRolesMapping = new Map(project.teams.map(item => [
+  isAssignedSubscription(project: IProject) {
+    const teamsAndRolesMapping = new Map(project.teams.map(item => [
       item.teamName.toLowerCase(),
       new Set(item.roles.map(item => item.role.toLowerCase()))
     ]))
 
     const subscriptionDetails: IProjectDetails[] = this.userSubscriptionDetails || [];
 
-    return subscriptionDetails.some(sub => 
+    return subscriptionDetails.some(sub =>
       sub.prj_name.toLowerCase() === project.projectName.toLowerCase() &&
       teamsAndRolesMapping.get(sub.team_name.toLowerCase())?.has(sub.role_name.toLowerCase())
     )
   }
+
   
+  launchApp(url: string) {
+    if(!url) return;
+  
+    const token = getCookie(ACCESS_TOKEN_KEY);
+
+    if (!token) return;
+
+    const redirectUri = new URL(url);
+
+    redirectUri.searchParams.append('token', token);
+
+    window.open(redirectUri, '_blank');
+  }
+  
+getProjectLaunchUrl(project: any): string {
+  if (!project?.external_apps?.length) return '';
+
+  // 1. Prefer URL already stored on the project
+  const storedUrl = project.external_apps[0].application_url;
+  if (storedUrl && storedUrl.trim() !== '') {
+    return storedUrl.trim();
+  }
+
+  // 2. Fallback: look up the URL from availableExtApps using application_id
+  const appId = project.external_apps[0].application_id || project.external_apps[0].app_id;
+  if (appId) {
+    const matchedApp = this.availableExtApps.find(
+      (app) => this.getExtAppId(app) === appId
+    );
+    const url = matchedApp?.application_url;
+    if (url && url.trim() !== '') {
+      return url.trim();
+    }
+  }
+
+  return '';
+}
+
+    toggleTeamCredentials(index: number, event: Event): void {
+    event.stopPropagation();
+    if (this.addedTeams[index]?.externalApp) {
+      this.addedTeams[index].externalApp.credentialsEnabled = !this.addedTeams[index].externalApp.credentialsEnabled;
+      this.cdr.detectChanges();
+    }
+  }
+
+  maskApiKey(key: string): string {
+  if (!key) return '';
+  return '•'.repeat(25);
+}
+
+toggleApiKeyVisibility(appId: string): void {
+  this.showApiKey[appId] = !this.showApiKey[appId];
+  this.cdr.detectChanges();
+}
+
+getLoggedUserId(): string {
+  if (!this.loggedUser) return '—';
+  return (
+    this.loggedUser.user_id ||
+    this.loggedUser.UserId ||
+    this.loggedUser._id ||
+    this.loggedUser.id ||
+    this.loggedUser.Email ||
+    '—'
+  );
+}
+
+getLoggedRoleId(project: any): string {
+  if (!this.loggedUser || !project) return '—';
+
+  const projectDetail = this.loggedUser.ProjectDtl?.find(
+    (p: any) =>
+      (p.prj_name || p.projectName || '').toLowerCase() ===
+      (project.projectName || '').toLowerCase()
+  );
+
+  if (projectDetail) {
+    return (
+      projectDetail.role_id ||
+      projectDetail.RoleId ||
+      projectDetail.roleId ||
+      projectDetail.role_name ||  
+      this.roleDetail ||
+      '—'
+    );
+  }
+
+  // Final fallback
+  return this.roleDetail || '—';
+}
+
+getUsersMappedToProject(
+  project: any,
+  teamsBeingRemoved: string[] = [],
+  rolesBeingRemoved: { team: string; role: string }[] = []
+): any[] {
+  if (!project?.projectName || !this.UserManagementData?.length) {
+    return [];
+  }
+
+  const projectNameLower = (project.projectName || '').toLowerCase().trim();
+
+  return this.UserManagementData.filter((user: any) => {
+    const prjDetails = user.PrjDetails || [];
+    return prjDetails.some((pd: any) => {
+      const pdName = (pd.prj_name || pd.projectName || '').toLowerCase().trim();
+      if (pdName !== projectNameLower) return false;
+
+      if (teamsBeingRemoved.length === 0 && rolesBeingRemoved.length === 0) {
+        return true;
+      }
+
+      const teamName = (pd.team_name || pd.teamName || '').toLowerCase().trim();
+      const roleName = (pd.role_name || pd.roleName || '').toLowerCase().trim();
+
+      if (teamsBeingRemoved.some(t => t.toLowerCase() === teamName)) {
+        return true;
+      }
+
+      return rolesBeingRemoved.some(
+        r =>
+          r.team.toLowerCase() === teamName &&
+          r.role.toLowerCase() === roleName
+      );
+    });
+  });
+}
+
+closeMappedUsersConfirmModal(): void {
+  this.showMappedUsersConfirmModal = false;
+  this.mappedUsersForConfirm = [];
+  this.pendingUpdateProjectData = null;
+
+  const modalEl = document.getElementById('mappedUsersConfirmModal');
+  if (modalEl) {
+    const modal = bootstrap.Modal.getInstance(modalEl);
+    if (modal) {
+      modal.hide();
+    }
+  }
+  this.cdr.detectChanges();
+}
+
+confirmMappedUsersAction(): void {
+  if (this.mappedUsersConfirmAction === 'update' && this.pendingUpdateProjectData) {
+    const { projectId, projectData } = this.pendingUpdateProjectData;
+    this.executeUpdate(projectId, projectData);
+  } else if (this.mappedUsersConfirmAction === 'delete' && this.projectToDelete) {
+    this.deleteProjectConfirmed();
+  }
+  this.closeMappedUsersConfirmModal();
+}
 }

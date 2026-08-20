@@ -20,6 +20,12 @@ export interface ILoginResponse {
   IsOTP?: string;
   Email?: string;
   EmployeeId?: string;
+  Success?: boolean;
+  Message?: string;
+
+  // token
+  Token: string;
+  RefreshToken: string;
 }
 
 export interface UserDetails {

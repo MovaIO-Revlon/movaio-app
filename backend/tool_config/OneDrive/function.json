@@ -1,0 +1,497 @@
+{
+  "functions": [
+    {
+      "name": "onedrive_list_files",
+      "description": "Returns a list of files and folders in the root directory of OneDrive. Use this when the user asks to see their root files without specifying a folder.",
+      "tags": [
+        "onedrive",
+        "files",
+        "folders"
+      ],
+      "visibility": "public",
+      "active": true,
+      "protocol": "rest",
+      "protocol_data": {
+        "method": "GET",
+        "path": "/v1.0/drive/root/children",
+        "server_url": "https://graph.microsoft.com"
+      },
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "object",
+            "description": "OData query parameters",
+            "properties": {
+              "$select": {
+                "type": "string",
+                "description": "Comma-separated list of properties to include in response (e.g., 'id,name,size,webUrl')."
+              },
+              "$expand": {
+                "type": "string",
+                "description": "Comma-separated list of relationships to expand."
+              },
+              "$top": {
+                "type": "integer",
+                "description": "The number of items to return in a result set."
+              }
+            },
+            "required": [],
+            "visible": [
+              "$select",
+              "$expand",
+              "$top"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [],
+        "visible": [
+          "query"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "onedrive_list_folder_children",
+      "description": "Returns items inside a specific folder by folder item_id. If parent folder ID is 'root', use onedrive_list_files instead.",
+      "tags": [
+        "onedrive",
+        "folders"
+      ],
+      "visibility": "public",
+      "active": true,
+      "protocol": "rest",
+      "protocol_data": {
+        "method": "GET",
+        "path": "/v1.0/drive/items/{item_id}/children",
+        "server_url": "https://graph.microsoft.com"
+      },
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "item_id": {
+            "type": "string",
+            "description": "The unique identifier of the parent folder DriveItem."
+          },
+          "query": {
+            "type": "object",
+            "description": "OData query parameters",
+            "properties": {
+              "$select": {
+                "type": "string",
+                "description": "Comma-separated list of properties to include in response."
+              },
+              "$expand": {
+                "type": "string",
+                "description": "Comma-separated list of relationships to expand."
+              },
+              "$top": {
+                "type": "integer",
+                "description": "The number of items to return in a result set."
+              }
+            },
+            "required": [],
+            "visible": [
+              "$select",
+              "$expand",
+              "$top"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "item_id"
+        ],
+        "visible": [
+          "item_id",
+          "query"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "onedrive_get_file_by_id",
+      "description": "Retrieves metadata for a specific file or folder by item_id. If user mention item id then call the list api and then fetch the itemid from them",
+      "tags": [
+        "onedrive",
+        "files",
+        "folders"
+      ],
+      "visibility": "public",
+      "active": true,
+      "protocol": "rest",
+      "protocol_data": {
+        "method": "GET",
+        "path": "/v1.0/drive/items/{item_id}",
+        "server_url": "https://graph.microsoft.com"
+      },
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "item_id": {
+            "type": "string",
+            "description": "The unique identifier of the DriveItem."
+          },
+          "query": {
+            "type": "object",
+            "description": "OData query parameters",
+            "properties": {
+              "$select": {
+                "type": "string",
+                "description": "Comma-separated list of properties to return."
+              },
+              "$expand": {
+                "type": "string",
+                "description": "Comma-separated list of relationships to expand."
+              }
+            },
+            "required": [],
+            "visible": [
+              "$select",
+              "$expand"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "item_id"
+        ],
+        "visible": [
+          "item_id",
+          "query"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "onedrive_create_folder",
+      "description": "Creates a new folder inside a specified parent directory. Pass 'root' as parent_item_id to create in root.",
+      "tags": [
+        "onedrive",
+        "folders"
+      ],
+      "visibility": "public",
+      "active": true,
+      "protocol": "rest",
+      "protocol_data": {
+        "method": "POST",
+        "path": "/v1.0/drive/items/{parent_item_id}/children",
+        "server_url": "https://graph.microsoft.com"
+      },
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "parent_item_id": {
+            "type": "string",
+            "description": "The unique identifier of the parent folder DriveItem. Use 'root' for root directory."
+          },
+          "body": {
+            "type": "object",
+            "description": "Folder creation details",
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "The name of the new folder."
+              },
+              "folder": {
+                "type": "object",
+                "description": "An empty object to signify folder creation",
+                "additionalProperties": true
+              },
+              "@microsoft.graph.conflictBehavior": {
+                "type": "string",
+                "description": "Behavior when folder exists: 'fail', 'replace', or 'rename'."
+              }
+            },
+            "required": [
+              "name",
+              "folder"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "parent_item_id",
+          "body"
+        ],
+        "visible": [
+          "parent_item_id",
+          "body"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "onedrive_download_file",
+      "description": "Downloads or exports the contents of a file by item_id.If user mention item id then call the list api and then fetch the item_id from them",
+      "tags": [
+        "onedrive",
+        "files",
+        "download"
+      ],
+      "visibility": "public",
+      "active": true,
+      "protocol": "rest",
+      "protocol_data": {
+        "method": "GET",
+        "path": "/v1.0/drive/items/{item_id}/content",
+        "server_url": "https://graph.microsoft.com"
+      },
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "item_id": {
+            "type": "string",
+            "description": "The unique identifier of the file DriveItem to download."
+          },
+          "query": {
+            "type": "object",
+            "description": "Optional query parameters",
+            "properties": {
+              "format": {
+                "type": "string",
+                "description": "Target format to convert file to (e.g., 'pdf', 'jpg', 'html')."
+              }
+            },
+            "required": [],
+            "visible": [
+              "format"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "item_id"
+        ],
+        "visible": [
+          "item_id",
+          "query"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "onedrive_upload_file",
+      "description": "Uploads or replaces file content in OneDrive. If a target folder is specified, upload the file into that folder (create the folder first if it does not exist). If no folder is specified, upload the file directly to the root directory using 'root' as the parent_item_id.Also If user mention item id then call the list api and then fetch the item_id from them",
+      "tags": [
+        "onedrive",
+        "files",
+        "upload"
+      ],
+      "visibility": "public",
+      "active": true,
+      "protocol": "rest",
+      "protocol_data": {
+        "method": "PUT",
+        "path": "/v1.0/drive/items/{parent_item_id}:/{filename}:/content",
+        "server_url": "https://graph.microsoft.com"
+      },
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "parent_item_id": {
+            "type": "string",
+            "description": "The parent folder ID. Use 'root' to upload directly into root folder."
+          },
+          "filename": {
+            "type": "string",
+            "description": "The target name of the file to be uploaded (including extension)."
+          },
+          "body": {
+            "type": "string",
+            "description": "The raw text or binary payload content of the file."
+          }
+        },
+        "required": [
+          "parent_item_id",
+          "filename",
+          "body"
+        ],
+        "visible": [
+          "parent_item_id",
+          "filename",
+          "body"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "onedrive_delete_file",
+      "description": "Deletes a file or folder (DriveItem) by item_id.If user mention item id then call the list api and then fetch the itemid from them",
+      "tags": [
+        "onedrive",
+        "files",
+        "folders",
+        "delete"
+      ],
+      "visibility": "public",
+      "active": true,
+      "protocol": "rest",
+      "protocol_data": {
+        "method": "DELETE",
+        "path": "/v1.0/drive/items/{item_id}",
+        "server_url": "https://graph.microsoft.com"
+      },
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "item_id": {
+            "type": "string",
+            "description": "The unique identifier of the DriveItem to delete."
+          }
+        },
+        "required": [
+          "item_id"
+        ],
+        "visible": [
+          "item_id"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "onedrive_search_items",
+      "description": "Searches for files or folders matching a query string across the drive.",
+      "tags": [
+        "onedrive",
+        "files",
+        "search"
+      ],
+      "visibility": "public",
+      "active": true,
+      "protocol": "rest",
+      "protocol_data": {
+        "method": "GET",
+        "path": "/v1.0/drive/root/search(q='{q}')",
+        "server_url": "https://graph.microsoft.com"
+      },
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "q": {
+            "type": "string",
+            "description": "The query text used to search for files and folders."
+          }
+        },
+        "required": [
+          "q"
+        ],
+        "visible": [
+          "q"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "onedrive_update_file",
+      "description": "Updates metadata for a file or folder (renaming, moving to a new parent folder, etc.).If user mention item id then call the list api and then fetch the itemid from them",
+      "tags": [
+        "onedrive",
+        "files",
+        "folders",
+        "update"
+      ],
+      "visibility": "public",
+      "active": true,
+      "protocol": "rest",
+      "protocol_data": {
+        "method": "PATCH",
+        "path": "/v1.0/drive/items/{item_id}",
+        "server_url": "https://graph.microsoft.com"
+      },
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "item_id": {
+            "type": "string",
+            "description": "The unique identifier of the DriveItem."
+          },
+          "body": {
+            "type": "object",
+            "description": "The updated properties for the item.",
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "The new name of the file or folder."
+              },
+              "parentReference": {
+                "type": "object",
+                "description": "Target parent folder to move the item to.",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "description": "The target parent folder ID."
+                  }
+                },
+                "additionalProperties": true
+              }
+            },
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "item_id",
+          "body"
+        ],
+        "visible": [
+          "item_id",
+          "body"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "onedrive_create_share_link",
+      "description": "Creates a shareable URL link for a file or folder.",
+      "tags": [
+        "onedrive",
+        "sharing"
+      ],
+      "visibility": "public",
+      "active": true,
+      "protocol": "rest",
+      "protocol_data": {
+        "method": "POST",
+        "path": "/v1.0/drive/items/{item_id}/createLink",
+        "server_url": "https://graph.microsoft.com"
+      },
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "item_id": {
+            "type": "string",
+            "description": "The unique identifier of the DriveItem."
+          },
+          "body": {
+            "type": "object",
+            "description": "Share link configuration payload",
+            "properties": {
+              "type": {
+                "type": "string",
+                "description": "The type of sharing link to create: 'view', 'edit', or 'embed'."
+              },
+              "scope": {
+                "type": "string",
+                "description": "The scope of the link: 'anonymous', 'organization', or 'users'."
+              }
+            },
+            "required": [
+              "type"
+            ],
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "item_id",
+          "body"
+        ],
+        "visible": [
+          "item_id",
+          "body"
+        ],
+        "additionalProperties": false
+      }
+    }
+  ]
+}

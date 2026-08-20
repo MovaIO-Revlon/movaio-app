@@ -1,6 +1,7 @@
 import {
   Component,
   computed,
+  effect,
   forwardRef,
   input,
   model,
@@ -73,6 +74,18 @@ export class Select implements ControlValueAccessor {
       ) || []
     );
   });
+
+  constructor() {
+    let wasOpen = false;
+    effect(() => {
+      const open = this.isOpen();
+      if (wasOpen && !open) {
+        this.onTouched();
+      }
+
+      wasOpen = open;
+    });
+  }
 
   handleSelect(option: TOption) {
     this.onSelect.emit(option);

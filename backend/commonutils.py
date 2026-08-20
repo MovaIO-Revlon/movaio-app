@@ -48,6 +48,12 @@ class DatabaseCollections:
         self.otp_collection = self.configloader.MONGO_COLLECTIONS["otp_collection"]
         self.rate_limiting_collection = self.configloader.MONGO_COLLECTIONS["rate_limiting_collection"]
         self.prompt_repo = self.configloader.MONGO_COLLECTIONS["prompt_repo"]
+        self.tool_management_collection = self.configloader.MONGO_COLLECTIONS["tool_management_collection"]
+        self.connections_collection = self.configloader.MONGO_COLLECTIONS["connections_collection"]
+        self.active_tool_collection =  self.configloader.MONGO_COLLECTIONS["active_tool_collection"]
+        self.user_notification_collection = self.configloader.MONGO_COLLECTIONS["user_notification_collection"]
+        self.agent_approval_request_collection = self.configloader.MONGO_COLLECTIONS["agent_approval_request_collection"]
+        self.external_applications_collection = self.configloader.MONGO_COLLECTIONS["external_applications_collection"]
     
 
 class CommonUtils:
@@ -180,10 +186,124 @@ class CommonUtils:
             return {}
     
     @staticmethod
-    def safe_get(dictionary, key, default=""):
-        """Safely get value from dictionary"""
-        return dictionary.get(key, default) if dictionary else default
-        
+    def _is_sensitive_key(key):
+        """Detect sensitive field names by keyword patterns."""
+        if not isinstance(key, str):
+            return False
+
+        lowered = key.strip().lower()
+        exact_sensitive = {
+            "email",
+            "userid",
+            "user_id",
+            "username",
+            "firstname",
+            "first_name",
+            "lastname",
+            "last_name",
+            "password",
+            "passwd",
+            "pass",
+            "secret",
+            "secrets",
+            "token",
+            "api_key",
+            "apikey",
+            "api-token",
+            "credential",
+            "credentials",
+            "auth",
+            "ssn",
+            "dob",
+            "card_number",
+            "cvv",
+            "pin",
+        }
+
+        if lowered in exact_sensitive:
+            return True
+
+        sensitive_substrings = [
+            "password",
+            "secret",
+            "token",
+            "api_key",
+            "apikey",
+            "credential",
+            "auth",
+            "ssn",
+            "dob",
+            "card",
+            "pin",
+            "email",
+        ]
+
+        return any(substring in lowered for substring in sensitive_substrings)
+
+    @staticmethod
+    def _get_cipher():
+        """Create a Fernet cipher using the configured encryption key."""
+        return Fernet(config_loader.encryption_key)
+
+    @staticmethod
+    def _encrypt_value(value):
+        """Encrypt a scalar or serializable value."""
+        if value is None:
+            return None
+
+        if isinstance(value, (dict, list)):
+            value = json.dumps(value)
+
+        if not isinstance(value, str):
+            value = str(value)
+
+        return CommonUtils._get_cipher().encrypt(value.encode("utf-8")).decode("utf-8")
+
+    @staticmethod
+    def _decrypt_value(value):
+        """Decrypt a value encrypted with Fernet."""
+        if not isinstance(value, str):
+            return value
+
+        try:
+            decrypted = CommonUtils._get_cipher().decrypt(value.encode("utf-8"))
+            decoded = decrypted.decode("utf-8")
+            try:
+                return json.loads(decoded)
+            except json.JSONDecodeError:
+                return decoded
+        except Exception:
+            return value
+
+    @staticmethod
+    def _process_sensitive_data(data, action):
+        """Recursive helper to encrypt or decrypt sensitive JSON fields."""
+        if isinstance(data, dict):
+            processed = {}
+            for key, value in data.items():
+                if CommonUtils._is_sensitive_key(key):
+                    if action == "encrypt":
+                        processed[key] = CommonUtils._encrypt_value(value)
+                    elif action == "decrypt":
+                        processed[key] = CommonUtils._decrypt_value(value)
+                    else:
+                        raise ValueError("Action must be 'encrypt' or 'decrypt'.")
+                else:
+                    processed[key] = CommonUtils._process_sensitive_data(value, action)
+            return processed
+
+        if isinstance(data, list):
+            return [CommonUtils._process_sensitive_data(item, action) for item in data]
+
+        return data
+
+    @staticmethod
+    def process_sensitive_fields(data, action):
+        """Encrypt or decrypt sensitive fields inside JSON-like data."""
+        if action not in {"encrypt", "decrypt"}:
+            raise ValueError("Action must be 'encrypt' or 'decrypt'.")
+        return CommonUtils._process_sensitive_data(data, action)
+
     @staticmethod
     # Helper: Serialize MongoDB documents
     def serialize_doc(doc):

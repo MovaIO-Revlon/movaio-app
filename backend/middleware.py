@@ -1,3 +1,4 @@
+# middleware.py
 import glob
 import logging
 import os
@@ -19,6 +20,7 @@ from utils import (
     parse_request,
     parse_response,
     # parse_file,
+    AuthorizationError
 )
 
 # Ensure logs dir exists
@@ -164,10 +166,14 @@ atexit.register(shutdown_logging)
 # --- Session helper (as provided) ---
 def get_current_user():
     """Get current user from session"""
-    session_id = session.get("session_id") or request.headers.get("X-Session-ID")
-    if session_id:
-        return session_manager.get_session_data(session_id)
-    return None
+    token = session_manager.extract_token()
+    if not token:
+        return None
+
+    try:
+        return session_manager.validate_token(token)
+    except AuthorizationError:
+        return None
 
 
 EXCLUDE_METHODS = ["OPTIONS"]
@@ -194,6 +200,50 @@ def setup_middlewares(flask_app_obj):
             if current_user
             else request.remote_addr or "anonyms"
         )
+    
+    # start - API key policy (UI optional / Postman mandatory via X-Client)
+    # @app.before_request
+    # def enforce_api_key_policy():
+    #     if request.method in EXCLUDE_METHODS:
+    #         return
+
+    #     from api_key_auth import (
+    #         path_is_external_category,
+    #         validate_api_key,
+    #         resolve_category_from_path,
+    #     )
+
+    #     route_rule = getattr(request, "url_rule", None)
+    #     path = route_rule.rule if route_rule else (request.path or "")
+
+    #     if not path_is_external_category(path):
+    #         return  # not external-category → leave alone (login, health, etc.)
+
+    #     api_key = (
+    #         request.headers.get("X-API-Key")
+    #         or request.headers.get("x-api-key")
+    #     )
+
+    #     # Do NOT force a key when absent — login + token-only keep working
+    #     if not api_key:
+    #         g.api_key_context = None
+    #         return
+
+    #     # Key present → validate + allowed_apis
+    #     from commonutils import DatabaseCollections
+    #     coll = DatabaseCollections().external_applications_collection
+
+    #     ctx = validate_api_key(api_key, coll)
+    #     g.api_key_context = ctx
+
+    #     category = resolve_category_from_path(path)
+    #     if category and category not in ctx["allowed_apis"]:
+    #         raise AuthorizationError(
+    #             f"API key not allowed for '{category}'. "
+    #             f"Allowed: {ctx['allowed_apis']}"
+    #         )
+
+    # end
 
     @app.before_request
     def log_request():

@@ -7,7 +7,7 @@ import secrets
 import smtplib
 import string
 from venv import logger
-from flask import request, jsonify
+from flask import g, request, jsonify
 import base64
 import logging
 import re
@@ -187,6 +187,7 @@ class UserManager(DatabaseCollections):
                 body = f.read()
             
             body = body.replace("AGENT_ID", data.get("agent_id", "N/A"))
+            body = body.replace("MASTER_ID", data.get("master_agent_id", "N/A"))
             body = body.replace("AGENT_NAME", data.get("agent_name", "N/A"))
             body = body.replace("AGENT_DESCRIPTION", data.get("agent_description", "N/A"))
             body = body.replace("AGENT_ROLE", data.get("agent_role", "N/A"))
@@ -211,7 +212,8 @@ class UserManager(DatabaseCollections):
 
             site_url = (self.config.URL_CONF or "http://localhost:5001").rstrip("/")
             agent_id = data.get("agent_id", "")
-            approve_url = data.get("approve_url") or f"{site_url}/approvalAPI/{agent_id}/{sourcefrom}/Approved/confirm"
+            # approve_url = data.get("approve_url") or f"{site_url}/approvalAPI/{agent_id}/{sourcefrom}/Approved/confirm"
+            approve_url = data.get("approve_url") or f"{site_url}?redirectRoute=agentApproval&agentId={agent_id}&approvalAction={sourcefrom}"
             decline_url = data.get("decline_url") or f"{site_url}/approvalAPI/{agent_id}/{sourcefrom}/Rejected/confirm"
             body = body.replace("APPROVE_URL", approve_url)
             body = body.replace("DECLINE_URL", decline_url)
@@ -724,9 +726,20 @@ class UserManager(DatabaseCollections):
 
     def get_user_details_service(self):
         # Get Current user
-        current_user = get_current_user()
-        ##print("-----",current_user)
-        prj_dtls = current_user.get('ProjectDtl')
+        user_op = {
+                'type': 'find_one',
+                'filter': {
+                    "Email": re.compile(f"^{re.escape(g.user_email)}$", re.IGNORECASE),
+                    "IsActive": True,
+                    "IsDelete": False
+                }
+                
+            }
+        user_data = self._query_db('user', user_op, 'master')
+        if not user_data:
+            raise AuthorizationError()
+        
+        prj_dtls = user_data.get("PrjDetails", [])
         user_type = "master"
         
         # Users using database manager
@@ -928,7 +941,6 @@ class UserManager(DatabaseCollections):
         email = user_dtls.get("Email", "")
         full_name = f"{user_dtls.get('FirstName', '')} {user_dtls.get('LastName', '')}"
         generated_password = self.generate_password(10)
-        print(f"New User : {email} Password : {generated_password}")
         active_project = user_dtls.get("ActiveProject", "")
 
         prj_details = user_dtls.get("PrjDetails", [])
@@ -1029,7 +1041,7 @@ class UserManager(DatabaseCollections):
 
 
 
-            #self.send_mail(email, full_name, generated_password, 'Welcome')
+            self.send_mail(email, full_name, generated_password, 'Welcome')
 
         else:
             userdata = self.user_collection.find_one({"Email": re.compile(f"^{re.escape(email)}$", re.IGNORECASE),
@@ -1469,262 +1481,198 @@ class UserManager(DatabaseCollections):
         }
         
         self._query_db('user', update_op,user_type)
-        
-        # Get updated user data and refresh session
-        user_op = {'type': 'find_one', 'filter': {"Email": re.compile(f"^{re.escape(email_id)}$", re.IGNORECASE),"IsActive": True, "IsDelete": False}}
-        user_data = self._query_db('user', user_op,user_type)
-        session_manager.replace_session(current_user['session_id'], user_data)
-        
         return True
         
     # CREATE / ONBOARD PROJECT
     def onboard_project_details(self, request):
-        project_details = request.get_json()
-        ##print("Raw data:", project_details)
-        
-        project_name = project_details.get('projectName')
-        project_desc = project_details.get('project_desc', "")
-        active = project_details.get('active', True)
-        teams = project_details.get('teams', [])
-        user_type = project_details.get('project_db_name', "")
-        app_url = project_details.get('app_url', "")
+        project_details = request.get_json() or {}
+
+        project_name = (project_details.get("projectName") or "").strip()
+        project_desc = project_details.get("project_desc") or project_details.get("description") or ""
+        teams = project_details.get("teams") or []
+        user_type = (project_details.get("project_db_name") or project_details.get("database_name") or "").strip()
+        app_url = project_details.get("app_url") or ""
+        external_apps_input = project_details.get("external_apps") or []
 
         if not project_name:
             raise ValidationError("Project name is required")
-
         if not teams:
             raise ValidationError("At least one team is required")
+        if not user_type:
+            raise ValidationError("Project database name is required")
 
-        # ✅ Check if project already exists
         existing_project = self.project.find_one({"projectName": project_name})
         if existing_project:
             raise ValidationError(f"Project '{project_name}' already exists")
 
-        # ✅ Create project doc
-        project_id = self.generate_project_id()
+        existing_db = self.project.find_one({"database_name": user_type})
+        if existing_db:
+            raise ValidationError(f"Database name '{user_type}' is already in use")
+
         valid_teams = []
         for t in teams:
-            team_name = t.get("teamName")
-            roles = t.get("roles", [])
-            if team_name:
-                valid_teams.append({
-                    "teamName": team_name.strip(),
-                    "roles": [{"role": r.get("role")} for r in roles if r.get("role")]
-                })
+            team_name = (t.get("teamName") or "").strip()
+            roles = t.get("roles") or []
+            if not team_name:
+                continue
+            valid_roles = [{"role": r.get("role")} for r in roles if r.get("role")]
+            if valid_roles:
+                valid_teams.append({"teamName": team_name, "roles": valid_roles})
 
         if not valid_teams:
             raise ValidationError("No valid teams provided")
 
+        project_numeric_id = self.generate_project_id()
+        now_str = datetime.now().strftime("%Y-%m-%d")
+
         project_doc = {
             "projectName": project_name,
-            "projectId": project_id,
             "project_desc": project_desc,
             "description": project_desc,
-            "active": active,
-            "teams": valid_teams,
+            "projectId": project_numeric_id,
             "database_name": user_type,
             "app_url": app_url,
-            "dateCreated": datetime.now().strftime("%Y-%m-%d")
+            "teams": valid_teams,
+            "active": project_details.get("active", True),
+            "dateCreated": now_str,
+            "dateUpdated": now_str,
         }
 
-        # ✅ Insert into master project collection
-        self.project.insert_one(project_doc)
+        subscription_apps, generated_keys = self._build_external_app_mappings(
+            external_apps_input,
+            project_doc,
+        )
 
-        # ✅ Insert into project-specific DB (but check duplicates first)
-        project_onboard_op = {
-            'type': 'insert_one',
-            'document': project_doc
-        }
-        self._query_db('project', project_onboard_op, user_type)
+        if subscription_apps:
+            project_doc["external_apps"] = [
+                {
+                    "application_id": app["application_id"],
+                    "application_name": app.get("application_name"),
+                    "allowed_apis": app.get("allowed_apis") or [],
+                    "api_key": app.get("api_key"),
+                    "status": app.get("status") or "active",
+                    "mapped_at": app.get("mapped_at"),
+                    "credentialsEnabled": True,  # default; frontend can toggle later
+                }
+                for app in subscription_apps
+            ]
+        else:
+            project_doc["external_apps"] = []
 
-        # ✅ Insert related data for each team
-        for t in teams:
+        insert_result = self.project.insert_one(project_doc)
+        project_mongo_id = str(insert_result.inserted_id)
+
+        # Save subscriptions INSIDE the respective app document in external_applications_collection
+        if subscription_apps:
+            for app in subscription_apps:
+                sub_data = {
+                    "application_id": str(app["application_id"]),
+                    "project_id": project_numeric_id,
+                    "project_name": project_name,
+                    "database_name": user_type,
+                    "api_key": app["api_key"],
+                    "allowed_apis": app["allowed_apis"],
+                    "status": "active",
+                    "mapped_at": app["mapped_at"]
+                }
+                self.external_applications_collection.update_one(
+                    {"_id": ObjectId(app["application_id"])},
+                    {"$push": {"subscriptions": sub_data}}
+                )
+
+        for cred in generated_keys:
+            cred["subscription_id"] = str(project_numeric_id)
+
+        self._query_db(
+            "project",
+            {"type": "insert_one", "document": {**project_doc, "_id": insert_result.inserted_id}},
+            user_type,
+        )
+
+        # Team sync
+        for t in valid_teams:
             team_name = t.get("teamName")
-
-            # Agencies
-            agencies = list(self.agency_collection.find({"assigned_to": team_name,"is_deleted":False}, {"_id": 0}))
-            if agencies:
-                agency_ids = [a["agency_id"] for a in agencies]
-                existing_agencies = list(self._query_db(
-                    'agency',
-                    {'type': 'find', 'filter': {'agency_id': {'$in': agency_ids}}, 'projection': {'agency_id': 1, '_id': 0}},
-                    user_type
-                ))
-                existing_agency_ids = {a['agency_id'] for a in existing_agencies}
-
-                new_agencies = [a for a in agencies if a["agency_id"] not in existing_agency_ids]
-                if new_agencies:
-                    cursor= self.workflow_collection.find({"agency_name": {"$in": [a["agency_name"] for a in new_agencies]}})
-                    workflow_list = list(cursor)
-                    # print("workflow",workflow_list)
-                    if workflow_list:
-                        self._query_db('workflow_collection', {'type': 'insert_many', 'documents': workflow_list}, user_type)
-                    
-                    
-
-                    # Mappings
-                    mappings = list(self.agent_agency_mapping_collection.find({"agency_id": {"$in": agency_ids},"status":"active"}, {"_id": 0}))
-                    mapping_ids = [m["agent_id"] + "_" + m["agency_id"] for m in mappings]
-
-                    existing_mappings = list(self._query_db(
-                        'agent_agency_mapping',
-                        {'type': 'find', 'filter': {'$or': [{"agent_id": m["agent_id"], "agency_id": m["agency_id"]} for m in mappings]}, 'projection': {'agent_id': 1, 'agency_id': 1, '_id': 0}},
-                        user_type
-                    ))
-                    existing_mapping_ids = {em['agent_id'] + "_" + em['agency_id'] for em in existing_mappings}
-
-                    new_mappings = [m for m in mappings if m["agent_id"] + "_" + m["agency_id"] not in existing_mapping_ids]
-                    if new_mappings:
-                        self._query_db('agent_agency_mapping', {'type': 'insert_many', 'documents': new_mappings}, user_type)
-
-                    # Agents
-                    agent_ids = [m["agent_id"] for m in mappings]
-                    agents = list(self.agent_collection.find(
-                        {"agent_id": {"$in": agent_ids}, "status": "active"},
-                        {"_id": 0}
-                         ))
-                    existing_agents = list(self._query_db(
-                        'agent',
-                        {'type': 'find', 'filter': {'agent_id': {'$in': agent_ids},"status": "active"}, 'projection': {'agent_id': 1, '_id': 0}},
-                        user_type
-                    ))
-                    existing_agent_ids = {ea['agent_id'] for ea in existing_agents}
-
-                    new_agents = [a for a in agents if a["agent_id"] not in existing_agent_ids]
-                    if new_agents:
-                        self._query_db('agent', {'type': 'insert_many', 'documents': new_agents}, user_type)
-                    
-                    self._query_db('agency', {'type': 'insert_many', 'documents': new_agencies}, user_type)
-
-                # Mappings
-                mappings = list(self.agent_agency_mapping_collection.find({"agency_id": {"$in": agency_ids},"status":"active"}, {"_id": 0}))
-                mapping_ids = [m["agent_id"] + "_" + m["agency_id"] for m in mappings]
-
-                existing_mappings = list(self._query_db(
-                    'agent_agency_mapping',
-                    {'type': 'find', 'filter': {'$or': [{"agent_id": m["agent_id"], "agency_id": m["agency_id"]} for m in mappings]}, 'projection': {'agent_id': 1, 'agency_id': 1, '_id': 0}},
-                    user_type
-                ))
-                existing_mapping_ids = {em['agent_id'] + "_" + em['agency_id'] for em in existing_mappings}
-
-                new_mappings = [m for m in mappings if m["agent_id"] + "_" + m["agency_id"] not in existing_mapping_ids]
+            if not team_name:
+                continue
+            agencies = list(self.agency_collection.find({"assigned_to": team_name, "is_deleted": False}, {"_id": 0}))
+            if not agencies:
+                continue
+            agency_ids = [a["agency_id"] for a in agencies]
+            existing_agencies = list(self._query_db("agency", {"type": "find", "filter": {"agency_id": {"$in": agency_ids}}, "projection": {"agency_id": 1, "_id": 0}}, user_type))
+            existing_agency_ids = {a["agency_id"] for a in existing_agencies}
+            new_agencies = [a for a in agencies if a["agency_id"] not in existing_agency_ids]
+            if new_agencies:
+                cursor = self.workflow_collection.find({"agency_name": {"$in": [a["agency_name"] for a in new_agencies]}})
+                workflow_list = list(cursor)
+                if workflow_list:
+                    self._query_db("workflow_collection", {"type": "insert_many", "documents": workflow_list}, user_type)
+                self._query_db("agency", {"type": "insert_many", "documents": new_agencies}, user_type)
+            mappings = list(self.agent_agency_mapping_collection.find({"agency_id": {"$in": agency_ids}, "status": "active"}, {"_id": 0}))
+            if mappings:
+                existing_mappings = list(self._query_db("agent_agency_mapping", {"type": "find", "filter": {"$or": [{"agent_id": m["agent_id"], "agency_id": m["agency_id"]} for m in mappings]}, "projection": {"agent_id": 1, "agency_id": 1, "_id": 0}}, user_type))
+                existing_mapping_keys = {f"{em['agent_id']}_{em['agency_id']}" for em in existing_mappings}
+                new_mappings = [m for m in mappings if f"{m['agent_id']}_{m['agency_id']}" not in existing_mapping_keys]
                 if new_mappings:
-                    self._query_db('agent_agency_mapping', {'type': 'insert_many', 'documents': new_mappings}, user_type)
-
-                # Agents
+                    self._query_db("agent_agency_mapping", {"type": "insert_many", "documents": new_mappings}, user_type)
                 agent_ids = [m["agent_id"] for m in mappings]
-                agents = list(self.agent_collection.find(
-                    {"agent_id": {"$in": agent_ids}, "status": "active"},
-                    {"_id": 0}
-                ))
-
-                existing_agents = list(self._query_db(
-                    'agent',
-                    {'type': 'find', 'filter': {'agent_id': {'$in': agent_ids},"status": "active"}, 'projection': {'agent_id': 1, '_id': 0}},
-                    user_type
-                ))
-                existing_agent_ids = {ea['agent_id'] for ea in existing_agents}
-
+                agents = list(self.agent_collection.find({"agent_id": {"$in": agent_ids}, "status": "active"}, {"_id": 0}))
+                existing_agents = list(self._query_db("agent", {"type": "find", "filter": {"agent_id": {"$in": agent_ids}}, "projection": {"agent_id": 1, "_id": 0}}, user_type))
+                existing_agent_ids = {ea["agent_id"] for ea in existing_agents}
                 new_agents = [a for a in agents if a["agent_id"] not in existing_agent_ids]
                 if new_agents:
-                    self._query_db('agent', {'type': 'insert_many', 'documents': new_agents}, user_type)
-                
-                # 1. Find agents that have a valid knowledge_store with at least one entry with 'id'
-                agents_with_kb = [
-                    a for a in agents
-                    if "knowledge_store" in a
-                    and isinstance(a["knowledge_store"], list)
-                    and a["knowledge_store"]  # not empty
-                    and isinstance(a["knowledge_store"][0], dict)
-                    and "id" in a["knowledge_store"][0]
-                    and a["knowledge_store"][0]["id"]  # not falsy/empty string
-                ]
-
+                    self._query_db("agent", {"type": "insert_many", "documents": new_agents}, user_type)
+                agents_with_kb = [a for a in agents if a.get("knowledge_store_id") or (isinstance(a.get("knowledge_store"), list) and a["knowledge_store"] and isinstance(a["knowledge_store"][0], dict) and a["knowledge_store"][0].get("id"))]
                 if agents_with_kb:
-                    # Extract the knowledge store IDs
-                    # Taking [0] → assumes usually one knowledge store per agent
-                    knowstore_ids = [
-                        a["knowledge_store"][0]["id"]
-                        for a in agents_with_kb
-                    ]
-
-                    # Optional: remove duplicates (in case same kb is referenced by multiple agents)
+                    knowstore_ids = []
+                    for a in agents_with_kb:
+                        if a.get("knowledge_store_id"):
+                            knowstore_ids.append(a["knowledge_store_id"])
+                        elif a.get("knowledge_store"):
+                            knowstore_ids.append(a["knowledge_store"][0]["id"])
                     knowstore_ids = list(set(knowstore_ids))
-
                     if knowstore_ids:
-                        # Fetch from main/source knowledge base
-                        kb_records = list(self.kb_collection.find(
-                            {"rag_id": {"$in": knowstore_ids}},
-                            # projection if you want to limit fields (recommended)
-                            # {"name": 1, "enabled": 1, "content": 1, ...}
-                        ))
-
-                        # Check which ones already exist in the target collection
-                        existing_kb = list(self._query_db(
-                            'kb_collection',
-                            {
-                                'type': 'find',
-                                'filter': {'rag_id': {'$in': knowstore_ids}}
-                                },
-                            user_type
-                        ))
-
-                        existing_kb_ids = {doc['_id'] for doc in existing_kb}
-
-                        # Upsert logic: insert if missing, full replace if exists
+                        kb_records = list(self.kb_collection.find({"$or": [{"rag_id": {"$in": knowstore_ids}}, {"_id": {"$in": knowstore_ids}}]}))
+                        existing_kb = list(self._query_db("kb_collection", {"type": "find", "filter": {"$or": [{"rag_id": {"$in": knowstore_ids}}, {"_id": {"$in": knowstore_ids}}]}}, user_type))
+                        existing_kb_ids = set()
+                        for doc in existing_kb:
+                            if doc.get("rag_id"):
+                                existing_kb_ids.add(doc["rag_id"])
+                            existing_kb_ids.add(doc.get("_id"))
                         for kb in kb_records:
-                            kb_id = kb['rag_id']
-
+                            kb_id = kb.get("rag_id") or kb.get("_id")
                             if kb_id not in existing_kb_ids:
-                                self._query_db(
-                                    'kb_collection',
-                                    {
-                                        'type': 'insert_one',
-                                        'document': kb
-                                    },
-                                    user_type
-                                )
+                                self._query_db("kb_collection", {"type": "insert_one", "document": kb}, user_type)
                             else:
-                                # Full document replacement
-                                # If you prefer to do partial update → change to $set on specific fields
-                                self._query_db(
-                                    'kb_collection',
-                                    {
-                                        'type': 'update_one',
-                                        'filter': {'rag_id': kb_id},
-                                        'update': {'$set': kb}          # replaces all fields
-                                        # Alternative (safer): {'$set': {k: v for k, v in kb.items() if k != '_id'}}
-                                    },
-                                    user_type
-                                )
+                                filt = {"rag_id": kb["rag_id"]} if kb.get("rag_id") else {"_id": kb["_id"]}
+                                self._query_db("kb_collection", {"type": "update_one", "filter": filt, "update": {"$set": kb}}, user_type)
 
-        return True         
-            
+        result = {
+            "success": True,
+            "project_id": project_mongo_id,
+            "projectId": project_numeric_id,
+            "message": "AI Solution created successfully",
+        }
+        if generated_keys:
+            result["external_app_credentials"] = generated_keys
+            result["message"] = "AI Solution created successfully. Copy API keys now. They will not be shown again."
+        return result
+   
     def generate_project_id(self):
         try:
-            # Find the project with the highest projectId
             last_project = self.project.find_one(sort=[("projectId", -1)])
             if last_project and "projectId" in last_project:
                 return last_project["projectId"] + 1
-            return 1  # Start from 1 if no projects exist
+            return 1
         except Exception as ex:
             logger.error(f"Error generating project ID: {str(ex)}")
             return 1   
 
     def get_all_projects_old(self):
         try:
-            
             raw_projects = list(self.project.find({}))
             raw_projects.sort(key=lambda x: x.get("projectId", ""))
             projects = [self.clean_document(p) for p in raw_projects]
-
-            
-            project_teams = {
-                p["projectName"]: [t["teamName"] for t in p.get("teams", [])]
-                for p in projects
-            }
-
-            
+            project_teams = {p["projectName"]: [t["teamName"] for t in p.get("teams", [])] for p in projects}
             users = list(self.user_collection.find({"IsDelete": False}))
             user_count_map = {}
             for u in users:
@@ -1732,79 +1680,52 @@ class UserManager(DatabaseCollections):
                     name = prj.get("prj_name")
                     if name:
                         user_count_map[name] = user_count_map.get(name, 0) + 1
-
-           
-            agencies = list(
-                self.agency_collection.find({"is_deleted": False},
-                                            {"agency_id": 1, "assigned_to": 1})
-            )
-            
+            agencies = list(self.agency_collection.find({"is_deleted": False}, {"agency_id": 1, "assigned_to": 1}))
             team_agencies = {}
             for ag in agencies:
                 team = ag.get("assigned_to")
                 if team:
                     team_agencies.setdefault(team, []).append(ag["agency_id"])
-
-           
-            agent_mappings = list(
-                self.agent_agency_mapping_collection.find(
-                    {"status": "active"},
-                    {"agency_id": 1}
-                )
-            )
+            agent_mappings = list(self.agent_agency_mapping_collection.find({"status": "active"}, {"agency_id": 1}))
             agency_agent_count = {}
             for m in agent_mappings:
                 aid = m.get("agency_id")
                 if aid:
                     agency_agent_count[aid] = agency_agent_count.get(aid, 0) + 1
-
-           
             project_stats = {}
             for proj_name, teams in project_teams.items():
                 agency_ids = set()
                 for team in teams:
                     agency_ids.update(team_agencies.get(team, []))
-
                 agency_cnt = len(agency_ids)
                 agent_cnt  = sum(agency_agent_count.get(aid, 0) for aid in agency_ids)
-
-                project_stats[proj_name] = {
-                    "AgencyCount": agency_cnt,
-                    "AgentCount":  agent_cnt
-                }
-
-            
+                project_stats[proj_name] = {"AgencyCount": agency_cnt, "AgentCount": agent_cnt}
             for p in projects:
                 name = p["projectName"]
                 stats = project_stats.get(name, {"AgencyCount": 0, "AgentCount": 0})
-
                 p["UserCount"]    = user_count_map.get(name, 0)
                 p["AgencyCount"]  = stats["AgencyCount"]
                 p["AgentCount"]   = stats["AgentCount"]
-
             return projects
-
         except Exception as ex:
             logging.error("Error in GetAllProjects:", exc_info=True)
             raise ex
             
     def get_all_projects(self):
-        # Single aggregation pipeline for projects with teams
         projects_pipeline = [
             {"$project": {
-                "projectName": 1, "project_desc": 1, "description": 1, "projectId": 1,"database_name":1,"dateCreated":1,"dateUpdated":1, 
+                "projectName": 1, "project_desc": 1, "description": 1, "projectId": 1,
+                "database_name": 1, "dateCreated": 1, "dateUpdated": 1,
                 "app_url": 1,
-                "teams": {"$ifNull": ["$teams", []]}
+                "teams": {"$ifNull": ["$teams", []]},
+                "external_apps": {"$ifNull": ["$external_apps", []]},
             }}
         ]
         projects = list(self.project.aggregate(projects_pipeline))
         projects = [self.clean_document(p) for p in projects]
-        
         project_names = [p["projectName"] for p in projects if p.get("projectName")]
         if not project_names:
             return projects
-
-        # Aggregation for user counts
         user_counts = list(self.user_collection.aggregate([
             {"$match": {"IsDelete": False, "PrjDetails.prj_name": {"$in": project_names}}},
             {"$unwind": "$PrjDetails"},
@@ -1812,63 +1733,37 @@ class UserManager(DatabaseCollections):
             {"$group": {"_id": "$PrjDetails.prj_name", "count": {"$sum": 1}}}
         ]))
         user_count_map = {u["_id"]: u["count"] for u in user_counts}
-
-        # Calculate project stats per project using their specific databases
         project_stats = {}
         for p in projects:
             project_name = p.get("projectName")
             database_name = p.get("database_name", "master")
-            
             if not project_name:
                 continue
-            
-            # Check if this is MASTER_DB
             if project_name == self.config.MASTER_DB:
                 total_agencies = self.agency_collection.count_documents({"is_deleted": False})
                 total_agents = self.agent_collection.count_documents({"isDeleted": {"$ne": True}})
                 project_stats[project_name] = {"AgencyCount": total_agencies, "AgentCount": total_agents}
             else:
-                # Query project-specific database for agencies
                 agency_op = {'type': 'find', 'filter': {"is_deleted": False}}
                 agencies = self._query_db('agency', agency_op, database_name)
-                
-                # Count ALL agencies in this project to match marketplace
                 agency_ids = {ag["agency_id"] for ag in agencies}
-                
-                # Count agents directly from project database (same as marketplace logic)
-                # Match marketplace: count all non-deleted agents in the project
-                agent_count_op = {
-                    'type': 'count', 
-                    'filter': {
-                        "$or": [
-                            {"isDeleted": {"$ne": True}},
-                            {"isDeleted": {"$exists": False}}
-                        ]
-                    }
-                }
+                agent_count_op = {'type': 'count', 'filter': {"$or": [{"isDeleted": {"$ne": True}}, {"isDeleted": {"$exists": False}}]}}
                 agent_count = self._query_db('agent', agent_count_op, database_name)
-                
-                project_stats[project_name] = {
-                    "AgencyCount": len(agency_ids),
-                    "AgentCount": agent_count
-                }
-
-        # Assign stats to projects
+                project_stats[project_name] = {"AgencyCount": len(agency_ids), "AgentCount": agent_count}
         for p in projects:
             name = p.get("projectName")
             if not name:
                 continue
-            
             stats = project_stats.get(name, {"AgencyCount": 0, "AgentCount": 0})
             p["AgencyCount"] = stats["AgencyCount"]
             p["AgentCount"] = stats["AgentCount"]
             p["UserCount"] = user_count_map.get(name, 0)
-
         return projects
 
     def update_project_details(self, project_id, request):
-        data = request.get_json()
+        data = request.get_json() or {}
         update_fields = {}
+        generated_keys = []
 
         if "projectName" in data:
             update_fields["projectName"] = data["projectName"]
@@ -1883,141 +1778,315 @@ class UserManager(DatabaseCollections):
         if "app_url" in data:
             update_fields["app_url"] = data["app_url"]
 
+        project_record = self.project.find_one({"_id": ObjectId(project_id)})
+        if not project_record:
+            raise ValidationError("Project not found")
+
+        # --- External apps: read existing from app docs, merge, save back ---
+        if "external_apps" in data:
+            # Read existing subscriptions for this project from app docs
+            existing_apps = []
+            for item in (data.get("external_apps") or []):
+                app_id = item.get("application_id") or item.get("_id") or item.get("id")
+                if app_id:
+                    try:
+                        app_doc = self.external_applications_collection.find_one(
+                            {"_id": ObjectId(app_id), "subscriptions.project_id": project_record.get("projectId")},
+                            {"subscriptions.$": 1}
+                        )
+                        if app_doc and app_doc.get("subscriptions"):
+                            existing_apps.extend(app_doc["subscriptions"])
+                    except Exception:
+                        pass
+
+            merged, generated_keys = self._merge_external_app_mappings(
+                existing_apps,
+                data.get("external_apps") or [],
+                project_record,
+            )
+
+            # Update or push subscriptions into the respective app documents
+            for app in merged:
+                sub_data = {k: v for k, v in app.items()}
+
+                has_existing = self.external_applications_collection.find_one(
+                    {"_id": ObjectId(app["application_id"]), "subscriptions.project_id": project_record.get("projectId")}
+                )
+
+                if has_existing:
+                    self.external_applications_collection.update_one(
+                        {"_id": ObjectId(app["application_id"]), "subscriptions.project_id": project_record.get("projectId")},
+                        {"$set": {"subscriptions.$": sub_data}}
+                    )
+                else:
+                    self.external_applications_collection.update_one(
+                        {"_id": ObjectId(app["application_id"])},
+                        {"$push": {"subscriptions": sub_data}}
+                    )
+
+            # Preserve existing api_key + application_name
+            existing_ext_apps = {
+                (a.get("application_id") or a.get("app_id")): a
+                for a in (project_record.get("external_apps") or [])
+                if a.get("application_id") or a.get("app_id")
+            }
+
+            # Collect names from teams payload
+            team_app_names = {}
+            for team in (data.get("teams") or []):
+                ext = team.get("externalApp") or {}
+                app_id = ext.get("application_id") or ext.get("app_id")
+                app_name = ext.get("app_name") or ext.get("application_name")
+                if app_id and app_name:
+                    team_app_names[app_id] = app_name
+
+            update_fields["external_apps"] = []
+            for app in merged:
+                app_id = app.get("application_id")
+                old = existing_ext_apps.get(app_id, {})
+
+                application_name = (
+                    app.get("application_name")
+                    or team_app_names.get(app_id)
+                    or old.get("application_name")
+                )
+
+                if not application_name and app_id:
+                    try:
+                        app_doc = self.external_applications_collection.find_one(
+                            {"_id": ObjectId(app_id)},
+                            {"name": 1, "application_name": 1}
+                        )
+                        if app_doc:
+                            application_name = app_doc.get("name") or app_doc.get("application_name")
+                    except Exception:
+                        pass
+
+                update_fields["external_apps"].append({
+                    "application_id": app_id,
+                    "application_name": application_name,
+                    "allowed_apis": app.get("allowed_apis") or old.get("allowed_apis") or [],
+                    "api_key": app.get("api_key") or old.get("api_key"),
+                    "status": app.get("status") or old.get("status") or "active",
+                    "mapped_at": app.get("mapped_at") or old.get("mapped_at"),
+                    "credentialsEnabled": app.get("credentialsEnabled", old.get("credentialsEnabled", True)),
+                })
+
         if not update_fields:
             raise ValidationError("No fields to update")
-            
+
         update_fields["dateUpdated"] = datetime.now().strftime("%Y-%m-%d")
 
-        from bson.objectid import ObjectId
-
-        # ✅ Update the master project collection
         update_result = self.project.update_one(
             {"_id": ObjectId(project_id)},
             {"$set": update_fields}
         )
-
         if update_result.matched_count == 0:
             raise ValidationError("Project not found")
 
-        # ✅ Determine user_type (database name)
-        project_record = self.project.find_one(
-            {"_id": ObjectId(project_id)},
-            {"database_name": 1, "projectName": 1, "_id": 0}
-        )
-        user_type = project_record.get("database_name") if project_record else "master"
+        user_type = project_record.get("database_name") or "master"
         project_name = project_record.get("projectName")
 
-        # ✅ Mirror update to project collection in specific DB
-        update_op = {
-            'type': 'update_one',
-            'filter': {"projectName": project_name},
-            'update': {"$set": update_fields}
-        }
-        self._query_db('project', update_op, user_type)
+        self._query_db(
+            "project",
+            {"type": "update_one", "filter": {"projectName": project_name}, "update": {"$set": update_fields}},
+            user_type,
+        )
 
-        
+        # Team sync
         teams = data.get("teams", [])
         for t in teams:
             team_name = t.get("teamName")
             if not team_name:
                 continue
+            agencies = list(self.agency_collection.find({"assigned_to": team_name, "is_deleted": False}, {"_id": 0}))
+            if not agencies:
+                continue
+            agency_ids = [a["agency_id"] for a in agencies]
+            existing_agencies = list(self._query_db("agency", {"type": "find", "filter": {"agency_id": {"$in": agency_ids}}, "projection": {"agency_id": 1, "_id": 0}}, user_type))
+            existing_agency_ids = {a["agency_id"] for a in existing_agencies}
+            new_agencies = [a for a in agencies if a["agency_id"] not in existing_agency_ids]
+            if new_agencies:
+                cursor = self.workflow_collection.find({"agency_name": {"$in": [a["agency_name"] for a in new_agencies]}})
+                workflow_list = list(cursor)
+                if workflow_list:
+                    self._query_db("workflow_collection", {"type": "insert_many", "documents": workflow_list}, user_type)
+                self._query_db("agency", {"type": "insert_many", "documents": new_agencies}, user_type)
+            mappings = list(self.agent_agency_mapping_collection.find({"agency_id": {"$in": agency_ids}, "status": "active"}, {"_id": 0}))
+            if mappings:
+                existing_mappings = list(self._query_db("agent_agency_mapping", {"type": "find", "filter": {"$or": [{"agent_id": m["agent_id"], "agency_id": m["agency_id"]} for m in mappings]}, "projection": {"agent_id": 1, "agency_id": 1, "_id": 0}}, user_type))
+                existing_mapping_keys = {f"{em['agent_id']}_{em['agency_id']}" for em in existing_mappings}
+                new_mappings = [m for m in mappings if f"{m['agent_id']}_{m['agency_id']}" not in existing_mapping_keys]
+                if new_mappings:
+                    self._query_db("agent_agency_mapping", {"type": "insert_many", "documents": new_mappings}, user_type)
+                agent_ids = [m["agent_id"] for m in mappings]
+                agents = list(self.agent_collection.find({"agent_id": {"$in": agent_ids}, "status": "active"}, {"_id": 0}))
+                existing_agents = list(self._query_db("agent", {"type": "find", "filter": {"agent_id": {"$in": agent_ids}}, "projection": {"agent_id": 1, "_id": 0}}, user_type))
+                existing_agent_ids = {ea["agent_id"] for ea in existing_agents}
+                new_agents = [a for a in agents if a["agent_id"] not in existing_agent_ids]
+                if new_agents:
+                    self._query_db("agent", {"type": "insert_many", "documents": new_agents}, user_type)
+                agents_with_kb = [a for a in agents if a.get("knowledge_store_id")]
+                if agents_with_kb:
+                    knowstore_ids = [a["knowledge_store_id"] for a in agents_with_kb]
+                    kb_records = list(self.kb_collection.find({"_id": {"$in": knowstore_ids}}))
+                    existing_kb = list(self._query_db("kb_collection", {"type": "find", "filter": {"_id": {"$in": knowstore_ids}}, "projection": {"_id": 1}}, user_type))
+                    existing_kb_ids = {k["_id"] for k in existing_kb}
+                    for kb in kb_records:
+                        if kb["_id"] not in existing_kb_ids:
+                            self._query_db("kb_collection", {"type": "insert_one", "document": kb}, user_type)
+                        else:
+                            self._query_db("kb_collection", {"type": "update_one", "filter": {"_id": kb["_id"]}, "update": {"$set": kb}}, user_type)
 
-            
-            agencies = list(self.agency_collection.find({"assigned_to": team_name,"is_deleted":False}, {"_id": 0}))
-            if agencies:
-                agency_ids = [a["agency_id"] for a in agencies]
+        if generated_keys:
+            return {"success": True, "external_app_credentials": generated_keys, "message": "Copy API keys now. They will not be shown again."}
+        return True
 
-                existing_agencies = list(self._query_db(
-                    'agency',
-                    {'type': 'find', 'filter': {'agency_id': {'$in': agency_ids}}, 'projection': {'agency_id': 1, '_id': 0}},
-                    user_type
-                ))
-                existing_agency_ids = {a['agency_id'] for a in existing_agencies}
+    def update_project_details_old(self, project_id, request):
+        data = request.get_json() or {}
+        update_fields = {}
+        generated_keys = []
 
-                new_agencies = [a for a in agencies if a["agency_id"] not in existing_agency_ids]
-                if new_agencies:
-                    cursor= self.workflow_collection.find({"agency_name": {"$in": [a["agency_name"] for a in new_agencies]}})
-                    workflow_list = list(cursor)
-                    if workflow_list:
-                        self._query_db('workflow_collection', {'type': 'insert_many', 'documents': workflow_list}, user_type)
+        if "projectName" in data:
+            update_fields["projectName"] = data["projectName"]
+        if "project_desc" in data:
+            update_fields["project_desc"] = data["project_desc"]
+        if "description" in data:
+            update_fields["description"] = data["description"]
+        if "teams" in data:
+            update_fields["teams"] = data["teams"]
+        if "project_db_name" in data:
+            update_fields["database_name"] = data["project_db_name"]
+        if "app_url" in data:
+            update_fields["app_url"] = data["app_url"]
+
+        project_record = self.project.find_one({"_id": ObjectId(project_id)})
+        if not project_record:
+            raise ValidationError("Project not found")
+
+        # --- External apps: read existing from app docs, merge, save back ---
+        if "external_apps" in data:
+            # Read existing subscriptions for this project from app docs
+            existing_apps = []
+            for item in (data.get("external_apps") or []):
+                app_id = item.get("application_id") or item.get("_id") or item.get("id")
+                if app_id:
+                    try:
+                        app_doc = self.external_applications_collection.find_one(
+                            {"_id": ObjectId(app_id), "subscriptions.project_id": project_record.get("projectId")},
+                            {"subscriptions.$": 1}
+                        )
+                        if app_doc and app_doc.get("subscriptions"):
+                            existing_apps.extend(app_doc["subscriptions"])
+                    except Exception:
+                        pass
+
+            merged, generated_keys = self._merge_external_app_mappings(
+                existing_apps,
+                data.get("external_apps") or [],
+                project_record,
+            )
+
+            # Update or push subscriptions into the respective app documents
+            for app in merged:
+                sub_data = {k: v for k, v in app.items()}  # Keep all fields including api_key
+                
+                has_existing = self.external_applications_collection.find_one(
+                    {"_id": ObjectId(app["application_id"]), "subscriptions.project_id": project_record.get("projectId")}
+                )
+                
+                if has_existing:
+                    self.external_applications_collection.update_one(
+                        {"_id": ObjectId(app["application_id"]), "subscriptions.project_id": project_record.get("projectId")},
+                        {"$set": {"subscriptions.$": sub_data}}
+                    )
+                else:
+                    self.external_applications_collection.update_one(
+                        {"_id": ObjectId(app["application_id"])},
+                        {"$push": {"subscriptions": sub_data}}
+                    )
                     
-                    self._query_db('agency', {'type': 'insert_many', 'documents': new_agencies}, user_type)
+            update_fields["external_apps"] = [
+            {
+                "application_id": app.get("application_id"),
+                "application_name": app.get("application_name"),
+                "allowed_apis": app.get("allowed_apis") or [],
+                "api_key": app.get("api_key"),
+                "status": app.get("status") or "active",
+                "mapped_at": app.get("mapped_at"),
+                "credentialsEnabled": app.get("credentialsEnabled", True),
+            }
+            for app in merged
+        ]
 
-            
-            if agencies:
-                mappings = list(self.agent_agency_mapping_collection.find({"agency_id": {"$in": agency_ids},"status":"active"}, {"_id": 0}))
-                if mappings:
-                    mapping_keys = {f"{m['agent_id']}_{m['agency_id']}" for m in mappings}
-                    existing_mappings = list(self._query_db(
-                        'agent_agency_mapping',
-                        {'type': 'find', 'filter': {'$or': [{"agent_id": m["agent_id"], "agency_id": m["agency_id"]} for m in mappings]},
-                        'projection': {'agent_id': 1, 'agency_id': 1, '_id': 0}},
-                        user_type
-                    ))
-                    existing_mapping_keys = {f"{em['agent_id']}_{em['agency_id']}" for em in existing_mappings}
+        if not update_fields:
+            raise ValidationError("No fields to update")
 
-                    new_mappings = [m for m in mappings if f"{m['agent_id']}_{m['agency_id']}" not in existing_mapping_keys]
-                    if new_mappings:
-                        self._query_db('agent_agency_mapping', {'type': 'insert_many', 'documents': new_mappings}, user_type)
+        update_fields["dateUpdated"] = datetime.now().strftime("%Y-%m-%d")
 
+        update_result = self.project.update_one(
+            {"_id": ObjectId(project_id)},
+            {"$set": update_fields}
+        )
+        if update_result.matched_count == 0:
+            raise ValidationError("Project not found")
 
-            if agencies:
-                agent_ids = [m["agent_id"] for m in mappings] if mappings else []
-                if agent_ids:
-                    agents = list(self.agent_collection.find({"agent_id": {"$in": agent_ids},"status": "active"}, {"_id": 0}))
-                    existing_agents = list(self._query_db(
-                        'agent',
-                        {'type': 'find', 'filter': {'agent_id': {'$in': agent_ids}}, 'projection': {'agent_id': 1, '_id': 0}},
-                        user_type
-                    ))
-                    existing_agent_ids = {ea['agent_id'] for ea in existing_agents}
-                    new_agents = [a for a in agents if a["agent_id"] not in existing_agent_ids]
-                    if new_agents:
-                        self._query_db('agent', {'type': 'insert_many', 'documents': new_agents}, user_type)
-                        
-                    agents_with_kb = [a for a in agents if "knowledge_store_id" in a and a["knowledge_store_id"]]
+        user_type = project_record.get("database_name") or "master"
+        project_name = project_record.get("projectName")
 
-                    if agents_with_kb:
-                        knowstore_ids = [a["knowledge_store_id"] for a in agents_with_kb]
+        self._query_db(
+            "project",
+            {"type": "update_one", "filter": {"projectName": project_name}, "update": {"$set": update_fields}},
+            user_type,
+        )
 
-                        
-                        kb_records = list(self.kb_collection.find(
-                            {"_id": {"$in": knowstore_ids}}
-                                # Include any fields you need
-                        ))
+        # Team sync
+        teams = data.get("teams", [])
+        for t in teams:
+            team_name = t.get("teamName")
+            if not team_name:
+                continue
+            agencies = list(self.agency_collection.find({"assigned_to": team_name, "is_deleted": False}, {"_id": 0}))
+            if not agencies:
+                continue
+            agency_ids = [a["agency_id"] for a in agencies]
+            existing_agencies = list(self._query_db("agency", {"type": "find", "filter": {"agency_id": {"$in": agency_ids}}, "projection": {"agency_id": 1, "_id": 0}}, user_type))
+            existing_agency_ids = {a["agency_id"] for a in existing_agencies}
+            new_agencies = [a for a in agencies if a["agency_id"] not in existing_agency_ids]
+            if new_agencies:
+                cursor = self.workflow_collection.find({"agency_name": {"$in": [a["agency_name"] for a in new_agencies]}})
+                workflow_list = list(cursor)
+                if workflow_list:
+                    self._query_db("workflow_collection", {"type": "insert_many", "documents": workflow_list}, user_type)
+                self._query_db("agency", {"type": "insert_many", "documents": new_agencies}, user_type)
+            mappings = list(self.agent_agency_mapping_collection.find({"agency_id": {"$in": agency_ids}, "status": "active"}, {"_id": 0}))
+            if mappings:
+                existing_mappings = list(self._query_db("agent_agency_mapping", {"type": "find", "filter": {"$or": [{"agent_id": m["agent_id"], "agency_id": m["agency_id"]} for m in mappings]}, "projection": {"agent_id": 1, "agency_id": 1, "_id": 0}}, user_type))
+                existing_mapping_keys = {f"{em['agent_id']}_{em['agency_id']}" for em in existing_mappings}
+                new_mappings = [m for m in mappings if f"{m['agent_id']}_{m['agency_id']}" not in existing_mapping_keys]
+                if new_mappings:
+                    self._query_db("agent_agency_mapping", {"type": "insert_many", "documents": new_mappings}, user_type)
+                agent_ids = [m["agent_id"] for m in mappings]
+                agents = list(self.agent_collection.find({"agent_id": {"$in": agent_ids}, "status": "active"}, {"_id": 0}))
+                existing_agents = list(self._query_db("agent", {"type": "find", "filter": {"agent_id": {"$in": agent_ids}}, "projection": {"agent_id": 1, "_id": 0}}, user_type))
+                existing_agent_ids = {ea["agent_id"] for ea in existing_agents}
+                new_agents = [a for a in agents if a["agent_id"] not in existing_agent_ids]
+                if new_agents:
+                    self._query_db("agent", {"type": "insert_many", "documents": new_agents}, user_type)
+                agents_with_kb = [a for a in agents if a.get("knowledge_store_id")]
+                if agents_with_kb:
+                    knowstore_ids = [a["knowledge_store_id"] for a in agents_with_kb]
+                    kb_records = list(self.kb_collection.find({"_id": {"$in": knowstore_ids}}))
+                    existing_kb = list(self._query_db("kb_collection", {"type": "find", "filter": {"_id": {"$in": knowstore_ids}}, "projection": {"_id": 1}}, user_type))
+                    existing_kb_ids = {k["_id"] for k in existing_kb}
+                    for kb in kb_records:
+                        if kb["_id"] not in existing_kb_ids:
+                            self._query_db("kb_collection", {"type": "insert_one", "document": kb}, user_type)
+                        else:
+                            self._query_db("kb_collection", {"type": "update_one", "filter": {"_id": kb["_id"]}, "update": {"$set": kb}}, user_type)
 
-                        
-                        existing_kb = list(self._query_db(
-                            'kb_collection',
-                            {'type': 'find', 'filter': {'_id': {'$in': knowstore_ids}}, 'projection': {'_id': 1}},
-                            user_type
-                        ))
-                        existing_kb_ids = {k['_id'] for k in existing_kb}
-
-                        
-                        for kb in kb_records:
-                            if kb['_id'] not in existing_kb_ids:
-                                
-                                self._query_db(
-                                    'kb_collection',
-                                    {
-                                        'type': 'insert_one',
-                                        'document': kb
-                                    },
-                                    user_type
-                                )
-                            else:
-                                
-                                self._query_db(
-                                    'kb_collection',
-                                    {
-                                        'type': 'update_one',
-                                        'filter': {'_id': kb['_id']},
-                                        'update': {'$set': kb}
-                                    },
-                                    user_type
-                                )
-
+        if generated_keys:
+            return {"success": True, "external_app_credentials": generated_keys, "message": "Copy API keys now. They will not be shown again."}
         return True
 
     def delete_project(self, project_id):
@@ -2093,6 +2162,248 @@ class UserManager(DatabaseCollections):
             self._query_db('agent', {'type': 'insert_many', 'documents': new_agents}, user_type)
 
         return agents
+
+    def _generate_api_key(self) -> str:
+        alphabet = string.ascii_letters + string.digits
+        random_part = "".join(secrets.choice(alphabet) for _ in range(32))
+        return f"sk-movaio-{random_part}"
+
+    def _hash_api_key(self, plain_key: str) -> str:
+        return hashlib.sha256(plain_key.encode("utf-8")).hexdigest()
+
+    def _get_endpoints(self) -> dict:
+        base = (getattr(self.config, "SITE_URL", None) or getattr(self.config, "URL_CONF", None) or "http://localhost:5001").rstrip("/")
+        return {"base_url": base, "api_base": f"{base}/api", "agents": f"{base}/api/agents", "workflows": f"{base}/api/workflows"}
+
+    def _resolve_user_and_role(self, project_name: str = None):
+        user_id = ""
+        role_id = ""
+        role_name = ""
+        try:
+            current = get_current_user() or {}
+            user_id = str(current.get("_id") or current.get("Email") or current.get("EmailId") or "")
+            prj_details = current.get("ProjectDtl") or current.get("PrjDetails") or []
+            active = (project_name or current.get("ActiveProject") or "").strip().lower()
+            for p in prj_details:
+                if not isinstance(p, dict):
+                    continue
+                name = (p.get("prj_name") or p.get("projectName") or "").strip().lower()
+                if name == active or not active:
+                    role_name = p.get("role_name") or p.get("RoleName") or ""
+                    rid = p.get("RoleId") or p.get("role_id")
+                    role_id = str(rid) if rid is not None else ""
+                    break
+            if role_name and not role_id:
+                role_doc = self.role_collection.find_one({"RoleName": role_name, "IsActive": True}, {"RoleId": 1})
+                if role_doc and role_doc.get("RoleId") is not None:
+                    role_id = str(role_doc["RoleId"])
+        except Exception as e:
+            logger.warning(f"_resolve_user_and_role: {e}")
+        return user_id, role_id, role_name
+
+    def _lookup_ext_app(self, item):
+        app_id = item.get("application_id") or item.get("_id") or item.get("id")
+        if not app_id:
+            return None, None
+        app_id_str = str(app_id)
+        try:
+            oid = ObjectId(app_id_str) if ObjectId.is_valid(app_id_str) else None
+        except Exception:
+            oid = None
+        app = None
+        if oid:
+            app = self.external_applications_collection.find_one({"_id": oid, "is_deleted": {"$ne": True}})
+        if not app:
+            app = self.external_applications_collection.find_one({"_id": app_id_str, "is_deleted": {"$ne": True}})
+        return app, app_id_str
+
+    def _get_existing_api_key_for_app(self, application_id: str) -> str | None:
+        """
+        Return the API key already assigned to this external application
+        (from any of its subscriptions or from the parent document).
+        """
+        if not application_id:
+            return None
+
+        try:
+            oid = ObjectId(application_id) if ObjectId.is_valid(application_id) else None
+        except Exception:
+            oid = None
+
+        # 1. Prefer key stored on the parent application document
+        query = {"_id": oid} if oid else {"_id": application_id}
+        parent = self.external_applications_collection.find_one(
+            {**query, "is_deleted": {"$ne": True}},
+            {"api_key": 1, "subscriptions.api_key": 1}
+        )
+        if parent:
+            if parent.get("api_key"):
+                return parent["api_key"]
+            # fallback: any subscription that already has a key
+            for sub in parent.get("subscriptions") or []:
+                if sub.get("api_key"):
+                    return sub["api_key"]
+
+        return None
+
+
+    def _build_external_app_mappings(self, external_apps_input, project_doc=None):
+        mappings = []
+        plain_keys = []
+        if not external_apps_input:
+            return mappings, plain_keys
+
+        endpoints = self._get_endpoints()
+        subscription_id = ""
+        if project_doc:
+            subscription_id = str(project_doc.get("projectId") or project_doc.get("_id") or "")
+        project_name = (project_doc or {}).get("projectName")
+        user_id, role_id, _ = self._resolve_user_and_role(project_name)
+
+        for item in external_apps_input:
+            app, app_id_str = self._lookup_ext_app(item)
+            if app:
+                app_name = app.get("name")
+                allowed = item.get("allowed_apis") or app.get("allowed_apis") or []
+            else:
+                app_name = item.get("name") or item.get("application_name") or "Unknown"
+                allowed = item.get("allowed_apis") or []
+                if not app_id_str:
+                    raw_id = item.get("application_id") or item.get("_id") or item.get("id")
+                    app_id_str = str(raw_id) if raw_id else ""
+            if not app_id_str:
+                continue
+
+            # ─── Re-use existing key for this application if present ───
+            plain = self._get_existing_api_key_for_app(app_id_str)
+            is_new_key = False
+            if not plain:
+                plain = self._generate_api_key()
+                is_new_key = True
+
+                # Persist the key on the parent application document
+                # so future subscriptions of the same app will reuse it
+                try:
+                    oid = ObjectId(app_id_str) if ObjectId.is_valid(app_id_str) else None
+                    filt = {"_id": oid} if oid else {"_id": app_id_str}
+                    self.external_applications_collection.update_one(
+                        filt,
+                        {"$set": {"api_key": plain, "updated_at": datetime.now(timezone.utc)}}
+                    )
+                except Exception as e:
+                    logger.warning(f"Could not store api_key on parent app {app_id_str}: {e}")
+
+            mappings.append({
+                "application_id": app_id_str,
+                "application_name": app_name,
+                "allowed_apis": allowed,
+                "api_key": plain,
+                "status": "active",
+                "mapped_at": datetime.now(timezone.utc),
+            })
+
+            # Only return the key to the frontend when it was newly generated
+            if is_new_key:
+                plain_keys.append({
+                    "application_id": app_id_str,
+                    "application_name": app_name,
+                    "subscription_id": subscription_id,
+                    "user_id": user_id,
+                    "role_id": role_id,
+                    "api_key": plain,
+                    "endpoints": endpoints,
+                    "allowed_apis": allowed,
+                })
+
+        return mappings, plain_keys
+
+
+    def _merge_external_app_mappings(self, existing_apps, incoming_apps, project_doc=None):
+        existing_by_id = {
+            str(a.get("application_id")): a
+            for a in (existing_apps or [])
+            if a.get("application_id")
+        }
+        merged = []
+        generated = []
+        endpoints = self._get_endpoints()
+        subscription_id = ""
+        if project_doc:
+            subscription_id = str(project_doc.get("projectId") or project_doc.get("_id") or "")
+        project_name = (project_doc or {}).get("projectName")
+        user_id, role_id, _ = self._resolve_user_and_role(project_name)
+
+        seen = set()
+        for item in (incoming_apps or []):
+            app_id = str(item.get("application_id") or item.get("_id") or item.get("id") or "")
+            if not app_id or app_id in seen:
+                continue
+            seen.add(app_id)
+
+            # Already mapped to THIS project → keep existing key
+            if app_id in existing_by_id:
+                prev = existing_by_id[app_id]
+                allowed = item.get("allowed_apis") or prev.get("allowed_apis") or []
+                merged.append({
+                    **prev,
+                    "allowed_apis": allowed,
+                    "status": prev.get("status") or "active",
+                })
+                continue
+
+            # New mapping for this project – try to reuse a key that already
+            # exists for the same application (from any other subscription)
+            app, app_id_str = self._lookup_ext_app(item)
+            if app:
+                app_name = app.get("name")
+                allowed = item.get("allowed_apis") or app.get("allowed_apis") or []
+                final_app_id = app_id_str
+            else:
+                app_name = item.get("name") or item.get("application_name") or "Unknown"
+                allowed = item.get("allowed_apis") or []
+                final_app_id = app_id_str if app_id_str else app_id
+
+            if not final_app_id:
+                continue
+
+            plain = self._get_existing_api_key_for_app(final_app_id)
+            is_new_key = False
+            if not plain:
+                plain = self._generate_api_key()
+                is_new_key = True
+                # Store on parent so future mappings reuse it
+                try:
+                    oid = ObjectId(final_app_id) if ObjectId.is_valid(final_app_id) else None
+                    filt = {"_id": oid} if oid else {"_id": final_app_id}
+                    self.external_applications_collection.update_one(
+                        filt,
+                        {"$set": {"api_key": plain, "updated_at": datetime.now(timezone.utc)}}
+                    )
+                except Exception as e:
+                    logger.warning(f"Could not store api_key on parent app {final_app_id}: {e}")
+
+            merged.append({
+                "application_id": final_app_id,
+                "application_name": app_name,
+                "allowed_apis": allowed,
+                "api_key": plain,
+                "status": "active",
+                "mapped_at": datetime.now(timezone.utc),
+            })
+
+            if is_new_key:
+                generated.append({
+                    "application_id": final_app_id,
+                    "application_name": app_name,
+                    "subscription_id": subscription_id,
+                    "user_id": user_id,
+                    "role_id": role_id,
+                    "api_key": plain,
+                    "endpoints": endpoints,
+                    "allowed_apis": allowed,
+                })
+
+        return merged, generated
     
 # # Global instance for backward compatibility
 # user_manager = UserManager()

@@ -322,6 +322,11 @@ export class Chatbot implements OnInit, AfterViewChecked, AfterViewInit {
   isPrivilegeDeletePromptRepo: boolean = false;
   isPrivilegeRefreshPromptRepo: boolean = false;
   isPrivilegeExecutePromptRepo: boolean = false;
+  promptRepoData: any[] = [];
+  isTitleDuplicateError: boolean = false;
+  titleDuplicateMessage: string = '';
+  isTitleCharLimitError: boolean = false;     
+  titleCharLimitMessage: string = '';
 
 
   //#endregion
@@ -351,6 +356,7 @@ export class Chatbot implements OnInit, AfterViewChecked, AfterViewInit {
     this.fetchAgenciesWithAgents();
     this.loggedUser = this._stateService.getLoginDetails();
     this.loadDropdowns();
+    this.loadPromptRepositoryData();
 
 
     this.userName = this.loggedUser.UserName;
@@ -9801,6 +9807,82 @@ formatWorkflowResponse(text) {
 	this.loadRecentData();
   }
 
+// Load prompt data for duplicate checking
+loadPromptRepositoryData() {
+  this.promptRepoService.getAgencyWithAgentsEnhanced().subscribe({
+    next: (res) => {
+      if (res?.success) {
+        this.promptRepoData = res.data || [];
+      }
+    },
+    error: (err) => {
+      console.warn('Failed to load prompt repo data for duplicate check', err);
+    }
+  });
+}
+
+// Check for duplicate title
+isTitleGloballyDuplicate(title: string, excludeMapId?: string): boolean {
+  if (!title?.trim() || !this.promptRepoData?.length) return false;
+
+  const normalized = title.toLowerCase().trim();
+
+  for (const agency of this.promptRepoData) {
+    if (!agency?.agents?.length) continue;
+    for (const agent of agency.agents) {
+      if (!agent?.queries?.length) continue;
+
+      const duplicate = agent.queries.some((q: any) => 
+        q.prompt_title?.toLowerCase().trim() === normalized &&
+        q.map_id !== excludeMapId &&
+        q._id !== excludeMapId
+      );
+
+      if (duplicate) return true;
+    }
+  }
+  return false;
+}
+
+// Real-time validation on blur
+validateRepoTitle() {
+  this.isTitleDuplicateError = false;
+  this.titleDuplicateMessage = '';
+  this.isTitleCharLimitError = false;
+  this.titleCharLimitMessage = '';
+
+  if (!this.repoTitle?.trim()) return;
+  
+    if (this.repoTitle?.trim()?.length < 5) {
+      this.titleCharLimitError = 'Title must be at least 5 characters long.';
+    } else {
+      this.titleCharLimitError = '';
+    }
+
+  if (this.isTitleGloballyDuplicate(this.repoTitle, this.currentResponseToSave?.map_id)) {
+    this.isTitleDuplicateError = true;
+    this.titleDuplicateMessage = 'This title already exists in the repository. Please use a different title.';
+  }
+  this.cdRef.detectChanges();
+}
+
+// Clear errors when user types
+onRepoTitleInput() {
+  this.isTitleCharLimitError = false;
+  this.titleCharLimitMessage = '';
+  this.isTitleDuplicateError = false;
+  this.titleDuplicateMessage = '';
+}
+
+resetSaveToRepoModal() {
+  this.isTitleDuplicateError = false;
+  this.titleDuplicateMessage = '';
+  this.isTitleCharLimitError = false;
+  this.titleCharLimitMessage = '';
+  this.currentResponseToSave = null;
+  this.isEditingTitle = false;
+}
+
 getRepositoryButtonText(): string {
   const lastRes = this.chatResponses[this.chatResponses.length - 1];
   
@@ -9839,6 +9921,8 @@ canSaveOrUpdateToRepo(): boolean {
 
 
 saveOrUpdatePromptToRepository(i: number) {
+  
+  this.resetSaveToRepoModal();  
   const res = this.chatResponses[i];
   if (!res) return;
 
@@ -9848,11 +9932,16 @@ saveOrUpdatePromptToRepository(i: number) {
   this.saveToRepoModalVisible = true;
 }
 
-
 directSaveToRepository() {
   if (!this.currentResponseToSave) return;
 
   const title = this.repoTitle.trim() || 'Untitled Prompt';
+
+  if (this.isTitleGloballyDuplicate(title, this.currentResponseToSave?.map_id)) {
+    this.showToast('error','This title already exists in the repository. Please use a different title.');  
+    return;
+  }
+
   const promptText = this.currentResponseToSave.plain || 
                      this.currentResponseToSave.explanation || 
                      this.currentResponseToSave.html || '';
@@ -9920,12 +10009,32 @@ private updatePromptInRepository(title: string, promptText: string) {
 }
 
 saveWithCustomTitle() {
+
+  this.isTitleDuplicateError = false;
+  this.titleDuplicateMessage = '';
+  this.isTitleCharLimitError = false;
+  this.titleCharLimitMessage = '';
+
   if (!this.repoTitle?.trim()) {
     this.showToast('error','Please enter a title');
     return;
   }
+    if (this.repoTitle?.trim()?.length < 5) {
+    this.isTitleCharLimitError = true;
+    this.titleCharLimitMessage = 'Title must be at least 5 characters long.';
+    this.cdRef.detectChanges();
+    return;
+  }
+  if (this.isTitleGloballyDuplicate(this.repoTitle, this.currentResponseToSave?.map_id)) {
+    this.isTitleDuplicateError = true;
+    this.titleDuplicateMessage = 'This title already exists in the repository. Please use a different title.';
+    this.cdRef.detectChanges();
+    return;
+  }
+  this.isTitleDuplicateError = false;
   this.directSaveToRepository();
 }
+
 
 closeSaveToRepoModal() {
   this.saveToRepoModalVisible = false;

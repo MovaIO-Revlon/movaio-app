@@ -38,6 +38,11 @@ export interface IAgent {
   knowledge_store: { name: string };
   session_start_url?: string;
   session_end_url?: string;
+  internal_tool: {
+    connection_id: string;
+    tool: string;
+    tool_name: string;
+  }[];
 }
 
 export interface IVoiceAgent {

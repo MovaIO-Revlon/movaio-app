@@ -10,7 +10,7 @@ from database_manager import select_database_by_user_type
 from utils import ValidationError
 from bson.objectid import ObjectId
 from UserManagement import UserManager
-from lyzr_api_management import LyzrAPIManagement
+
 # DatabaseManager is now replaced by DatabaseCollections in common_utils
 
 
@@ -89,7 +89,6 @@ class AgentManager(DatabaseCollections):
         self.config = ConfigLoader()        
         self.utils = CommonUtils()
         self.user_manager = UserManager()
-        self.lyzr_api_manager= LyzrAPIManagement()
     
     def _query_db(self, collection_name, operation, user_type=None):
         """Helper method to query database with user type"""
@@ -113,6 +112,23 @@ class AgentManager(DatabaseCollections):
             user_type=user_type
         )
 
+    def send_notification(self, to_email , to_name , data , sourcefrom):
+        print("Sending notification to:", to_email, data)
+        notification_data={
+            "type":"recieved_request",
+            "timestamp": datetime.now(timezone.utc),
+            "email": to_email,
+            "request_id": data.get("agent_id", ""),
+            "data":{
+                "sender": to_name,
+                "action":sourcefrom,
+                "agent_id": data.get("agent_id", ""),
+                "agent_name": data.get("agent_name", ""),
+            }
+        }
+        self.user_notification_collection.insert_one(notification_data)
+
+
     def add_update_agent_details(self, request):
         agent_details = request.get_json()
         agent_id = agent_details.get('agent_id', '')
@@ -133,29 +149,31 @@ class AgentManager(DatabaseCollections):
             else:
                 agent_doc_data = self._build_agent_doc(agent_details, agent_id, enriched_names, scheduler_time)
             agent_doc_data['created_ts'] = datetime.now(timezone.utc)
+            if agent_details.get("internal_tool",[]) and agent_details.get("custom_tool_config") == True:
+                    agent_doc_data["internal_tool"] = agent_details.get("internal_tool",[])
+                    agent_doc_data["Iscustomtool"] = True
             # agent_doc_data['agent_doc_data'] = agent_doc_data
             insertd = self.agent_collection.insert_one(agent_doc_data)
             inserted_id = str(insertd.inserted_id)
+            agent_doc_data['master_agent_id']= inserted_id
+            inserted_approval_request = self.agent_approval_request_collection.insert_one(agent_doc_data)
+            inserted_approval_request_id = str(inserted_approval_request.inserted_id)
             mail_data = {
-                "agent_id": inserted_id,
+                "agent_id": inserted_approval_request_id,
+                "master_agent_id": inserted_id,
                 "agent_name": agent_details.get("name", ""),
                 "agent_description": agent_details.get("description", ""),
                 "agent_role": agent_details.get("agent_role", ""),
                 "agent_instruction": agent_details.get("agent_prompt", "")
             }
             to_email = agent_details.get("approverEmail")
-            #mail_result = self.user_manager.send_mail_approval(
-            #    to_email=to_email,
-            #    to_name="Pranav",
-             #   data=mail_data,
-            #    sourcefrom="Onboarding"
-           # )
-            data = {
-                "agent_id": inserted_id,
-                "status": "Approved",
-                "sourcefrom": "Onboarding"
-            }
-            self.lyzr_api_manager.approval_api(data)
+            mail_result = self.user_manager.send_mail_approval(
+                to_email=to_email,
+                to_name="Pranav",
+                data=mail_data,
+                sourcefrom="Onboarding"
+            )
+            self.send_notification(to_email, agent_details.get("modified_by", {"name": "Unknown User"}).get("name", "Unknown User"), mail_data, "Onboarding")
             return True
         else:
             agent_id = agent_details.get('agent_id')
@@ -174,28 +192,33 @@ class AgentManager(DatabaseCollections):
             version  = agent_db_data.get("version", "1.0.0")
             agent_doc_data = self._build_agent_doc_lyzr_upd(agent_details, enriched_names, scheduler_time,version) if agent_provider_type == "new" else self._build_agent_doc(agent_details, agent_id, enriched_names, scheduler_time)
             agent_doc_data['updated_ts'] = datetime.utcnow()
+            if agent_details.get("internal_tool",[]) and agent_details.get("custom_tool_config") == True:
+                    agent_doc_data["internal_tool"] = agent_details.get("internal_tool",[])
+                    agent_doc_data["Iscustomtool"] = True
             self.agent_collection.update_one({'agent_id': agent_id}, {'$set': {"agent_doc_data": agent_doc_data}} )
             self.agent_collection.update_one({'agent_id': agent_id}, {'$set': {"metadata": agent_details}})
+            agent_doc_data['master_agent_id']= agent_id
+            agent_doc_data['Approval_Status'] = str("Pending Approval")
+            agent_doc_data['Approval_Status_Message'] = str("Pending for Approval")
+            agent_doc_data['approverEmail'] = agent_details.get("approverEmail")
+            inserted_approval_request = self.agent_approval_request_collection.insert_one(agent_doc_data)
+            inserted_approval_request_id = str(inserted_approval_request.inserted_id)
             mail_data = {
-                "agent_id": agent_id,
+                "agent_id": inserted_approval_request_id,
+                "master_agent_id": agent_id,
                 "agent_name": agent_details.get("name", ""),
                 "agent_description": agent_details.get("description", ""),
                 "agent_role": agent_details.get("agent_role", ""),
                 "agent_instruction": agent_details.get("agent_prompt", "")
             }
             to_email = agent_details.get("approverEmail")
-            #mail_result = self.user_manager.send_mail_approval(
-             #   to_email=to_email,
-             #   to_name="Pranav",
-             #   data=mail_data,
-             #   sourcefrom="Update"
-           # )
-            data = {
-                "agent_id": agent_id,
-                "status": "Approved",
-                "sourcefrom": "Update"
-            }
-            self.lyzr_api_manager.approval_api(data)
+            mail_result = self.user_manager.send_mail_approval(
+                to_email=to_email,
+                to_name="Pranav",
+                data=mail_data,
+                sourcefrom="Update"
+            )
+            self.send_notification(to_email, agent_details.get("modified_by", {"name": "Unknown User"}).get("name", "Unknown User"), mail_data, "Update")
             return True
     
     def onboard_agent_details(self, request):
@@ -204,6 +227,13 @@ class AgentManager(DatabaseCollections):
         
         if not agent_id:
             raise ValidationError("Missing agent id")
+
+        agent = json.loads(json.dumps(self.agent_collection.find_one({'agent_id': agent_id,"$or": [
+                    {"isDeleted": {"$exists": False}},
+                    {"isDeleted": False}
+                ]}, {'_id': 0})))
+        if agent:
+            raise ValidationError("Agent with the same Agent ID already exists")
         
         enriched_names = self._get_agent_details(agent_details)
         scheduler_time = self.scheduler_validator.process_scheduler(
@@ -247,6 +277,8 @@ class AgentManager(DatabaseCollections):
             )
         
         return names
+    
+    
     
     def get_all_dropdown_details(self):
         # MCP Connector (no status filter)
@@ -354,6 +386,9 @@ class AgentManager(DatabaseCollections):
             
         
         mapped_data['created_ts'] = datetime.utcnow()
+        if payload.get("internal_tool",[]) and payload.get("Iscustomtool") == True:
+            mapped_data["internal_tool"] = payload.get("internal_tool",[])
+            mapped_data["Iscustomtool"] = True
         
         # if self.agent_collection.find_one({"agent_id": agent_id}):
             # return jsonify({"Success": False, "Message": "Agent already exists"}), 200
@@ -537,7 +572,8 @@ class AgentManager(DatabaseCollections):
             "version": version,
             "Approval_Status": agent_details.get("Approval_Status", "Pending Approval"),
             "Approval_Status_Message": agent_details.get("Approval_Status_Message", "Pending for approval"),
-            "approverEmail":agent_details.get("approverEmail", "")
+            "approverEmail":agent_details.get("approverEmail", ""),
+            "modified_by": agent_details.get("modified_by", "")
         }
 
     def _build_agent_doc(self, agent_details, agent_id, names, scheduler_time):
@@ -571,7 +607,8 @@ class AgentManager(DatabaseCollections):
             'scheduleFrequency': agent_details.get('scheduleFrequency'),
             'schedulerTime': scheduler_time,
             'avatar': agent_details.get('avatar', ''),
-            'actions': agent_details.get('actions', [])
+            'actions': agent_details.get('actions', []),
+            "modified_by": agent_details.get("modified_by", "")
         }
     
     def _get_external_agent_doc(self, payload, agent_data, role_name, agent_type_name, scheduler_time):
@@ -844,9 +881,42 @@ class AgentManager(DatabaseCollections):
         for agent in agents:
             agent_id_str = str(agent.get("agent_id", ""))
             self._enrich_agent_document(agent, agent_id_str, trending_agent_ids)
+            internal_tools_raw = agent.get("internal_tool",'')
+
+            if internal_tools_raw:
+                enriched_tools = []
+                for tool_id in internal_tools_raw:
+                    # Fetch tool data from database
+                    tool_data = self.active_tool_collection.find_one({"_id": ObjectId(tool_id)})
+                    tool_name = tool_data.get("tool_action_name") if tool_data else None
+                    connection_id = tool_data.get("connection_id") if tool_data else None
+                    
+                    # Append as a dictionary
+                    enriched_tools.append({
+                        "tool": tool_id,
+                        "tool_name": tool_name,
+                        "connection_id": connection_id
+                    })
+                agent["internal_tool"] = enriched_tools
+            else:
+                agent["internal_tool"] = []
         
         return agents
-    
+
+    def get_agent_details_for_approval(self, agent_id):
+        operation = {
+            'type': 'find_one',
+            'filter': {
+                "_id": ObjectId(agent_id)
+            }
+        }
+        agent = self._query_db('agent_approval_request_collection', operation)
+        
+        if not agent:
+            return None
+        
+        return agent
+
     def get_all_voice_agent_details(self):
         operation = {
             'type': 'find',
@@ -1062,7 +1132,7 @@ class AgentManager(DatabaseCollections):
             'foundation_resp_ai', 'foundation_ethic_ai', 'foundation_guardrails_ai',
             'status', 'agent_owner', 'agent_provider', 'agent_type_id',
             'scheduleFrequency', 'schedulerTime', 'api_agent_id', 'agent_session_id',
-            'agent_api_key', 'agent_api_url', 'user_id', 'avatar', 'actions',
+            'agent_api_key', 'agent_api_url', 'user_id', 'avatar', 'actions',"internal_tool",
             'schedulerFrequency', 'ai_foundation', 'agent_role', 'agent_goal', 'knowledge_store_enabled','mcp_connector_checkbox','mcp_connector_value','knowledge_store_checkbox','knowledge_store_value','data_store_checkbox','data_store_value','memory_checkbox','memory_value','context_checkbox','context_value'
         }
 
@@ -2331,6 +2401,7 @@ class AgentManager(DatabaseCollections):
         # if agent_provider_type == "new" and approved_status == "Approved":
         mail_data = {
             "agent_id": agent_id,
+            "master_agent_id": agent_id,
             "agent_name": agent.get("name", ""),
             "agent_description": agent.get("description", ""),
             "agent_role": agent.get("agent_role", ""),
@@ -2338,20 +2409,12 @@ class AgentManager(DatabaseCollections):
             "deletion_description": data.get("reason","")
         }
         to_email = data.get("approver_email","")
-        #mail_result = self.user_manager.send_mail_approval(
-            #to_email=to_email,
-           # to_name="Super Admin",
-          #  data=mail_data,
-         #   sourcefrom="Delete"
-        #)
-
-        
-        data = {
-            "agent_id": agent_id,
-            "status": "Approved",
-            "sourcefrom": "Delete"
-            }
-        self.lyzr_api_manager.approval_api(data)
+        mail_result = self.user_manager.send_mail_approval(
+            to_email=to_email,
+            to_name="Super Admin",
+            data=mail_data,
+            sourcefrom="Delete"
+        )
         # else:
         #     knowledge_store= agent.get("knowledge_store", {})
         #     update_op = {
@@ -2393,35 +2456,38 @@ class AgentManager(DatabaseCollections):
             return jsonify({"success": False, "message": "Agent not found or already deleted"}), 404
         approved_status = agent.get("Approval_Status","Approved")
         if approved_status == "Approved" or approved_status == "Rejected":
+            agent['Approval_Status_Message'] = str("Pending approval for deletion")
+            agent['Approval_Status'] = str("Pending Approval")
+            to_email = data.get("approver_email","")
+            agent['approverEmail'] = str(to_email)
+            agent['master_agent_id'] = str(agent_id)
+            agent['modified_by']= data.get("modified_by",{"email": "", "name": ""})
+            agent.pop('_id', None)  # Remove the _id field to avoid duplication issues
+            inserted_approval_request = self.agent_approval_request_collection.insert_one(agent)
+            inserted_approval_request_id = str(inserted_approval_request.inserted_id)
             mail_data = {
-                "agent_id": agent_id,
+                "agent_id": inserted_approval_request_id,
+                "master_agent_id": agent_id,
                 "agent_name": agent.get("name", ""),
                 "agent_description": agent.get("description", ""),
                 "agent_role": agent.get("agent_role", ""),
                 "agent_instruction": agent.get("agent_prompt", ""),
                 "deletion_description": data.get("reason","")
             }
-            to_email = data.get("approver_email","")
-            print("to_email",to_email)
             mail_result = self.user_manager.send_mail_approval(
                 to_email=to_email,
                 to_name="Super Admin",
                 data=mail_data,
                 sourcefrom="Delete"
             )
-            #update_op = {
-             #   'type': 'update_one',
-              #  'filter': {"_id": ObjectId(agent_id)},
-               # 'update': {"$set": {"Approval_Status_Message": "Pending approval for deletion", "Approval_Status": "Pending Approval","deleted_request_email":to_email}}
-            #}
-            #self._query_db('agent', update_op)
-                
-            data = {
-                "agent_id": agent_id,
-                "status": "Approved",
-                "sourcefrom": "Delete"
-                }
-            self.lyzr_api_manager.approval_api(data)
+
+            self.send_notification(to_email, data.get("modified_by", {"name": "Unknown User"}).get("name", "Unknown User"), mail_data, "Delete")
+            # update_op = {
+            #     'type': 'update_one',
+            #     'filter': {"_id": ObjectId(agent_id)},
+            #     'update': {"$set": {"Approval_Status_Message": "Pending approval for deletion", "Approval_Status": "Pending Approval","deleted_request_email":to_email}}
+            # }
+            # self._query_db('agent', update_op)
             return "Agent deletion requested successfully"
 
 

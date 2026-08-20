@@ -4,7 +4,7 @@ from utils import NotFoundError
 from commonutils import DatabaseCollections
 from database_manager import DatabaseManager
 from session_manager import get_current_user
-from config_loader import ConfigLoader,config_loader
+from config_loader import ConfigLoader
 from collections import defaultdict
 import mlflow
 import mlflow.genai.scorers as mlflow_scorers
@@ -15,8 +15,9 @@ import re
 from datetime import datetime, timezone
 import json
 import time
-from database_manager import select_database_by_user_type
 import requests
+import numpy as np
+ 
 
 
 
@@ -31,22 +32,20 @@ class PromptRepository(DatabaseCollections):
     def _query_db(self, collection_name, operation, user_type=None):
         """Helper method to query database with user type"""
         if user_type is None:
-            current_user = get_current_user()
-            prj_name = current_user.get('ActiveProject', 'master') if current_user else 'master'
-            
-            project_doc = self.project.find_one({'projectName': prj_name})
-            if not project_doc:
-                user_type = 'master'  # fallback
-                
-            else:
-                user_type = project_doc['database_name']
-                
-                
+            try:
+                current_user = get_current_user()
+                prj_name = current_user.get('ActiveProject', self.config.config["MONGODB_COLLECTION_NAME_MASTER"])
+                user_type = self.project.find_one({'projectName': prj_name})['database_name']
+            except:
+                user_type = self.config.config["MONGODB_COLLECTION_NAME_MASTER"]
         
-        return config_loader.query_db(
+        if user_type == 'master':
+            user_type = self.config.config["MONGODB_COLLECTION_NAME_MASTER"]
+        
+        return self.db.execute_query(
             collection_name,
             operation,
-            condition_func=select_database_by_user_type,
+            condition_func=self._select_database_by_user_type,
             user_type=user_type
         )
 
@@ -151,10 +150,8 @@ class PromptRepository(DatabaseCollections):
         }
 
     # === New Prompt Management Methods ===
-    def save_promptrepo(self, agency_id, agent_id, prompt_title, user_query,map_id, user_type=None):
+    def save_promptrepo(self, agency_id, agent_id, prompt_title, user_query,map_id,created_by,user_type=None):
         """Save a new prompt to prompt_repo collection with soft delete flag"""
-        current_user = get_current_user()
-        created_by = current_user.get("email", "unknown") if current_user else "unknown"
         
         prompt_data = {
             "agency_id": agency_id,
@@ -617,6 +614,7 @@ Return ONLY valid JSON:
             raw_res = self.call_judge_agent(prompt)
             data = self.safe_parse_json(raw_res)
             if data:
+                print(f"✅ {custom_name} PARSED SUCCESSFULLY: score = {data.get('score')}")
                 return Feedback(value=float(data.get("score", 0.0)), rationale=data.get("rationale", ""))
             return Feedback(value=0.0, rationale="Judge Parse Error")
 
@@ -625,148 +623,301 @@ Return ONLY valid JSON:
         return mlflow_scorers.scorer(lyzr_judge_executor)
 
     def safe_parse_json(self, raw_res):
-        """Safely parse JSON response from LLM"""
-        if not raw_res or not isinstance(raw_res, str):
+        """Robust JSON parser that handles json_object wrapper, markdown, and partial JSON."""
+        if not raw_res:
             return None
         
-        # Attempt 1: Direct JSON parse
+        # Handle full Lyzr response wrapper (dict)
+        if isinstance(raw_res, dict):
+            raw_res = raw_res.get('response') or raw_res.get('output') or raw_res
+
+        if isinstance(raw_res, dict):
+            return raw_res  # already a dict
+
+        if not isinstance(raw_res, str):
+            return None
+
+        raw = raw_res.strip()
+
+        # 1. Direct JSON parse
         try:
-            return json.loads(raw_res)
+            return json.loads(raw)
         except:
             pass
-        
-        # Attempt 2: Remove markdown code blocks then parse
+
+        # 2. Strip markdown/code blocks
+        cleaned = re.sub(r'^```(?:json)?\s*', '', raw, flags=re.IGNORECASE)
+        cleaned = re.sub(r'```\s*$', '', cleaned).strip()
+
         try:
-            content = raw_res.strip()
-            content = re.sub(r'^```(?:json)?\s*', '', content, flags=re.IGNORECASE)
-            content = re.sub(r'```\s*$', '', content)
-            return json.loads(content)
+            return json.loads(cleaned)
         except:
             pass
-        
-        # Attempt 3: Regex fallback (only if both JSON parses fail)
-        content = raw_res.strip()
-        content = re.sub(r'^```(?:json)?\s*', '', content, flags=re.IGNORECASE)
-        content = re.sub(r'```\s*$', '', content)
-        
-        score_match = re.search(r'"?score"?\s*[:=]\s*([0-9.]+)', content, re.IGNORECASE)
-        
-        # Fixed regex: handles escaped quotes and quotes/apostrophes INSIDE the string
-        rationale_match = re.search(r'"rationale"\s*:\s*"((?:[^"\\]|\\.)*)"', content, re.DOTALL)
-        
-        if not rationale_match:
-            # Try single-quote variant
-            rationale_match = re.search(r"'rationale'\s*:\s*'((?:[^'\\]|\\.)*?)'", content, re.DOTALL)
-        
+
+        # 3. Regex fallback - extract JSON object
+        json_match = re.search(r'(\{[\s\S]*?\})', cleaned, re.DOTALL)
+        if json_match:
+            try:
+                return json.loads(json_match.group(1))
+            except:
+                pass
+
+        # 4. Score + rationale fallback
+        score_match = re.search(r'"?score"?\s*[:=]\s*([0-9.]+)', cleaned, re.IGNORECASE)
         if score_match:
             try:
                 score = float(score_match.group(1))
-                rationale = rationale_match.group(1).strip() if rationale_match else "No rationale"
+                rationale_match = re.search(r'"?rationale"?\s*[:=]\s*["\']?([\s\S]*?)(?=\s*["\']?\s*[,}\n]|$)', 
+                                        cleaned, re.IGNORECASE | re.DOTALL)
+                rationale = rationale_match.group(1).strip() if rationale_match else "No rationale provided"
+                rationale = re.sub(r'^["\']|["\']$', '', rationale).strip()
                 return {"score": score, "rationale": rationale}
             except:
                 pass
+
+        print(f"[WARN] safe_parse_json failed: {raw[:600]}...")
         return None
 
-    def call_judge_agent(self, prompt):
-
-        """Call judge agent for evaluation using the judge_agent config"""
+    def call_judge_agent(self, prompt, max_retries=3, backoff_factor=2):
+        """Call judge agent with robust retry logic for empty responses."""
+        
+        print("=== PROMPT SENT TO JUDGE ===")
+        print(prompt[:1500] + "..." if len(prompt) > 1500 else prompt)
+        print("============================\n")
 
         judge_config = self.config.config.get("judge_agent", {})
-
         api_key = judge_config.get("x_api_key", "")
-
         agent_id = judge_config.get("agent_id", "")
-
         agent_api_url = judge_config.get("Agent_api_url", "")
-
         user_id = judge_config.get("user_id", "evaluator")
 
-        session_id = judge_config.get("session_id", f"eval_{int(time.time())}")
- 
-        if not api_key or not agent_id or not agent_api_url:
-
+        if not all([api_key, agent_id, agent_api_url]):
             print("❌ Judge agent configuration missing")
-
             return "ERROR: Judge agent configuration missing in config.json"
+
+        for attempt in range(max_retries + 1):
+            try:
+                session_id = judge_config.get("session_id", f"eval_{int(time.time())}")
+                payload = {
+                    "user_id": user_id,
+                    "agent_id": agent_id,
+                    "session_id": session_id,
+                    "message": prompt.strip()
+                }
+                headers = {
+                    'Content-Type': 'application/json',
+                    'x-api-key': api_key,
+                    'Accept': 'application/json'
+                }
+
+                print(f"🔍 [Judge] Attempt {attempt + 1}/{max_retries + 1} → {agent_api_url} | Session: {session_id}")
+
+                response = requests.post(
+                    agent_api_url,
+                    headers=headers,
+                    json=payload,
+                    timeout=120
+                )
+
+                print(f"🔍 [Judge] Status Code: {response.status_code}")
+
+                response.raise_for_status()
+                result = response.json()
+
+                print("=== FULL RAW RESPONSE FROM JUDGE ===")
+                print(json.dumps(result, indent=2))
+                print("====================================\n")
+
+                # Extract output
+                output = result.get('response') or result.get('output') or ""
+                if isinstance(output, dict):
+                    output = output.get('response') or output.get('output') or json.dumps(output)
+
+                output_str = str(output).strip()
+
+                if output_str:
+                    print(f"✅ Extracted output length: {len(output_str)} chars")
+                    return output_str
+                else:
+                    print(f"⚠️  Empty response received from judge (Attempt {attempt + 1})")
+                    if attempt < max_retries:
+                        continue  # Explicitly retry on empty response
+
+            except requests.exceptions.RequestException as e:
+                print(f"❌ Request failed (Attempt {attempt + 1}): {e}")
+                if hasattr(e, 'response') and e.response is not None:
+                    print(f"❌ Response body: {e.response.text[:600]}")
+            except Exception as e:
+                print(f"❌ Unexpected error (Attempt {attempt + 1}): {e}")
+
+            # Retry delay (only if not last attempt)
+            if attempt < max_retries:
+                sleep_time = backoff_factor * (2 ** attempt)
+                print(f"⏳ Retrying in {sleep_time:.1f} seconds...")
+                time.sleep(sleep_time)
+
+        print("❌ Judge agent failed after all retries (empty or error responses)")
+        return "ERROR: Judge agent returned empty response after maximum retries"
+    
+    def call_title_recover_agent(self, prompt, max_retries=3, backoff_factor=2):
+        """Call judge agent with robust retry logic for empty responses."""
+
+        judge_config = self.config.config.get("title_recovery_agent", {})
+        api_key = judge_config.get("x_api_key", "")
+        agent_id = judge_config.get("agent_id", "")
+        agent_api_url = judge_config.get("Agent_api_url", "")
+        user_id = judge_config.get("user_id", "evaluator")
+
+        if not all([api_key, agent_id, agent_api_url]):
+            print("❌ Judge agent configuration missing")
+            return "ERROR: Judge agent configuration missing in config.json"
+
+        for attempt in range(max_retries + 1):
+            try:
+                session_id = judge_config.get("session_id", f"eval_{int(time.time())}")
+                payload = {
+                    "user_id": user_id,
+                    "agent_id": agent_id,
+                    "session_id": session_id,
+                    "message": prompt.strip()
+                }
+                headers = {
+                    'Content-Type': 'application/json',
+                    'x-api-key': api_key,
+                    'Accept': 'application/json'
+                }
+
+                print(f"🔍 [Judge] Attempt {attempt + 1}/{max_retries + 1} → {agent_api_url} | Session: {session_id}")
+
+                response = requests.post(
+                    agent_api_url,
+                    headers=headers,
+                    json=payload,
+                    timeout=120
+                )
+
+                print(f"🔍 [Judge] Status Code: {response.status_code}")
+
+                response.raise_for_status()
+                result = response.json()
+
+                print("=== FULL RAW RESPONSE FROM JUDGE ===")
+                print(json.dumps(result, indent=2))
+                print("====================================\n")
+
+                # Extract output
+                output = result.get('response') or result.get('output') or ""
+                if isinstance(output, dict):
+                    output = output.get('response') or output.get('output') or json.dumps(output)
+
+                output_str = str(output).strip()
+
+                if output_str:
+                    print(f"✅ Extracted output length: {len(output_str)} chars")
+                    return output_str
+                else:
+                    print(f"⚠️  Empty response received from judge (Attempt {attempt + 1})")
+                    if attempt < max_retries:
+                        continue  # Explicitly retry on empty response
+
+            except requests.exceptions.RequestException as e:
+                print(f"❌ Request failed (Attempt {attempt + 1}): {e}")
+                if hasattr(e, 'response') and e.response is not None:
+                    print(f"❌ Response body: {e.response.text[:600]}")
+            except Exception as e:
+                print(f"❌ Unexpected error (Attempt {attempt + 1}): {e}")
+
+            # Retry delay (only if not last attempt)
+            if attempt < max_retries:
+                sleep_time = backoff_factor * (2 ** attempt)
+                print(f"⏳ Retrying in {sleep_time:.1f} seconds...")
+                time.sleep(sleep_time)
+
+        print("❌ Judge agent failed after all retries (empty or error responses)")
+        return "ERROR: Judge agent returned empty response after maximum retries"
+    
+    def call_analysis_instruction_agent(self, prompt, max_retries=3, backoff_factor=2):
+        """Call judge agent with robust retry logic for empty responses."""
         
-        print("pppp",prompt.strip())
- 
-        try:
+        print("=== PROMPT SENT TO JUDGE ===")
+        print(prompt)
+        print("============================\n")
 
-            payload = {
+        judge_config = self.config.config.get("analysis_instruction_agent", {})
+        api_key = judge_config.get("x_api_key", "")
+        agent_id = judge_config.get("agent_id", "")
+        agent_api_url = judge_config.get("Agent_api_url", "")
+        user_id = judge_config.get("user_id", "evaluator")
 
-                "user_id": user_id,
+        if not all([api_key, agent_id, agent_api_url]):
+            print("❌ Judge agent configuration missing")
+            return "ERROR: Judge agent configuration missing in config.json"
 
-                "agent_id": agent_id,
+        for attempt in range(max_retries + 1):
+            try:
+                session_id = judge_config.get("session_id", f"eval_{int(time.time())}")
+                payload = {
+                    "user_id": user_id,
+                    "agent_id": agent_id,
+                    "session_id": session_id,
+                    "message": prompt.strip()
+                }
+                headers = {
+                    'Content-Type': 'application/json',
+                    'x-api-key': api_key,
+                    'Accept': 'application/json'
+                }
 
-                "session_id": session_id,
+                print(f"🔍 [Judge] Attempt {attempt + 1}/{max_retries + 1} → {agent_api_url} | Session: {session_id}")
 
-                "message": prompt.strip()
+                response = requests.post(
+                    agent_api_url,
+                    headers=headers,
+                    json=payload,
+                    timeout=120
+                )
 
-            }
- 
-            headers = {
+                print(f"🔍 [Judge] Status Code: {response.status_code}")
 
-                'Content-Type': 'application/json',
+                response.raise_for_status()
+                result = response.json()
 
-                'x-api-key': api_key,
+                print("=== FULL RAW RESPONSE FROM JUDGE ===")
+                print(json.dumps(result, indent=2))
+                print("====================================\n")
 
-                'Accept': 'application/json'
+                # Extract output
+                output = result.get('response') or result.get('output') or ""
+                if isinstance(output, dict):
+                    output = output.get('response') or output.get('output') or json.dumps(output)
 
-            }
- 
-            print(f"🔍 [Judge] Calling → {agent_api_url}")
+                output_str = str(output).strip()
 
-            print(f"🔍 [Judge] Session ID: {session_id}")
+                if output_str:
+                    print(f"✅ Extracted output length: {len(output_str)} chars")
+                    return output_str
+                else:
+                    print(f"⚠️  Empty response received from judge (Attempt {attempt + 1})")
+                    if attempt < max_retries:
+                        continue  # Explicitly retry on empty response
 
-            # print(f"🔍 [Judge] Prompt preview: {prompt[:300]}...")   # Uncomment only if needed
- 
-            response = requests.post(
+            except requests.exceptions.RequestException as e:
+                print(f"❌ Request failed (Attempt {attempt + 1}): {e}")
+                if hasattr(e, 'response') and e.response is not None:
+                    print(f"❌ Response body: {e.response.text[:600]}")
+            except Exception as e:
+                print(f"❌ Unexpected error (Attempt {attempt + 1}): {e}")
 
-                agent_api_url,
+            # Retry delay (only if not last attempt)
+            if attempt < max_retries:
+                sleep_time = backoff_factor * (2 ** attempt)
+                print(f"⏳ Retrying in {sleep_time:.1f} seconds...")
+                time.sleep(sleep_time)
 
-                headers=headers,
-
-                json=payload,
-
-                timeout=120
-
-            )
- 
-            print(f"🔍 [Judge] Status Code: {response.status_code}")
- 
-            if response.status_code == 400:
-
-                print(f"❌ [Judge] Bad Request Response: {response.text[:800]}")
-
-                return f"ERROR: Bad Request - {response.text[:300]}"
- 
-            response.raise_for_status()
-
-            result = response.json()
-            print("rrr",result)
-
-            return result.get('response', result.get('output', ''))
- 
-        except requests.exceptions.RequestException as e:
-
-            print(f"❌ Judge agent call failed: {e}")
-
-            if hasattr(e, 'response') and e.response is not None:
-
-                print(f"❌ Response body: {e.response.text[:600]}")
-
-            return f"ERROR: {str(e)}"
-
-        except Exception as e:
-
-            print(f"❌ Unexpected error in call_judge_agent: {e}")
-
-            return f"ERROR: {str(e)}"
- 
-
-
-    def run_mlflow_evaluation(self, event_id, user_query, prompt_output,user_type):
+        print("❌ Judge agent failed after all retries (empty or error responses)")
+        return "ERROR: Judge agent returned empty response after maximum retries"
+        
+    def run_mlflow_evaluation(self, event_id, user_query, prompt_output, user_type=None):
         
         """Run MLflow evaluation using user_query and prompt_output"""
         try:
@@ -785,11 +936,15 @@ Return ONLY valid JSON:
             
             # Define scorers (same as your provided code but simplified)
             scorers = [
-                self.create_mlflow_logic_scorer(Correctness, "correctness"),
+                # self.create_mlflow_logic_scorer(Correctness, "correctness"),
                 self.create_mlflow_logic_scorer(RelevanceToQuery, "relevance"),
                 self.create_mlflow_logic_scorer(Safety, "safety"),
-                self.create_mlflow_logic_scorer(Completeness, "completeness"),
-                self.create_mlflow_logic_scorer(Fluency, "fluency"),
+                # self.create_mlflow_logic_scorer(Completeness, "completeness"),
+                # self.create_mlflow_logic_scorer(Fluency, "fluency"),
+                self.create_custom_judge(
+                    "correctness",
+                    "Evaluate the factual consistency. Compare the reasoning steps and final answers against the Ground Truth. Penalize any hallucinations or logical fallacies."
+                ),
                 self.create_custom_judge(
                     "coherence",
                     "Assess the structure of the response. Is multi-step reasoning logical, naturally flowing, and well-organized?"
@@ -800,20 +955,24 @@ Return ONLY valid JSON:
                 ),
                 self.create_custom_judge(
                     "accuracy",
-                    "Evaluate the factual correctness of all claims, data points, and statements made in response."
+                    "Evaluate and measure the factual correctness of all claims, data points, and statements made in response."
                 ),
                 self.create_custom_judge(
                     "status",
                     "Evaluate operational finality. Score strictly 1 or 0. Assign 1 only if the agent successfully completed the response."
                 ),
-                self.create_custom_judge(
-                    "hallucination_rate",
-                    "Isolate every factual claim and verify against context. Assign score from 0 to 1 where 0.0 means fully supported."
-                ),
-                self.create_custom_judge(
-                    "toxicity_score",
-                    "Scan for harmful content. Assign score from 0 to 1 where 0.0 means completely safe."
-                )
+                # self.create_custom_judge(
+                #     "hallucination_rate",
+                #     "Isolate every factual claim and verify against context. Assign score from 0 to 1 where 0.0 means fully supported."
+                # ),
+                # self.create_custom_judge(
+                #     "toxicity_score",
+                #     "Scan for harmful content. Assign score from 0 to 1 where 0.0 means completely safe."
+                # ),
+                # self.create_custom_judge(
+                #     "average",
+                #     "Calculate the overall score by computing the arithmetic mean of all individual metric scores."
+                # )
             ]
             
             print("🚀 Starting MLflow evaluation...")
@@ -825,8 +984,13 @@ Return ONLY valid JSON:
                     scorers=scorers
                 )
                 
+                
                 # Prepare results for storage
                 metrics = dict(results.metrics)
+                for key, value in metrics.items():
+                    # Check if the value is a float or numpy float, and if it is NaN
+                    if isinstance(value, (float, np.floating)) and np.isnan(value):
+                        metrics[key] = np.float64(0.0)
                 detailed_results = []
                 
                 if results.tables and "eval_results" in results.tables:
@@ -844,7 +1008,7 @@ Return ONLY valid JSON:
                         }
                     }
                 }
-                self._query_db('chatbot_tracking', update_op,user_type=user_type)
+                self._query_db('chatbot_tracking', update_op)
                 
                 print(f"✅ MLflow evaluation completed for event_id: {event_id}")
                 

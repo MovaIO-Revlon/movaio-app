@@ -1,5 +1,6 @@
 import { ChartType } from 'chart.js';
 import { TOption } from '../components/select/select';
+import { environment } from '../../environments/environment';
 
 export const CHART_COLOR_SET10 = [
   '#F17A92',
@@ -85,3 +86,8 @@ export const TRENDS_DEFALUT_USE_CASE_JSON = `{
 }`;
 
 export const PSV_REGEX = /```psv\s+([^\n]+)\n([\s\S]*?)```/g;
+
+const domain = environment.domainName.replace('@', '')?.split('.')?.[0] || '';
+export const ACCESS_TOKEN_KEY = `${domain}-access-token`;
+export const REFRESH_TOKEN_KEY = `${domain}-refresh-token`;
+export const USER_DETAILS_KEY = `${domain}-user-details`;

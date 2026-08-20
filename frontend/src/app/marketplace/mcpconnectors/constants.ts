@@ -7,6 +7,7 @@ export interface IConnector {
   key: TConnectorType;
   icon: string;
   disabled?: boolean;
+  description: string;
 }
 
 export interface IConnectorGroup {
@@ -22,23 +23,33 @@ export const CONNECTOR_GROUPS: IConnectorGroup[] = [
         label: 'Excel',
         key: 'excel',
         icon: 'assets/img/excel_icon.png',
+        description: 'Read and process Excel spreadsheets.',
       },
       {
         label: 'Docx',
         key: 'docx',
         icon: 'assets/img/docx.png',
+        description: 'Extract and analyze Microsoft Word documents.',
         disabled: true,
+      },
+      {
+        label: 'OneDrive',
+        key: 'OneDrive',
+        icon: 'assets/img/onedrive.png',
+        description: 'Extract and analyze Microsoft Word documents.',
       },
       {
         label: 'PPT',
         key: 'ppt',
         icon: 'assets/img/ppt.png',
+        description: 'Access and process PowerPoint presentations.',
         disabled: true,
       },
       {
         label: 'PDF',
         key: 'pdf',
         icon: 'assets/img/pdf.png',
+        description: 'Read and analyze PDF documents.',
         disabled: true,
       },
     ],
@@ -50,12 +61,13 @@ export const CONNECTOR_GROUPS: IConnectorGroup[] = [
         label: 'Team Dynamix',
         key: 'team_dynamix',
         icon: 'assets/img/team_dynamix.png',
+        description: 'Connect to TeamDynamix tickets and assets.',
       },
       {
         label: 'Service Now',
-        key: 'service_now',
+        key: 'ServiceNow',
         icon: 'assets/img/service_now.png',
-        disabled: true,
+        description: 'Access incidents, requests, and knowledge articles.',
       },
     ],
   },
@@ -66,17 +78,20 @@ export const CONNECTOR_GROUPS: IConnectorGroup[] = [
         label: 'JIRA',
         key: 'jira',
         icon: 'assets/img/jira_icon.png',
+        description: 'Sync Jira projects, issues, and workflows.',
       },
       {
         label: 'Azure DevOps',
         key: 'azure_devops',
         icon: 'assets/img/azure_devops.png',
+        description: 'Access Azure DevOps boards, repos, and pipelines.',
         disabled: true,
       },
       {
         label: 'Rally',
         key: 'rally',
         icon: 'assets/img/rally.png',
+        description: 'Connect to Rally work items and project data.',
         disabled: true,
       },
     ],
@@ -88,18 +103,19 @@ export const CONNECTOR_GROUPS: IConnectorGroup[] = [
         label: 'GitHub',
         key: 'github',
         icon: 'assets/img/github.png',
+        description: 'Access repositories, branches, and pull requests.',
         disabled: true,
       },
       {
         label: 'SVN',
         key: 'svn',
         icon: 'assets/img/svn.png',
+        description: 'Connect to Subversion repositories.',
         disabled: true,
       },
     ],
   },
 ];
-
 export const CONNECTOR_ICON_MAP: Record<TConnectorType, string> =
   CONNECTOR_GROUPS.map((item) => item.connectors)
     .flat(1)

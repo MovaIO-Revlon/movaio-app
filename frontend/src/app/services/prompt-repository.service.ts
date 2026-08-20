@@ -37,11 +37,12 @@ export class PromptRepositoryService {
       catchError((error) => {
         console.error('Error in getAgencyWithAgentsEnhanced:', error);
         
+        // Return empty response structure on error so UI doesn't break
         return of({
           success: false,
           data: [],
           message: error?.message || 'Failed to fetch agencies'
-        } as unknown as ApiResponse<any>); 
+        } as unknown as ApiResponse<any>);  // ✅ Fixed: cast via unknown
       })
     );
   }
@@ -76,5 +77,9 @@ export class PromptRepositoryService {
   DeletePrompt(params: any) {
     return this.http.post<ApiResponse<any>>(`/DeletePrompt`, params);
   }
+
+deduplicatePromptTitles(params: any = {}): Observable<ApiResponse<any>> {
+  return this.http.post<ApiResponse<any>>(`/recoverDuplicateTitle`, params);
+}
 
 }

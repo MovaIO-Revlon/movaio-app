@@ -4,8 +4,8 @@ import {
   AfterViewInit,
   ViewChild,
   ElementRef,
-  AfterViewChecked,
-    HostListener
+  HostListener,
+  inject
 } from '@angular/core';
 import { NgxSpinnerService } from 'ngx-spinner';
 import { Router, RouterModule, ActivatedRoute } from '@angular/router';
@@ -18,11 +18,9 @@ import { DomSanitizer } from '@angular/platform-browser';
 import { FormsModule } from '@angular/forms';
 import { SemarketplaceService } from '../../services/semarketplace.service';
 import { Chatbot } from '../../chatbot/chatbot';
-import { Chart } from 'chart.js';
 import { TimeAgoPipe } from '../../timeago/time-ago-pipe';
 import { TooltipDirective } from '../../custom-tooltip/tooltip.directive';
 import { secommendcenter } from '../../services/secommedcenter.service';
-import { filter } from 'rxjs/operators';
 //import ForceGraph3D from 'force-graph';
 import ForceGraph3D from '3d-force-graph';
 import * as THREE from 'three';
@@ -37,9 +35,6 @@ import { getApiError } from '../../utils';
 import { Trends } from "../trends/trends";
 import { AgentEval } from '../agent-eval/agent-eval';
 
-declare var $: any;
-declare var bootstrap: any;
-
 @Component({
   selector: 'app-commendcentermain',
   imports: [CommonModule, Header, FormsModule, RouterModule, Chatbot, TimeAgoPipe, TooltipDirective, NgMultiSelectDropDownModule, Insights, Trends,AgentEval],
@@ -52,9 +47,7 @@ export class CommendCenterMain implements AfterViewInit {
   @ViewChild('filt') filterModalRef!: ElementRef;
   @ViewChild('zoomControls') zoomControls!: ElementRef<HTMLDivElement>;
 
-  newChatbot = true;
   selectedRagId: string = '';
-  captcha: boolean = false;
   showTestCases: boolean = false;
   UserName: string = '';
   loadTabMenu = [
@@ -1482,18 +1475,6 @@ export class CommendCenterMain implements AfterViewInit {
     }
   }
 
-  doLogOut(): void {
-    this._stateService.clearLoginDetails();
-    this._stateService.clearLoginOTPDetails();
-    this._stateService.clearLogoutOTPDetails();
-    this._loginservice.getReCaptchaConfig().subscribe((res) => {
-      this.captcha = res.data.OTPRecaptcha;
-      this._stateService.setLogoutOTPDetails(this.captcha);
-      this._router.navigate(['/']);
-    });
-  }
-
-
   generateReport(): void {
     // Your logic here
     console.log('Generating report...');
@@ -1568,7 +1549,8 @@ export class CommendCenterMain implements AfterViewInit {
     // Re-render or update visualization with current this.background
     if (
       this.selectedNodeTypes.length != 0 ||
-      this.selectedLinkTypes.length != 0
+      this.selectedLinkTypes.length != 0 ||
+	  this.searchKgTerm.trim() !== ''
     ) {
       this.filterForceGraph();
     } else {
@@ -1577,7 +1559,7 @@ export class CommendCenterMain implements AfterViewInit {
     this.overrideSceneNavInfoStyles();
     this.changeDetectorRef.detectChanges();
   }
-  renderForceGraph(): void {
+  renderForceGraph_old(): void {
     const bgColor = this.background === 'white' ? '#ffffff' : '#000000';
 
     // Remove duplicate relationships
@@ -1757,6 +1739,378 @@ export class CommendCenterMain implements AfterViewInit {
     }, 0);
   }
 
+    renderForceGraph(): void {
+    const bgColor = this.background === 'white' ? '#ffffff' : '#000000';
+    const container = this.graphContainer.nativeElement as HTMLElement;
+
+    if (!container) return;
+
+    container.innerHTML = '';
+
+    const uniqueRelationships = this.removeDuplicateLinks(
+      this.graphData.relationships
+    );
+
+    this.nodeTypes = Array.from(
+      new Set(this.graphData.nodes.map((n: any) => n.type))
+    ).sort();
+
+    this.linkTypes = Array.from(
+      new Set(uniqueRelationships.map((r: any) => r.type))
+    ).sort();
+
+    this.changeDetectorRef.detectChanges();
+
+    const data = {
+      nodes: this.graphData.nodes.map((n: any) => ({
+        id: n.id,
+        label: n.type,
+        text: n.text
+      })),
+      links: uniqueRelationships.map((r: any) => ({
+        source: r.from,
+        target: r.to,
+        label: r.type
+      }))
+    };
+
+    const connectedNodeIds = new Set(
+      data.links.flatMap((l: any) => [l.source, l.target])
+    );
+
+    const linkCounts: Record<string, number> = {};
+    (data.links as any[]).forEach((link: any) => {
+      const s = String(link.source);
+      const t = String(link.target);
+      const key = s < t ? `${s}|${t}` : `${t}|${s}`;
+      linkCounts[key] = (linkCounts[key] || 0) + 1;
+    });
+
+    const pairLinkIndices: Record<string, number> = {};
+    (data.links as any[]).forEach((link: any) => {
+      const s = String(link.source);
+      const t = String(link.target);
+      const key = s < t ? `${s}|${t}` : `${t}|${s}`;
+      if (pairLinkIndices[key] === undefined) pairLinkIndices[key] = 0;
+      link.pairIndex = pairLinkIndices[key]++;
+      link.totalCount = linkCounts[key];
+    });
+
+    let hoveredLink: any = null;
+    let draggedLink: any = null;
+    let isDraggingLink = false;
+    let dragPlane: THREE.Plane | null = null;
+    let dragOffset = new THREE.Vector3();
+
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+
+    const Graph = new ForceGraph3D(container)
+      .graphData(data)
+      .enableNodeDrag(true)
+      .enablePointerInteraction(true)
+      .showPointerCursor((obj: any) => !!obj)
+      .nodeColor((node: any) =>
+        this.getNodeColor(node, connectedNodeIds, this.background)
+      )
+      .nodeLabel((node: any) => node.label) // Shows a native HTML tooltip
+      .onNodeHover((node: any) => {
+        if (isDraggingLink) return;
+        container.style.cursor = node ? 'pointer' : 'default';
+      })
+      .linkColor((link: any) => {
+        if (draggedLink === link) return '#ff6b00';
+        if (hoveredLink === link) return '#ff9800';
+        return this.getLinkColor(link, this.background);
+      })
+      .linkWidth((link: any) => {
+        if (draggedLink === link) return 12;
+        if (hoveredLink === link) return 10;
+        return 6;
+      })
+      .linkOpacity(1)
+      .linkHoverPrecision(24)
+      .backgroundColor(bgColor)
+      .linkLabel((link: any) => link.label)
+      .linkDirectionalArrowLength(8)
+      .linkDirectionalArrowRelPos(1)
+      .width(container.offsetWidth)
+      .height(container.offsetHeight)
+      .d3Force('charge', d3.forceManyBody().strength(-600))
+      .d3Force('link', d3.forceLink().id((d: any) => d.id).distance(350))
+      .cooldownTicks(300)
+      .linkCurvature((link: any) => {
+        if (link.totalCount < 2) return 0;
+        const mid = (link.totalCount - 1) / 2;
+        return (link.pairIndex - mid) * 0.15;
+      });
+
+    Graph.nodeThreeObject((node: any) => {
+      const group = new THREE.Group();
+
+      const nodeColor = this.getNodeColor(
+        node,
+        connectedNodeIds,
+        this.background
+      );
+
+      const sphere = new THREE.Mesh(
+        new THREE.SphereGeometry(8, 16, 16),
+        new THREE.MeshLambertMaterial({ color: nodeColor })
+      );
+
+      const hitArea = new THREE.Mesh(
+        new THREE.SphereGeometry(16, 16, 16),
+        new THREE.MeshBasicMaterial({
+          transparent: true,
+          opacity: 0
+        })
+      );
+
+      const text = `${node.text} (${node.label})`;
+      const fontSize = 14;
+      const fontSpec = `${fontSize}px Sans-Serif`;
+
+      const dpr = window.devicePixelRatio || 1;
+      const padding = 16;
+
+      const tmpCanvas = document.createElement('canvas');
+      const tmpCtx = tmpCanvas.getContext('2d')!;
+      tmpCtx.font = fontSpec;
+      const textWidth = tmpCtx.measureText(text).width;
+
+      const logicalWidth = textWidth + padding * 2;
+      const logicalHeight = fontSize + padding;
+      const canvasWidth = Math.ceil(logicalWidth * dpr);
+      const canvasHeight = Math.ceil(logicalHeight * dpr);
+
+      const canvas = document.createElement('canvas');
+      canvas.width = canvasWidth;
+      canvas.height = canvasHeight;
+
+      const ctx = canvas.getContext('2d')!;
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.scale(dpr, dpr);
+      ctx.font = fontSpec;
+      ctx.textBaseline = 'middle';
+      ctx.textAlign = 'left';
+      ctx.clearRect(0, 0, logicalWidth, logicalHeight);
+      ctx.fillStyle = this.background === 'black' ? '#fff' : '#000000';
+      ctx.fillText(text, padding, logicalHeight / 2);
+
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.minFilter = THREE.LinearFilter;
+      texture.magFilter = THREE.LinearFilter;
+      texture.needsUpdate = true;
+
+      const sprite = new THREE.Sprite(
+        new THREE.SpriteMaterial({
+          map: texture,
+          transparent: true
+        })
+      );
+
+      sprite.scale.set(logicalWidth, logicalHeight, 1);
+      sprite.position.set(0, logicalHeight / 2, 0);
+
+      //group.add(hitArea);
+      group.add(sphere);
+      group.add(sprite);
+
+      return group;
+    });
+
+    Graph.onNodeDrag((node: any) => {
+      if (isDraggingLink) return;
+      node.fx = node.x;
+      node.fy = node.y;
+      node.fz = node.z;
+    });
+
+    Graph.onNodeDragEnd((node: any) => {
+      if (isDraggingLink) return;
+      node.fx = node.x;
+      node.fy = node.y;
+      node.fz = node.z;
+    });
+
+    Graph.onLinkHover((link: any) => {
+      hoveredLink = link;
+      Graph.refresh();
+    });
+
+    const getMouse = (event: PointerEvent) => {
+      const rect = container.getBoundingClientRect();
+      mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+      mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+    };
+
+    const startDraggingLink = (event: PointerEvent) => {
+      if (!hoveredLink || isDraggingLink) return;
+
+      draggedLink = hoveredLink;
+      isDraggingLink = true;
+
+      const source = draggedLink.source as any;
+      const target = draggedLink.target as any;
+
+      if (
+        !source ||
+        !target ||
+        source.x == null ||
+        source.y == null ||
+        source.z == null ||
+        target.x == null ||
+        target.y == null ||
+        target.z == null
+      ) {
+        draggedLink = null;
+        isDraggingLink = false;
+        return;
+      }
+
+      const midpoint = new THREE.Vector3(
+        (source.x + target.x) / 2,
+        (source.y + target.y) / 2,
+        (source.z + target.z) / 2
+      );
+
+      const camera = Graph.camera();
+      const cameraDir = new THREE.Vector3();
+      camera.getWorldDirection(cameraDir);
+
+      dragPlane = new THREE.Plane().setFromNormalAndCoplanarPoint(
+        cameraDir,
+        midpoint
+      );
+
+      getMouse(event);
+      raycaster.setFromCamera(mouse, camera);
+
+      const hitPoint = new THREE.Vector3();
+      const hit = raycaster.ray.intersectPlane(dragPlane, hitPoint);
+
+      if (!hit) {
+        draggedLink = null;
+        isDraggingLink = false;
+        dragPlane = null;
+        return;
+      }
+
+      dragOffset.copy(hitPoint).sub(midpoint);
+
+      source.fx = source.x;
+      source.fy = source.y;
+      source.fz = source.z;
+
+      target.fx = target.x;
+      target.fy = target.y;
+      target.fz = target.z;
+
+      Graph.enableNavigationControls(false);
+      Graph.d3ReheatSimulation();
+      Graph.refresh();
+
+      event.preventDefault();
+      event.stopPropagation();
+    };
+
+    const onPointerMove = (event: PointerEvent) => {
+      if (!isDraggingLink || !draggedLink || !dragPlane) return;
+
+      const source = draggedLink.source as any;
+      const target = draggedLink.target as any;
+      if (!source || !target) return;
+
+      getMouse(event);
+      raycaster.setFromCamera(mouse, Graph.camera());
+
+      const hitPoint = new THREE.Vector3();
+      const hit = raycaster.ray.intersectPlane(dragPlane, hitPoint);
+      if (!hit) return;
+
+      const desiredMid = hitPoint.sub(dragOffset);
+
+      const currentMid = new THREE.Vector3(
+        ((source.fx ?? source.x ?? 0) + (target.fx ?? target.x ?? 0)) / 2,
+        ((source.fy ?? source.y ?? 0) + (target.fy ?? target.y ?? 0)) / 2,
+        ((source.fz ?? source.z ?? 0) + (target.fz ?? target.z ?? 0)) / 2
+      );
+
+      const delta = desiredMid.sub(currentMid);
+
+      source.fx = (source.fx ?? source.x ?? 0) + delta.x;
+      source.fy = (source.fy ?? source.y ?? 0) + delta.y;
+      source.fz = (source.fz ?? source.z ?? 0) + delta.z;
+
+      target.fx = (target.fx ?? target.x ?? 0) + delta.x;
+      target.fy = (target.fy ?? target.y ?? 0) + delta.y;
+      target.fz = (target.fz ?? target.z ?? 0) + delta.z;
+
+      Graph.d3ReheatSimulation();
+      Graph.refresh();
+
+      event.preventDefault();
+      event.stopPropagation();
+    };
+
+    const stopDraggingLink = (event?: PointerEvent) => {
+      if (!draggedLink) return;
+
+      const source = draggedLink.source as any;
+      const target = draggedLink.target as any;
+
+      if (source) {
+        source.fx = source.x;
+        source.fy = source.y;
+        source.fz = source.z;
+      }
+
+      if (target) {
+        target.fx = target.x;
+        target.fy = target.y;
+        target.fz = target.z;
+      }
+
+      draggedLink = null;
+      isDraggingLink = false;
+      dragPlane = null;
+
+      Graph.enableNavigationControls(true);
+      Graph.refresh();
+
+      if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    };
+
+    this.graphInstance = Graph;
+
+    setTimeout(() => {
+      const sceneCont = container.querySelector('.scene-container') as HTMLElement | null;
+      if (sceneCont) {
+        sceneCont.style.height = '560px';
+      }
+
+      const canvas = container.querySelector('canvas') as HTMLCanvasElement | null;
+      if (canvas) {
+        canvas.style.height = '560px';
+        canvas.height = 560;
+
+        canvas.addEventListener('pointerdown', startDraggingLink);
+        canvas.addEventListener('pointermove', onPointerMove);
+        canvas.addEventListener('pointerup', stopDraggingLink);
+        canvas.addEventListener('pointerleave', stopDraggingLink);
+      }
+
+      if (this.graphInstance) {
+        this.graphInstance.height(sceneCont ? sceneCont.offsetHeight : 560);
+        this.graphInstance.width(sceneCont ? sceneCont.offsetWidth : container.offsetWidth);
+      }
+    }, 0);
+  }
+  
   onRagIdChange(): void {
     this.selectedNodeTypes = [];
     this.selectedLinkTypes = [];
@@ -2069,7 +2423,7 @@ export class CommendCenterMain implements AfterViewInit {
     this.changeDetectorRef.detectChanges();
   }
  
- filterForceGraph(): void {
+ filterForceGraph_old(): void {
     const bgColor = this.background === 'white' ? '#ffffff' : '#000000';
 
     // Remove duplicate relationships
@@ -2248,6 +2602,379 @@ export class CommendCenterMain implements AfterViewInit {
     }, 0);
   }
 
+   filterForceGraph(): void {
+    const bgColor = this.background === 'white' ? '#ffffff' : '#000000';
+    const container = this.graphContainer.nativeElement as HTMLElement;
+
+    if (!container) return;
+
+    container.innerHTML = '';
+
+    const uniqueRelationships = this.removeDuplicateLinks(
+      this.filteredGraphData.relationships
+    );
+
+    this.nodeTypes = Array.from(
+      new Set(this.filteredGraphData.nodes.map((n: any) => n.type))
+    ).sort();
+
+    this.linkTypes = Array.from(
+      new Set(uniqueRelationships.map((r: any) => r.type))
+    ).sort();
+
+    this.changeDetectorRef.detectChanges();
+
+    const data = {
+      nodes: this.filteredGraphData.nodes.map((n: any) => ({
+        id: n.id,
+        label: n.type,
+        text: n.text
+      })),
+      links: uniqueRelationships.map((r: any) => ({
+        source: r.from,
+        target: r.to,
+        label: r.type
+      }))
+    };
+
+    const connectedNodeIds = new Set(
+      data.links.flatMap((l: any) => [l.source, l.target])
+    );
+
+    const linkCounts: Record<string, number> = {};
+    (data.links as any[]).forEach((link: any) => {
+      const s = String(link.source);
+      const t = String(link.target);
+      const key = s < t ? `${s}|${t}` : `${t}|${s}`;
+      linkCounts[key] = (linkCounts[key] || 0) + 1;
+    });
+
+    const pairLinkIndices: Record<string, number> = {};
+    (data.links as any[]).forEach((link: any) => {
+      const s = String(link.source);
+      const t = String(link.target);
+      const key = s < t ? `${s}|${t}` : `${t}|${s}`;
+      if (pairLinkIndices[key] === undefined) pairLinkIndices[key] = 0;
+      link.pairIndex = pairLinkIndices[key]++;
+      link.totalCount = linkCounts[key];
+    });
+
+    let hoveredLink: any = null;
+    let draggedLink: any = null;
+    let isDraggingLink = false;
+    let dragPlane: THREE.Plane | null = null;
+    let dragOffset = new THREE.Vector3();
+
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+
+    const Graph = new ForceGraph3D(container)
+      .graphData(data)
+      .enableNodeDrag(true)
+      .enablePointerInteraction(true)
+      .showPointerCursor((obj: any) => !!obj)
+      .nodeColor((node: any) =>
+        this.getNodeColor(node, connectedNodeIds, this.background)
+      )
+      .nodeLabel((node: any) => node.label) // Shows a native HTML tooltip
+      .onNodeHover((node: any) => {
+        if (isDraggingLink) return;
+        container.style.cursor = node ? 'pointer' : 'default';
+      })
+      .linkColor((link: any) => {
+        if (draggedLink === link) return '#ff6b00';
+        if (hoveredLink === link) return '#ff9800';
+        return this.getLinkColor(link, this.background);
+      })
+      .linkWidth((link: any) => {
+        if (draggedLink === link) return 12;
+        if (hoveredLink === link) return 10;
+        return 6;
+      })
+      .linkOpacity(1)
+      .linkHoverPrecision(24)
+      .backgroundColor(bgColor)
+      .linkLabel((link: any) => link.label)
+      .linkDirectionalArrowLength(8)
+      .linkDirectionalArrowRelPos(1)
+      .width(container.offsetWidth)
+      .height(container.offsetHeight)
+      .d3Force('charge', d3.forceManyBody().strength(-600))
+      .d3Force('link', d3.forceLink().id((d: any) => d.id).distance(350))
+      .cooldownTicks(300)
+      .linkCurvature((link: any) => {
+        if (link.totalCount < 2) return 0;
+        const mid = (link.totalCount - 1) / 2;
+        return (link.pairIndex - mid) * 0.15;
+      });
+
+    Graph.nodeThreeObject((node: any) => {
+      const group = new THREE.Group();
+
+      const nodeColor = this.getNodeColor(
+        node,
+        connectedNodeIds,
+        this.background
+      );
+
+      const sphere = new THREE.Mesh(
+        new THREE.SphereGeometry(8, 16, 16),
+        new THREE.MeshLambertMaterial({ color: nodeColor })
+      );
+
+      const hitArea = new THREE.Mesh(
+        new THREE.SphereGeometry(16, 16, 16),
+        new THREE.MeshBasicMaterial({
+          transparent: true,
+          opacity: 0
+        })
+      );
+
+      const text = `${node.text} (${node.label})`;
+      const fontSize = 14;
+      const fontSpec = `${fontSize}px Sans-Serif`;
+
+      const dpr = window.devicePixelRatio || 1;
+      const padding = 16;
+
+      const tmpCanvas = document.createElement('canvas');
+      const tmpCtx = tmpCanvas.getContext('2d')!;
+      tmpCtx.font = fontSpec;
+      const textWidth = tmpCtx.measureText(text).width;
+
+      const logicalWidth = textWidth + padding * 2;
+      const logicalHeight = fontSize + padding;
+      const canvasWidth = Math.ceil(logicalWidth * dpr);
+      const canvasHeight = Math.ceil(logicalHeight * dpr);
+
+      const canvas = document.createElement('canvas');
+      canvas.width = canvasWidth;
+      canvas.height = canvasHeight;
+
+      const ctx = canvas.getContext('2d')!;
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.scale(dpr, dpr);
+      ctx.font = fontSpec;
+      ctx.textBaseline = 'middle';
+      ctx.textAlign = 'left';
+      ctx.clearRect(0, 0, logicalWidth, logicalHeight);
+      ctx.fillStyle = this.background === 'black' ? '#fff' : '#000000';
+      ctx.fillText(text, padding, logicalHeight / 2);
+
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.minFilter = THREE.LinearFilter;
+      texture.magFilter = THREE.LinearFilter;
+      texture.needsUpdate = true;
+
+      const sprite = new THREE.Sprite(
+        new THREE.SpriteMaterial({
+          map: texture,
+          transparent: true
+        })
+      );
+
+      sprite.scale.set(logicalWidth, logicalHeight, 1);
+      sprite.position.set(0, logicalHeight / 2, 0);
+
+      //group.add(hitArea);
+      group.add(sphere);
+      group.add(sprite);
+
+      return group;
+    });
+
+    Graph.onNodeDrag((node: any) => {
+      if (isDraggingLink) return;
+      node.fx = node.x;
+      node.fy = node.y;
+      node.fz = node.z;
+    });
+
+    Graph.onNodeDragEnd((node: any) => {
+      if (isDraggingLink) return;
+      node.fx = node.x;
+      node.fy = node.y;
+      node.fz = node.z;
+    });
+
+    Graph.onLinkHover((link: any) => {
+      hoveredLink = link;
+      Graph.refresh();
+    });
+
+    const getMouse = (event: PointerEvent) => {
+      const rect = container.getBoundingClientRect();
+      mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+      mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+    };
+
+    const startDraggingLink = (event: PointerEvent) => {
+      if (!hoveredLink || isDraggingLink) return;
+
+      draggedLink = hoveredLink;
+      isDraggingLink = true;
+
+      const source = draggedLink.source as any;
+      const target = draggedLink.target as any;
+
+      if (
+        !source ||
+        !target ||
+        source.x == null ||
+        source.y == null ||
+        source.z == null ||
+        target.x == null ||
+        target.y == null ||
+        target.z == null
+      ) {
+        draggedLink = null;
+        isDraggingLink = false;
+        return;
+      }
+
+      const midpoint = new THREE.Vector3(
+        (source.x + target.x) / 2,
+        (source.y + target.y) / 2,
+        (source.z + target.z) / 2
+      );
+
+      const camera = Graph.camera();
+      const cameraDir = new THREE.Vector3();
+      camera.getWorldDirection(cameraDir);
+
+      dragPlane = new THREE.Plane().setFromNormalAndCoplanarPoint(
+        cameraDir,
+        midpoint
+      );
+
+      getMouse(event);
+      raycaster.setFromCamera(mouse, camera);
+
+      const hitPoint = new THREE.Vector3();
+      const hit = raycaster.ray.intersectPlane(dragPlane, hitPoint);
+
+      if (!hit) {
+        draggedLink = null;
+        isDraggingLink = false;
+        dragPlane = null;
+        return;
+      }
+
+      dragOffset.copy(hitPoint).sub(midpoint);
+
+      source.fx = source.x;
+      source.fy = source.y;
+      source.fz = source.z;
+
+      target.fx = target.x;
+      target.fy = target.y;
+      target.fz = target.z;
+
+      Graph.enableNavigationControls(false);
+      Graph.d3ReheatSimulation();
+      Graph.refresh();
+
+      event.preventDefault();
+      event.stopPropagation();
+    };
+
+    const onPointerMove = (event: PointerEvent) => {
+      if (!isDraggingLink || !draggedLink || !dragPlane) return;
+
+      const source = draggedLink.source as any;
+      const target = draggedLink.target as any;
+      if (!source || !target) return;
+
+      getMouse(event);
+      raycaster.setFromCamera(mouse, Graph.camera());
+
+      const hitPoint = new THREE.Vector3();
+      const hit = raycaster.ray.intersectPlane(dragPlane, hitPoint);
+      if (!hit) return;
+
+      const desiredMid = hitPoint.sub(dragOffset);
+
+      const currentMid = new THREE.Vector3(
+        ((source.fx ?? source.x ?? 0) + (target.fx ?? target.x ?? 0)) / 2,
+        ((source.fy ?? source.y ?? 0) + (target.fy ?? target.y ?? 0)) / 2,
+        ((source.fz ?? source.z ?? 0) + (target.fz ?? target.z ?? 0)) / 2
+      );
+
+      const delta = desiredMid.sub(currentMid);
+
+      source.fx = (source.fx ?? source.x ?? 0) + delta.x;
+      source.fy = (source.fy ?? source.y ?? 0) + delta.y;
+      source.fz = (source.fz ?? source.z ?? 0) + delta.z;
+
+      target.fx = (target.fx ?? target.x ?? 0) + delta.x;
+      target.fy = (target.fy ?? target.y ?? 0) + delta.y;
+      target.fz = (target.fz ?? target.z ?? 0) + delta.z;
+
+      Graph.d3ReheatSimulation();
+      Graph.refresh();
+
+      event.preventDefault();
+      event.stopPropagation();
+    };
+
+    const stopDraggingLink = (event?: PointerEvent) => {
+      if (!draggedLink) return;
+
+      const source = draggedLink.source as any;
+      const target = draggedLink.target as any;
+
+      if (source) {
+        source.fx = source.x;
+        source.fy = source.y;
+        source.fz = source.z;
+      }
+
+      if (target) {
+        target.fx = target.x;
+        target.fy = target.y;
+        target.fz = target.z;
+      }
+
+      draggedLink = null;
+      isDraggingLink = false;
+      dragPlane = null;
+
+      Graph.enableNavigationControls(true);
+      Graph.refresh();
+
+      if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    };
+
+    this.graphInstance = Graph;
+
+    setTimeout(() => {
+      const sceneCont = container.querySelector('.scene-container') as HTMLElement | null;
+      if (sceneCont) {
+        sceneCont.style.height = '560px';
+      }
+
+      const canvas = container.querySelector('canvas') as HTMLCanvasElement | null;
+      if (canvas) {
+        canvas.style.height = '560px';
+        canvas.height = 560;
+
+        canvas.addEventListener('pointerdown', startDraggingLink);
+        canvas.addEventListener('pointermove', onPointerMove);
+        canvas.addEventListener('pointerup', stopDraggingLink);
+        canvas.addEventListener('pointerleave', stopDraggingLink);
+      }
+
+      if (this.graphInstance) {
+        this.graphInstance.height(sceneCont ? sceneCont.offsetHeight : 560);
+        this.graphInstance.width(sceneCont ? sceneCont.offsetWidth : container.offsetWidth);
+      }
+    }, 0);
+  }
+
+  
   getNodeColor(
     node: any,
     connectedNodeIds: Set<string>,
@@ -2456,7 +3183,7 @@ export class CommendCenterMain implements AfterViewInit {
         case 'Version':
           return 'goldenrod';
         default:
-          return '#222'; // Strong dark gray for white bg
+          return '#e2d8d8cc'; // Strong dark gray for white bg
       }
     } else {
       // Highlighted blue for all or most links, inspired by border in your image

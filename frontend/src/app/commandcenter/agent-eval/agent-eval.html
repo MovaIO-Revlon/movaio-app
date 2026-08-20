@@ -185,35 +185,35 @@
         @if (isMethodDropdownOpen()) {
   <div class="method-select__backdrop" (click)="closeMethodDropdown()"></div>
   <div class="method-select__dropdown">
-   <div class="method-select__dropdown-list">
-  @for (ds of datasetOptions(); track ds.value) {
-    <div
-      class="method-select__option"
-      [class.method-select__option--disabled]="isMethodOptionDisabled(ds.value)"
-      (click)="!isMethodOptionDisabled(ds.value) && selectMethod(ds.value); $event.stopPropagation()"
-    >
-      <span class="method-select__option-label">{{ ds.label }}</span>
-      <div class="method-select__option-right">
-        @if (getEvalMethodDescription(ds.value) && !isMethodOptionDisabled(ds.value)) {
-          <div class="method-select__info-trigger"
-            (mouseenter)="showMethodInfo($event, getEvalMethodDescription(ds.value))"
-            (mouseleave)="hideMethodInfo()">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="12" cy="12" r="10"/>
-              <line x1="12" y1="16" x2="12" y2="12"/>
-              <line x1="12" y1="8" x2="12.01" y2="8"/>
-            </svg>
+    <div class="method-select__dropdown-list">
+      @for (ds of datasetOptions(); track ds.value) {
+  <div
+    class="method-select__option"
+    [class.method-select__option--disabled]="isMethodOptionDisabled(ds.value)"
+    (click)="!isMethodOptionDisabled(ds.value) && selectMethod(ds.value); $event.stopPropagation()"
+  >
+          <span class="method-select__option-label">{{ ds.label }}</span>
+          <div class="method-select__option-right">
+          @if (getEvalMethodDescription(ds.value)) {
+  <div class="method-select__info-trigger"
+    (mouseenter)="showMethodInfo($event, getEvalMethodDescription(ds.value))"
+    (mouseleave)="hideMethodInfo()">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="10"/>
+      <line x1="12" y1="16" x2="12" y2="12"/>
+      <line x1="12" y1="8" x2="12.01" y2="8"/>
+    </svg>
+  </div>
+}
+            @if (selectedDataSet() === ds.value) {
+              <svg class="method-select__check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+            }
           </div>
-        }
-        @if (selectedDataSet() === ds.value) {
-          <svg class="method-select__check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="20 6 9 17 4 12"/>
-          </svg>
-        }
-      </div>
+        </div>
+      }
     </div>
-  }
-</div>
   </div>
 }
       </div>
@@ -257,6 +257,30 @@
             }
           </div>
         }
+
+             <!-- @if (showDateFilter()) {
+              <div class="form-group form-group--date" [class.has-date-selection]="dateRange().length > 0">
+                <label class="form-label">Date Range</label>
+                <div class="datepicker-wrapper">
+                  @if (dateRange().length === 0) {
+                    <span class="datepicker-placeholder">Select date</span>
+                  }
+                  <app-datepicker
+                    [allowSingleDate]="false"
+                    [(value)]="dateRange"
+                    style="
+                      --label-font-size: 0.75rem;
+                      --label-min-width: 12rem;
+                      --label-min-height: auto;
+                    "
+                  >
+                    <img icon src="/assets/img/calendar.svg" alt="calendar icon" />
+                  </app-datepicker>
+                </div>
+              </div>
+            }
+          </div>
+        } -->
 
                 <!-- Step 2: Data Input Section — conditional on dataset type -->
         @if (showStep3()) {
@@ -775,7 +799,7 @@
           <div class="eval-runs-accordion">
 
             <!-- Fallback: evaluating but no results yet — show table with loading row inside same structure -->
-            @if (isEvaluating() && !showResults()) {
+           @if (showFallbackLoading()) {
               <div class="eval-run-item">
                 <div class="eval-run-body">
                   <div class="ps-3 pe-3 eval-table-wrapper">
@@ -793,14 +817,14 @@
                           <th class="col-conciseness"><span class="th-label">Conciseness</span></th>
                           <th class="col-safety"><span class="th-label">Safety</span></th>
                           <th class="col-average"><span class="th-label">Average</span></th>
-                          <th class="col-analysis" *ngIf="isConfigIoScenario() || isConfigTraceScenario()">
+                          <th class="col-analysis" *ngIf="isOnlineEvaluation()">
                             <span class="th-label">Analysis</span>
                           </th>
                         </tr>
                       </thead>
                       <tbody>
                         <tr class="eval-loading-row">
-                          <td [attr.colspan]="(isConfigIoScenario() || isConfigTraceScenario() )? 12 : 11">
+                          <td [attr.colspan]="isOnlineEvaluation() ?  12 : 11">
                             <div class="eval-row-loader">
                               <div class="eval-row-loader__spinner"></div>
                               <span class="eval-row-loader__text">Evaluating Agent Results...</span>
@@ -939,16 +963,16 @@
                             <th class="col-average" [appTooltip]="getMetricDefinition('average')">
                               <span class="th-label">Average</span>
                             </th>
-                            <th class="col-analysis" *ngIf="isConfigIoScenario() || isConfigTraceScenario()">
+                            <th class="col-analysis" *ngIf="isOnlineEvaluation()">
                               <span class="th-label">Analysis</span>
                             </th>
                           </tr>
                         </thead>
                         <tbody>
                           <!-- Loading row — first row inside the existing table -->
-                          @if (isEvaluating()) {
+                          @if (isEvaluating() && evaluatingDateKey() === group.dateKey) {
                             <tr class="eval-loading-row">
-                             <td [attr.colspan]="(isConfigIoScenario()|| isConfigTraceScenario()) ? 12 : 11">
+                              <td [attr.colspan]="isOnlineEvaluation() ? 12 : 11">
                                 <div class="eval-row-loader">
                                   <div class="eval-row-loader__spinner"></div>
                                   <span class="eval-row-loader__text">Evaluating Agent results...</span>
@@ -1026,7 +1050,7 @@
                               <td class="col-average" [appTooltip]="getAverageTooltip(result)">
                                 <span [class]="getScoreBadgeClass(result.average)" style="font-weight: 700;">{{ result.average }}</span>
                               </td>
-                              <td class="col-analysis" *ngIf="isConfigIoScenario()|| isConfigTraceScenario()">
+                              <td class="col-analysis" *ngIf="isOnlineEvaluation()">
                                 <button 
                                   class="btn btn-sm btn-orange" 
                                   (click)="showAnalysisModal(result)">
@@ -1085,6 +1109,7 @@
     </div>
   }
 
+<!-- Cell Tooltip Popup -->
 @if (cellTooltip.visible) {
   <div
     class="cell-tooltip-popup"
@@ -1092,10 +1117,30 @@
     [style.top.px]="cellTooltip.position.top"
     [style.width.px]="cellTooltipSizing.width"
     [style.maxHeight.px]="cellTooltipSizing.maxHeight"
-    (mouseenter)="onCellTooltipEnter()"
-    (mouseleave)="onCellTooltipLeave()"
+    (mouseenter)="onTooltipMouseEnter()"
+    (mouseleave)="onTooltipMouseLeave()"
   >
-    {{ cellTooltip.text }}
+    <div class="cell-tooltip-popup__inner">
+      <button
+        class="cell-tooltip-copy-btn"
+        type="button"
+        [class.cell-tooltip-copy-btn--copied]="isCopied('tooltip-content')"
+        (click)="copyTooltipContent(); $event.stopPropagation()"
+        title="Copy"
+      >
+        @if (isCopied('tooltip-content')) {
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+        } @else {
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+          </svg>
+        }
+      </button>
+      {{ cellTooltip.text }}
+    </div>
   </div>
 }
 @if (methodInfoTooltip().visible) {
@@ -1144,7 +1189,13 @@
   <div class="modal-dialog modal-lg">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title">Agent Configuration Evaluation</h5>
+        <h5 class="modal-title">
+    @if (isOnlineEvaluation() && (selectedDataSet() === 'Config + I/O Dataset' || selectedDataSet() === 'Config + Trace Data')) {
+      Agent Configuration Evaluation
+    } @else {
+      Agent Evaluation Analysis
+    }
+  </h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
      <div class="modal-body" *ngIf="selectedAnalysis()">
@@ -1177,8 +1228,10 @@
         (click)="toggleConfigHighlight(i)">
       
       <span>{{ cause }}</span>
-      <span class="expand-icon" 
-            [class.expanded]="expandedCauses().has(i)">▼</span>
+      @if (selectedAnalysis()?.configHighlights?.[cause]) {
+        <span class="expand-icon" 
+              [class.expanded]="expandedCauses().has(i)">▼</span>
+      }
       
       <div class="config-content" 
            *ngIf="expandedCauses().has(i) && selectedAnalysis()?.configHighlights?.[cause]">

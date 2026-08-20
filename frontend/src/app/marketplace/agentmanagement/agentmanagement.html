@@ -659,6 +659,49 @@
       </div>
     </div>
 
+    @if(!isEditMode) {
+    <div class="mb-1">
+      <label class="form-label fs-14 fw-semibold">Tool</label>
+      <app-select
+        placeholder="Select Connector"
+        [options]="connectorsOptions()"
+        (onSelect)="onConnectorSelect($event.value)"
+        [allowSearch]="false"
+        formControlName="connector"
+        style="
+          --min-height: auto;
+          --width: 100%;
+          --option-font-size: 0.9rem;
+          --font-size: 0.7rem;
+          --options-max-width: auto;
+        "
+        [parentWidth]="true"
+      />
+    </div>
+
+    <div class="mb-2">
+      <label class="form-label fs-14 fw-semibold">Tool Actions</label>
+      <app-multi-select
+        [withSelectAll]="true"
+        [parentWidth]="true"
+        positionY="top"
+        style="
+          --width: 100%;
+          --label-padding-y: 0.4rem;
+          --label-font-size: 0.7rem;
+          --option-font-size: 0.7rem;
+          --options-max-width: auto;
+          --checkbox-size: 0.9rem;
+          --min-height: auto;
+        "
+        placeholder="Select Tools"
+        formControlName="internal_tool"
+        [options]="toolOptions()"
+        [disabled]="toolsQuery.isLoading() || !toolOptions().length"
+      />
+      <form-error controlName="internal_tool"/>
+    </div>
+  }
   </div>
 
                    <div class="mb-2" *ngIf="agentForm.get('agent_type_id')?.value === 'MASTER'">
@@ -938,6 +981,53 @@
                     </div>
 
                   </div>
+
+                  @if (!isExternalNewAgent) {
+                    <div class="mb-1">
+                      <label class="form-label fs-14 fw-semibold">Tool</label>
+                      <app-select
+                        placeholder="Select Connector"
+                        [options]="connectorsOptions()"
+                        [allowSearch]="false"
+                        (onSelect)="onConnectorSelect($event.value)"
+                        formControlName="connector"
+                        style="
+                          --min-height: auto;
+                          --width: 100%;
+                          --option-font-size: 0.9rem;
+                          --font-size: 0.7rem;
+                          --options-max-width: auto;
+                        "
+                        [parentWidth]="true"
+                      />
+                    </div>
+
+                    <div class="mb-2">
+                      <label class="form-label fs-14 fw-semibold">Tool Actions</label>
+                      <app-multi-select
+                        [withSelectAll]="true"
+                        [parentWidth]="true"
+                        positionY="top"
+                        style="
+                          --width: 100%;
+                          --label-padding-y: 0.4rem;
+                          --label-font-size: 0.7rem;
+                          --option-font-size: 0.7rem;
+                          --options-max-width: auto;
+                          --checkbox-size: 0.9rem;
+                          --min-height: auto;
+                        "
+                        placeholder="Select Tools"
+                        formControlName="internal_tool"
+                        [options]="toolOptions()"
+                        [disabled]="!toolOptions().length"
+                      />
+
+                      <form-error controlName="internal_tool"/>
+
+                    </div>
+                  }
+
                 </div>
               </div>
             </div>

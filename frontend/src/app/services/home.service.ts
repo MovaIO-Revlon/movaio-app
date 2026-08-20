@@ -1,5 +1,5 @@
 import { HttpClient, HttpErrorResponse, HttpEvent } from '@angular/common/http';
-import { Injectable,NgZone } from '@angular/core';
+import { inject, Injectable,NgZone } from '@angular/core';
 import { Observable, timeout, Subject } from 'rxjs';
 import { AIInfuseStateService } from './aiinfuse-state.service';
 import { HttpEventType, HttpResponse } from '@angular/common/http';
@@ -13,17 +13,20 @@ import {
   UserManagement,
   IRole,
   IAgent,
+  ILoginResponse,
 } from '../types';
 import { filter, map, scan, distinctUntilChanged } from 'rxjs/operators';
 import { environment as config } from '../../environments/environment';
 import { checkForFetchError, getDefaultHeaders } from '../utils';
 import { Router } from '@angular/router';
-import { io, Socket } from 'socket.io-client';
+import { io } from 'socket.io-client';
+import { fetchWithAuth } from './auth.interceptor';
 
 @Injectable({
   providedIn: 'root',
 })
 export class HomeService {
+
   constructor(
     private _http: HttpClient,
     private userState: AIInfuseStateService,
@@ -107,7 +110,7 @@ export class HomeService {
   }
 
   switchProject(params: any) {
-    return this._http.put<ApiResponse<boolean>>(`/switchProject`, params);
+    return this._http.put<ApiResponse<Pick<ILoginResponse, 'Token' | 'RefreshToken'>>>(`/switchProject`, params);
   }
 
   // region projectmanagement
@@ -147,6 +150,18 @@ export class HomeService {
   
   getAgencyWithAgents() {
     return this._http.get<ApiResponse<any[]>>(`/GetAgencyWithAgents`);
+  }
+
+  getSessionList(params: any) {
+    return this._http.get<ApiResponse<any[]>>(`/getSessionList`, params);
+  }
+
+  getSessionDetails(sessionId: string) {
+    return this._http.get<ApiResponse<any[]>>(`/getSessionDetails/${sessionId}`);
+  }
+
+  getRecentQuery(agentId: string) {
+    return this._http.get<ApiResponse<{ top_query: string }>>(`/getRecentQuery/${agentId}`);
   }
 
   refreshsubScriptionDetails(params: any) {
@@ -226,95 +241,144 @@ chatbotAgentUnified(params: any): {
   const traceDetailsSubject = new Subject<any>();
   const logDetailsSubject = new Subject<any>();
 
+
+
   // Make a single API call
-  fetch(`${config.apiUrl}/chatbotagent`, {
+  fetchWithAuth(`${config.apiUrl}/chatbotagent`, {
     method: "POST",
     body: JSON.stringify(params),
-    headers: getDefaultHeaders(this.router, this.userState.getLoginDetails()?.SessionId),
+    headers: getDefaultHeaders(
+      this.router,
+    ),
   })
     .then(async (res) => {
       await checkForFetchError(res);
 
       if (!res.body) throw new HttpErrorResponse({ statusText: 'No Response Body' });
 
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = '';
+      const contentType = res.headers.get('Content-Type');
+      if (contentType?.includes('application/json')) {
+        const d : ApiResponse<string> = await res.json()
+        streamSubject.next(d?.data || '');
+        this.ngZone.run(() => {
+          streamSubject.next('end');
+          streamSubject.complete();
+          traceDetailsSubject.complete();
+          logDetailsSubject.complete();
+        });
+      } else {
 
-      const read = async () => {
-        while (true) {
-          const { value, done } = await reader.read();
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        let jsonBuffer = ''; // Buffer for accumulating potential JSON
 
-          if (done) break;
+        const read = async () => {
+          while (true) {
+            const { value, done } = await reader.read();
 
-          buffer += decoder.decode(value, { stream: true });
+            if (done) break;
 
-          const frames = buffer.split('\n');
-          buffer = frames.pop()!;
+            buffer += decoder.decode(value, { stream: true });
 
-          for (const frame of frames) {
-            if (!frame.startsWith('data:')) continue;
+            const frames = buffer.split('\n');
+            buffer = frames.pop()!;
 
-            let parsed = frame.replace(/^data: /, '').replace(/^data:/, '');
+            for (const frame of frames) {
+              if (!frame.startsWith('data:')) continue;
 
-            // Check for end signals first
-            if (["[END]", "[DONE]"].some(item => parsed.toLowerCase().includes(item.toLowerCase()))) {
-              // Send the special 'end' signal for the stream subscription's logic
-              this.ngZone.run(() => streamSubject.next('end'));
-              continue; // Skip further processing for this frame
-            }
+              let parsed = frame.replace(/^data: /, '').replace(/^data:/, '');
 
-            // Check if this might be JSON
-            if (parsed.startsWith('{') || parsed.startsWith('[')) {
-              try {
-                let unescaped = parsed.replace(/\\n/g, '\n').replace(/\\"/g, '"').replace(/\\\\/g, '\\');
-                const jsonData = JSON.parse(unescaped);
+              // Check for end signals first
+              if (["[END]", "[DONE]"].some(item => parsed.toLowerCase().includes(item.toLowerCase()))) {
+                // Send the special 'end' signal for the stream subscription's logic
+                this.ngZone.run(() => streamSubject.next('end'));
+                continue; // Skip further processing for this frame
+              }
 
-                // Route to appropriate subject based on type
-                if (jsonData.type === 'trace_details') {
-                  this.ngZone.run(() => traceDetailsSubject.next(jsonData));
-                } else if (jsonData.type === 'log') {
-                  this.ngZone.run(() => logDetailsSubject.next(jsonData));
-                }
-                else if (jsonData.type === 'msg') {
-                    this.ngZone.run(() => logDetailsSubject.next(jsonData));
-                  }
-              } catch (e) {
+              // Check if this might be JSON
+              if (parsed.startsWith('{') || parsed.startsWith('[')) {
+                jsonBuffer += parsed; // Accumulate potential JSON
                 try {
-                  const fixedJson = parsed.replace(/\n/g, '\\n').replace(/\r/g, '\\r').replace(/\t/g, '\\t');
-                  const jsonData = JSON.parse(fixedJson);
+                  let unescaped = parsed.replace(/\\n/g, '\n').replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+                  const jsonData = JSON.parse(unescaped);
+                  console.log('✅ Unified Service - Parsed JSON:', jsonData);
+
+                  // Route to appropriate subject based on type
                   if (jsonData.type === 'trace_details') {
                     this.ngZone.run(() => traceDetailsSubject.next(jsonData));
                   } else if (jsonData.type === 'log') {
                     this.ngZone.run(() => logDetailsSubject.next(jsonData));
                   }
-                } catch (e2) {
-                  console.log('❌ Unified Service - JSON parse error (both attempts failed):', e2);
+                  else if (jsonData.type === 'msg') {
+                      this.ngZone.run(() => logDetailsSubject.next(jsonData));
+                  } else if (jsonData.type === 'final_response') {
+                      this.ngZone.run(() => {
+                        streamSubject.next(jsonData?.data?.response || '')
+                        if (jsonData?.data?.trace_details)
+                          traceDetailsSubject.next({ type: 'trace_details' , data: jsonData.data.trace_details })
+
+                        streamSubject.next('end')
+                        streamSubject.complete()
+                        traceDetailsSubject.complete()
+                        logDetailsSubject.complete()
+                    });
+                  }
+                  // else{
+                  //   this.ngZone.run(() => streamSubject.next(jsonData));
+                  // }
+                } catch (e) {
+                  try {
+                    const fixedJson = parsed.replace(/\n/g, '\\n').replace(/\r/g, '\\r').replace(/\t/g, '\\t');
+                    const jsonData = JSON.parse(fixedJson);
+                    if (jsonData.type === 'trace_details') {
+                      this.ngZone.run(() => traceDetailsSubject.next(jsonData));
+                    } else if (jsonData.type === 'log') {
+                      this.ngZone.run(() => logDetailsSubject.next(jsonData));
+                    } else if (jsonData.type === 'final_response') {
+                      this.ngZone.run(() => {
+                        streamSubject.next(jsonData?.data?.response || '')
+                        if (jsonData?.data?.trace_details)
+                          traceDetailsSubject.next({ type: 'trace_details' , data: jsonData.data.trace_details })
+
+                        streamSubject.next('end')
+                        streamSubject.complete()
+                        traceDetailsSubject.complete()
+                        logDetailsSubject.complete()
+                    });
+                  }
+                    // else{
+                    //   this.ngZone.run(() => streamSubject.next(jsonData));
+                    // }
+                  } catch (e2) {
+                    console.log('❌ Unified Service - JSON parse error (both attempts failed):', e2);
+                    this.ngZone.run(() => streamSubject.next(parsed)); // Fallback: send raw text
+                  }
                 }
+              } else if (parsed) {
+                // Don't convert \n to actual newlines here, as we want to preserve them as text
+                // The component will handle the conversion
+                this.ngZone.run(() => streamSubject.next(parsed));
               }
-            } else if (parsed) {
-              // Don't convert \n to actual newlines here, as we want to preserve them as text
-              // The component will handle the conversion
-              this.ngZone.run(() => streamSubject.next(parsed));
             }
           }
-        }
 
-        // Complete all subjects when the stream is fully done
-        this.ngZone.run(() => {
-          streamSubject.complete();
-          traceDetailsSubject.complete();
-          logDetailsSubject.complete();
-        });
-      };
+          // Complete all subjects when the stream is fully done
+          this.ngZone.run(() => {
+            streamSubject.complete();
+            traceDetailsSubject.complete();
+            logDetailsSubject.complete();
+          });
+        };
 
-      read().catch(error => {
-        this.ngZone.run(() => {
-          streamSubject.error(error);
-          traceDetailsSubject.error(error);
-          logDetailsSubject.error(error);
+        read().catch(error => {
+          this.ngZone.run(() => {
+            streamSubject.error(error);
+            traceDetailsSubject.error(error);
+            logDetailsSubject.error(error);
+          });
         });
-      });
+      }
     })
     .catch(e => {
       this.ngZone.run(() => {
@@ -485,6 +549,14 @@ listenToWorkflowLogs(workflowId: string, eventId: string): Observable<any> {
 
   getWorkflowLogsAndTraces(workflowId: string, eventId: string): Observable<ApiResponse<any>> {
     return this._http.get<ApiResponse<any>>(`/workflow/${workflowId}/${eventId}/logs-and-traces`);
+  }
+
+  getNotificationsByUser(email: string) {
+    return this._http.get<ApiResponse<any>>(`/getNotificationsByUser/${email}`);
+  }
+
+  getSessionToken() {
+    return this._http.post<ApiResponse<{ session_token: string }>>('/session-token',{})
   }
 
   //#endregion

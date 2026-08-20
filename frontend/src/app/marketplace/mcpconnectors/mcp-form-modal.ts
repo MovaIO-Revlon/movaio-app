@@ -1,8 +1,10 @@
 import {
   Component,
   computed,
+  effect,
   ElementRef,
   inject,
+  input,
   model,
   output,
   resource,
@@ -19,9 +21,14 @@ import { lastValueFrom, Observable } from 'rxjs';
 import {
   ApiResponse,
   IAgent,
+  IConnection,
+  IFunctionJson,
+  ILoginResponse,
+  IRequest,
   ISchemaForAgent,
   ISearchIndex,
   IUseCase,
+  TConnectorCategory,
   TConnectorType,
   TUseCaseType,
 } from '../../types';
@@ -45,6 +52,10 @@ import {
   FilterStore,
   PAGE_NAME,
 } from '../../commandcenter/trends/filter.store';
+import { DynamicForm } from './dynamic-form';
+import { ToolSelector } from './tool-selector';
+import { rxResource } from '@angular/core/rxjs-interop';
+import { AIInfuseStateService } from '../../services/aiinfuse-state.service';
 
 export type TStepperData = IJiraForm &
   IExcelForm &
@@ -52,6 +63,9 @@ export type TStepperData = IJiraForm &
     columns: IColumn[];
     useCases: Record<TUseCaseType, IUseCase[]>;
     visualization: Record<TUseCaseType, Record<string, Partial<WidgetConfig>>>;
+    source: Record<string, any>;
+    customTools: IFunctionJson[];
+    toolsOrder: string[];
   };
 type TStepperPlainData = IJiraForm &
   Omit<IExcelForm, 'files' | 'sheetsList'> &
@@ -64,10 +78,15 @@ enum CONNECTOR_STEPS {
   FIELD_MAPPING = 'Field Mapping',
   USE_CASE_CONFIGURATION = 'Use Case Configuration',
   VISUALIZATION_CONFIGURATION = 'Visualization Configuration',
+  CONFIGURE_TOOLS = 'Configure Tools',
 }
 
 const INITIAL_STEPS: CONNECTOR_STEPS[] = Object.values(CONNECTOR_STEPS).filter(
-  (item) => item !== CONNECTOR_STEPS.CONNECTOR_OVERVIEW,
+  (item) =>
+    ![
+      CONNECTOR_STEPS.CONNECTOR_OVERVIEW,
+      CONNECTOR_STEPS.CONFIGURE_TOOLS,
+    ].includes(item),
 );
 declare var $: any;
 
@@ -85,6 +104,9 @@ const defaultData: TStepperData = {
     insights: {},
     trends: {},
   },
+  source: {},
+  customTools: [],
+  toolsOrder: [],
   //excel
   sheet_name: '',
   files: [],
@@ -111,6 +133,8 @@ const defaultData: TStepperData = {
     ConnectorOverView,
     UseCaseMapper,
     WidgetBuilderComponent,
+    DynamicForm,
+    ToolSelector,
   ],
   providers: [{ provide: PAGE_NAME, useValue: 'insights' }, FilterStore],
   template: `
@@ -126,12 +150,12 @@ const defaultData: TStepperData = {
     >
       <div class="modal-dialog modal-xl">
         <div class="modal-content">
-          <div class="modal-header">
+          <div class="modal-header py-2">
             <h1
               class="modal-title fw-semibold fs-14"
               id="onboardMCPConnectorLabel"
             >
-              {{ isEdit() ? 'Edit' : 'Add' }} MCP Server
+              {{ isEdit() ? 'Edit' : 'New' }} MCP Connector
             </h1>
             <button
               type="button"
@@ -142,53 +166,65 @@ const defaultData: TStepperData = {
           </div>
 
           @let currentStep = activeStep();
-          @let index = steps().indexOf(currentStep);
-          @let stepsLength = steps().length;
+          @let index = renderSteps().indexOf(currentStep);
+          @let stepsLength = renderSteps().length;
           @let isEditMode = isEdit();
+          @let privilegeConfig = privilege();
 
-          <div class="modal-body">
+          <div
+            class="modal-body p-0 h-100 position-relative overflow-y-auto overflow-x-hidden"
+            style="max-height: 70dvh;"
+          >
             <div
-              class="stepper d-flex justify-content-center align-items-center gap-2 py-3"
+              class="stepper overflow-auto d-flex align-items-center gap-2 px-3 py-2 border-bottom"
             >
-              @for (step of steps(); track step) {
+              @for (step of renderSteps(); track step) {
                 <div
-                  class="step d-flex"
+                  class="step d-flex text-nowrap"
                   [class.active]="step === currentStep || $index < index"
+                  style="color: var(--color);"
                 >
-                  <span class="step-count">
-                    @if ($index < index) {
-                      <i class="fa-solid fa-check"></i>
-                    } @else {
-                      {{ $index + 1 }}
-                    }
-                  </span>
+                  @if (currentStep !== connectorSteps.SELECT_CONNECTOR) {
+                    <span class="step-count">
+                      @if ($index < index) {
+                        <i class="fa-solid fa-check"></i>
+                      } @else {
+                        {{ $index + 1 }}
+                      }
+                    </span>
+                  }
+
                   <span class="step-label">{{ step }}</span>
                 </div>
-                @if ($index < stepsLength - 1) {
+                @if (stepsLength > 1 && $index < stepsLength - 1) {
                   <div class="spacer"></div>
                 }
               }
             </div>
+            @let connectorType = connector().type;
+            @let viewMode = isViewMode();
 
             @switch (currentStep) {
               @case (connectorSteps.CONNECTOR_OVERVIEW) {
                 <connector-overview
                   class="border-top d-block pt-1"
-                  [data]="searchIndex()"
-                  (onDelete)="onDelete.emit(searchIndex()!)"
+                  [data]="entityData()"
+                  (onDelete)="
+                    privilegeConfig.delete && onDelete.emit(entityData()!)
+                  "
                 />
               }
               @case (connectorSteps.SELECT_CONNECTOR) {
-                <connector-step [(ngModel)]="connectorType" />
+                <connector-step [(ngModel)]="connector" />
               }
               @case (connectorSteps.SOURCE_SETUP) {
-                @switch (connectorType()) {
+                @switch (connectorType) {
                   @case ('excel') {
                     <excel-connector-form
-                      class="border-top d-block pt-1"
+                      class="border-top d-block pt-1 px-2"
                       [isEdit]="isEditMode"
                       [(valid)]="isStepValid"
-                      [isViewMode]="isViewMode()"
+                      [isViewMode]="viewMode"
                       [agentsList]="agentsList()"
                       [entityList]="entityList()"
                       [data]="stepInitialData()"
@@ -196,10 +232,10 @@ const defaultData: TStepperData = {
                   }
                   @case ('jira') {
                     <jira-connector-form
-                      class="border-top d-block pt-1"
+                      class="border-top d-block pt-1 px-2"
                       [isEdit]="isEditMode"
                       [(valid)]="isStepValid"
-                      [isViewMode]="isViewMode()"
+                      [isViewMode]="viewMode"
                       [agentsList]="agentsList()"
                       [entityList]="entityList()"
                       [data]="stepInitialData()"
@@ -207,21 +243,38 @@ const defaultData: TStepperData = {
                   }
                   @case ('team_dynamix') {
                     <team-dynamix-connector-form
-                      class="border-top d-block pt-1"
+                      class="border-top d-block pt-1 px-2"
                       [isEdit]="isEditMode"
                       [(valid)]="isStepValid"
-                      [isViewMode]="isViewMode()"
+                      [isViewMode]="viewMode"
                       [agentsList]="agentsList()"
                       [entityList]="entityList()"
                       [data]="stepInitialData()"
                     />
                   }
+                  @default {
+                    @if (
+                      connectorType &&
+                      ['OneDrive', 'ServiceNow'].includes(connectorType)
+                    ) {
+                      <dynamic-form
+                        [attr.c]="connectorType"
+                        [(valid)]="isStepValid"
+                        [connector]="$any(connectorType)"
+                        [excludeNames]="excludeNames()"
+                        [tools]="toolsData()"
+                        [data]="stepInitialData()"
+                        [isEdit]="isEdit()"
+                      />
+                    }
+                  }
                 }
               }
               @case (connectorSteps.FIELD_MAPPING) {
                 <column-mapper
+                  class="px-2 pt-1 d-block"
                   [(valid)]="isStepValid"
-                  [isViewMode]="isViewMode()"
+                  [isViewMode]="viewMode"
                   [entity]="entity()"
                   [columnsList]="columnList()"
                   [data]="data().columns"
@@ -239,10 +292,11 @@ const defaultData: TStepperData = {
                 >
                 </ng-container>
                 <usecase-mapper
+                  class="d-block px-2"
                   [(valid)]="isStepValid"
                   [entity]="entity()"
                   [data]="data().useCases[useCaseTab]"
-                  [indexId]="searchIndex()?.index_id || ''"
+                  [indexId]="$any(entityData())?.index_id || ''"
                   [useCaseTab]="useCaseTab"
                   [fullSchema]="fullSchema()"
                 />
@@ -259,10 +313,23 @@ const defaultData: TStepperData = {
                 >
                 </ng-container>
                 <widget-builder
+                  class="px-2"
                   [(valid)]="isStepValid"
                   [cases]="data().useCases[useCaseTab]"
                   [useCaseConfig]="data().visualization[useCaseTab]"
                   [useCaseTab]="useCaseTab"
+                />
+              }
+              @case (connectorSteps.CONFIGURE_TOOLS) {
+                <tool-selector
+                  [(valid)]="isStepValid"
+                  [tools]="toolsData()"
+                  [data]="data().customTools"
+                  [toolsOrder]="data().toolsOrder"
+                  [connector]="$any(connectorType)"
+                  [privilegeEdit]="
+                    isEdit() ? privilegeConfig.edit : privilegeConfig.add
+                  "
                 />
               }
             }
@@ -288,9 +355,7 @@ const defaultData: TStepperData = {
               type="button"
               class="btn btn-warning text-white px-3"
               (click)="nextStep()"
-              [disabled]="
-                !allowNext() || (!isPrivilegeEdit() && index === stepsLength)
-              "
+              [disabled]="!allowNext()"
             >
               @if (index === steps().length - 1) {
                 Submit
@@ -304,7 +369,7 @@ const defaultData: TStepperData = {
     </div>
 
     <ng-template #pageTab let-tab>
-      <ul class="nav nav-tabs mb-2">
+      <ul class="nav nav-tabs mb-2 mt-1 px-2">
         @for (item of ['insights', 'trends']; track item) {
           <li class="nav-item" (click)="changeUseCaseTab(item)">
             <span
@@ -329,7 +394,7 @@ const defaultData: TStepperData = {
       color: var(--color);
       display: flex;
       gap: 0.5rem;
-      font-size: 0.875rem;
+      font-size: 0.75rem;
       font-weight: 400;
     }
 
@@ -348,7 +413,8 @@ const defaultData: TStepperData = {
       --color: #000;
     }
 
-    .stepper .step.active .step-count {
+    .stepper .step.active,
+    .stepper .step-count {
       --color: #ffa242;
     }
   `,
@@ -359,13 +425,16 @@ export class McpFormModal {
   @ViewChild(ExcelConnectorForm) excel!: ExcelConnectorForm;
   @ViewChild(JiraConnectorForm) jira!: JiraConnectorForm;
   @ViewChild(TeamDynamixForm) teamDynamix!: TeamDynamixForm;
+  @ViewChild(DynamicForm) dynamicForm!: DynamicForm;
   @ViewChild(ColumnMapper) columnMapping!: ColumnMapper;
   @ViewChild(UseCaseMapper) UseCaseMapper!: UseCaseMapper;
   @ViewChild(WidgetBuilderComponent) widgetBuilder!: WidgetBuilderComponent;
+  @ViewChild(ToolSelector) toolSelector!: ToolSelector;
 
   private readonly service = inject(SemarketplaceService);
   private readonly toast = inject(ToastService);
   private readonly loading = inject(NgxSpinnerService);
+  private readonly state = inject(AIInfuseStateService);
   readonly connectorSteps = CONNECTOR_STEPS;
 
   private jiraFields: (keyof TStepperPlainData)[] = [
@@ -388,7 +457,8 @@ export class McpFormModal {
   ];
 
   isStepValid = model<boolean>(false);
-  onDelete = output<ISearchIndex>();
+  excludeNames = input<string[]>([]);
+  onDelete = output<ISearchIndex | IConnection>();
   steps = signal(INITIAL_STEPS);
   isEdit = signal<boolean>(false);
   entityList = signal<string[]>(['incident', 'defect', 'testcase']);
@@ -399,11 +469,23 @@ export class McpFormModal {
         ?.data.filter((agent) => agent.agent_type_id === 'INSIGHT_AGENT') || [],
   );
 
-  isPrivilegeEdit = signal(false);
+  privilege = input.required<{
+    view: boolean;
+    add: boolean;
+    edit: boolean;
+    delete: boolean;
+    refresh: boolean;
+    execute: boolean;
+  }>();
 
-  isViewMode = signal(false);
   activeStep = signal<CONNECTOR_STEPS>(CONNECTOR_STEPS.SELECT_CONNECTOR);
-  connectorType = signal<TConnectorType>('excel');
+  connector = signal<{
+    type: TConnectorType | null;
+    category: TConnectorCategory | null;
+  }>({
+    type: null,
+    category: null,
+  });
   columnList = signal<string[]>([]);
   fullSchema = signal<ISchemaForAgent['full_schema']>([]);
   selectedUseCaseTab = signal<keyof TStepperData['useCases']>('insights');
@@ -411,7 +493,7 @@ export class McpFormModal {
   data = signal<TStepperData>({
     ...defaultData,
   });
-  searchIndex = signal<ISearchIndex | undefined>(undefined);
+  entityData = signal<ISearchIndex | IConnection | undefined>(undefined);
 
   close = output<boolean>();
 
@@ -431,8 +513,10 @@ export class McpFormModal {
       sheetsList,
       app_id,
       password,
+      source,
     } = this.data();
-    const connectorType = this.connectorType();
+    const connectorType = this.connector().type;
+    if (!connectorType) return {};
 
     if (connectorType === 'excel') {
       return {
@@ -469,6 +553,10 @@ export class McpFormModal {
       } satisfies ITeamDynamixForm;
     }
 
+    if (['OneDrive', 'ServiceNow'].includes(connectorType)) {
+      return source;
+    }
+
     return {};
   });
 
@@ -477,50 +565,109 @@ export class McpFormModal {
   });
 
   entity = computed(() => this.data().entity_type || 'incident');
+  isViewMode = computed(() => {
+    const p = this.privilege();
+
+    return !(p.add || p.edit);
+  });
   allowNext = computed(() => {
     const currentStep = this.activeStep();
     if (currentStep === this.connectorSteps.CONNECTOR_OVERVIEW) return true;
-    if (currentStep === this.connectorSteps.SELECT_CONNECTOR)
-      return !!this.connectorType();
+    if (currentStep === this.connectorSteps.SELECT_CONNECTOR) {
+      const connector = this.connector();
+      return !!connector.type && connector.category;
+    }
+
+    const renderSteps = this.renderSteps();
+    const p = this.privilege();
+    if (
+      renderSteps.indexOf(this.activeStep()) === renderSteps.length - 1 &&
+      !(this.isEdit() ? p.edit : p.add)
+    ) {
+      return false;
+    }
     return this.isStepValid();
   });
+
+  renderSteps = computed(() => {
+    const entityData = this.entityData();
+
+    const id =
+      entityData &&
+      ('connection_name' in entityData
+        ? entityData.connection_id
+        : entityData._id);
+    if (!id && !(this.connector().type && this.connector().category))
+      return [CONNECTOR_STEPS.SELECT_CONNECTOR];
+
+    return this.steps();
+  });
+
+  toolsData = computed(
+    () => (!this.toolsQuery.error() && this.toolsQuery.value()?.data) || [],
+  );
+
+  constructor() {
+    effect(() => {
+      const category = this.connector().category;
+      if (category && !this.isEdit()) {
+        this.steps.set(
+          category === 'agent'
+            ? [
+                CONNECTOR_STEPS.SELECT_CONNECTOR,
+                CONNECTOR_STEPS.SOURCE_SETUP,
+                CONNECTOR_STEPS.CONFIGURE_TOOLS,
+              ]
+            : INITIAL_STEPS,
+        );
+      }
+    });
+  }
 
   openModal(
     {
       columnsList,
       fullSchema,
       connector_type,
-      isPrivilegeEdit,
+      category,
       ...initialData
     }: Partial<
       TStepperData & {
         columnsList?: string[];
         fullSchema: ISchemaForAgent['full_schema'];
         connector_type?: TConnectorType;
-        isPrivilegeEdit?: boolean;
+        category: TConnectorCategory;
       }
     >,
-    searchIndex?: ISearchIndex,
+    entityData?: ISearchIndex | IConnection,
   ) {
-    this.isPrivilegeEdit.set(!!isPrivilegeEdit);
-    this.isViewMode.set(!isPrivilegeEdit);
-
     if (initialData) {
       this.data.set({ ...defaultData, ...initialData });
       this.columnList.set(columnsList || []);
       this.fullSchema.set(fullSchema || []);
-      this.connectorType.set(connector_type || 'excel');
+      this.connector.update((v) => ({
+        ...v,
+        type: connector_type || null,
+        category: category || null,
+      }));
     }
 
-    this.searchIndex.set(searchIndex);
-    this.isEdit.set(!!searchIndex);
+    this.entityData.set(entityData);
+    this.isEdit.set(!!entityData);
 
-    if (searchIndex) {
-      this.steps.set(
-        Object.values(CONNECTOR_STEPS).filter(
-          (item) => item !== CONNECTOR_STEPS.SELECT_CONNECTOR,
-        ),
-      );
+    if (entityData) {
+      const tempSteps =
+        category === 'agent'
+          ? [
+              CONNECTOR_STEPS.CONNECTOR_OVERVIEW,
+              CONNECTOR_STEPS.SOURCE_SETUP,
+              CONNECTOR_STEPS.CONFIGURE_TOOLS,
+            ]
+          : Object.values(CONNECTOR_STEPS).filter(
+              (item) => item !== CONNECTOR_STEPS.SELECT_CONNECTOR,
+            );
+
+      this.steps.set(tempSteps);
       this.activeStep.set(CONNECTOR_STEPS.CONNECTOR_OVERVIEW);
     }
 
@@ -542,13 +689,22 @@ export class McpFormModal {
     this.steps.set(INITIAL_STEPS);
     this.close.emit(refetch);
     this.error.set('');
+    this.connector.set({ type: null, category: null });
   }
 
-  update(d: Partial<IExcelForm | IJiraForm | ITeamDynamixForm>) {
+  update(
+    d: Partial<
+      | IExcelForm
+      | IJiraForm
+      | ITeamDynamixForm
+      | { source: Record<string, any> }
+    >,
+  ) {
     this.data.update((v) => ({
       ...v,
       ...d,
-      columns: v.entity_type !== d.entity_type ? [] : v.columns,
+      columns:
+        'entity_type' in d && v.entity_type !== d?.entity_type ? [] : v.columns,
     }));
   }
 
@@ -570,18 +726,21 @@ export class McpFormModal {
       this.fullSchema.set([]);
       const data = this.teamDynamix?.onSubmit() || {};
       this.update(data);
+    } else if (['OneDrive', 'ServiceNow'].includes(connectorType)) {
+      const source = this.dynamicForm?.onSubmit() || {};
+      this.update({ source });
     }
   }
 
   private updateColumnMappings() {
-    const cType = this.connectorType();
+    const cType = this.connector().type;
     const columnMapping = this.columnMapping?.onSubmit() || {};
     this.data.update((v) => ({
       ...v,
       ...columnMapping,
     }));
 
-    if (['jira', 'team_dynamix'].includes(cType)) {
+    if (cType && ['jira', 'team_dynamix'].includes(cType)) {
       this.fetchFieldsSchema(this.data());
     }
   }
@@ -611,13 +770,25 @@ export class McpFormModal {
     }));
   }
 
+  private updateTools() {
+    const tools = this.toolSelector?.onSubmit() || {};
+    this.data.update((v) => ({
+      ...v,
+      customTools: tools.filter(
+        (item) => item.type && ['local', 'custom'].includes(item.type),
+      ),
+      toolsOrder: tools.map((item) => item.name),
+    }));
+  }
+
   nextStep() {
     const activeStep = this.activeStep();
     const steps = this.steps();
+    const { type: connectorType, category } = this.connector();
+
+    if (!connectorType) return;
 
     if (activeStep === CONNECTOR_STEPS.SOURCE_SETUP) {
-      const connectorType = this.connectorType();
-
       this.updateFormData(connectorType);
 
       this.data.update((v) => {
@@ -658,6 +829,8 @@ export class McpFormModal {
       this.updateUseCases();
     } else if (activeStep === CONNECTOR_STEPS.VISUALIZATION_CONFIGURATION) {
       this.updateVisualization();
+    } else if (activeStep === CONNECTOR_STEPS.CONFIGURE_TOOLS) {
+      this.updateTools();
     }
 
     if (activeStep === steps[steps.length - 1]) {
@@ -671,8 +844,10 @@ export class McpFormModal {
 
   prevStep() {
     const activeStep = this.activeStep();
-    const connectorType = this.connectorType();
+    const connectorType = this.connector().type;
     const steps = this.steps();
+
+    if (!connectorType) return;
 
     if (activeStep === steps[0]) return this.closeModal(false);
     else if (activeStep === CONNECTOR_STEPS.SOURCE_SETUP) {
@@ -683,6 +858,8 @@ export class McpFormModal {
       this.updateUseCases();
     } else if (activeStep === CONNECTOR_STEPS.VISUALIZATION_CONFIGURATION) {
       this.updateVisualization();
+    } else if (activeStep === CONNECTOR_STEPS.CONFIGURE_TOOLS) {
+      this.updateTools();
     }
 
     this.activeStep.update((v) => steps[Math.max(0, steps.indexOf(v) - 1)]);
@@ -731,7 +908,7 @@ export class McpFormModal {
   }
 
   fetchFieldsSchema(data: Partial<IJiraForm | ITeamDynamixForm>): void {
-    const connectorType = this.connectorType();
+    const connectorType = this.connector().type;
     let observable: Observable<ApiResponse<unknown>> | null = null;
 
     if (connectorType === 'jira') {
@@ -775,11 +952,95 @@ export class McpFormModal {
     });
   }
 
+  submitConnectorForm({
+    connector,
+    source,
+    customTools,
+    toolsOrder,
+  }: {
+    connector: string;
+    source: Record<string, any>;
+    customTools: IFunctionJson[];
+    toolsOrder: string[];
+  }) {
+    const { name, auth, ...credentials } = source;
+    const connection_id = (this.entityData() as IConnection)?.connector_id;
+
+    const toolData = this.toolsData().find(
+      (item) => item.tool_name === connector,
+    );
+    const connector_id =
+      toolData?._id && typeof toolData?._id === 'object'
+        ? toolData?._id?.$oid
+        : (toolData?._id as string);
+
+    if (!connector_id) return;
+
+    this.loading.show();
+    this.service
+      .saveConnection({
+        connector,
+        connection_name: name,
+        user_id: (this.state.getLoginDetails() as ILoginResponse)?.Email || '',
+        credentials,
+        connector_id,
+        connection_id,
+        auth,
+        custom_tool: customTools.map((item) => ({
+          id: item.id,
+          action_name: item.name,
+          action_desc: item.description,
+          parameters: { ...item, type: undefined, id: undefined },
+        })),
+        tools_order: toolsOrder,
+      })
+      .subscribe({
+        next: () => {
+          this.loading.hide();
+          this.toast.showToast(
+            'success',
+            `Connector ${this.isEdit() ? 'updated' : 'created'} successfully!`,
+          );
+
+          this.closeModal(true);
+        },
+        error: (error) => {
+          this.loading.hide();
+
+          this.error.set(
+            error?.error?.message ||
+              `Failed to ${connector_id ? 'update' : 'create'} connector `,
+          );
+        },
+      });
+  }
+
   submitForm(): void {
     this.error.set('');
 
-    const connectorType = this.connectorType();
-    const { files, columns, useCases, visualization, ...rest } = this.data();
+    const connectorType = this.connector().type;
+
+    if (!connectorType) return;
+
+    const {
+      files,
+      columns,
+      useCases,
+      visualization,
+      source,
+      customTools,
+      toolsOrder,
+      ...rest
+    } = this.data();
+
+    if (['OneDrive', 'ServiceNow'].includes(connectorType)) {
+      return this.submitConnectorForm({
+        connector: connectorType,
+        source,
+        customTools,
+        toolsOrder,
+      });
+    }
 
     let formData = new FormData();
 
@@ -846,4 +1107,8 @@ export class McpFormModal {
       },
     });
   }
+
+  toolsQuery = rxResource({
+    stream: () => this.service.getAllTools(),
+  });
 }

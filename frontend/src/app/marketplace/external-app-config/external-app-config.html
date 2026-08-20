@@ -1,0 +1,730 @@
+<app-header></app-header>
+<div class="root" style="margin-top: 4.063rem">
+
+  <!-- Main Content -->
+  <div class="content position-relative">
+    <!-- Header -->
+    <div
+      class="header d-flex gap-3 align-items-center border-bottom pb-2 px-3"
+      style="margin: 0 -1rem"
+    >
+      <!-- Title -->
+      <div class="title">External Applications</div>
+
+      <!-- Search -->
+      <div
+        class="position-relative ms-auto fs-12"
+        style="max-width: 20rem; min-width: 16rem"
+      >
+        <i
+          class="fa-solid fa-search position-absolute text-muted"
+          style="left: 0.75rem; top: 50%; transform: translateY(-50%); font-size: 0.8rem"
+        ></i>
+        <input
+          class="form-control fs-12 ps-6 rounded-3"
+          style="height: 2.2rem; border-color: #e5e7eb"
+          placeholder="Search"
+          [ngModel]="filters().search"
+          (ngModelChange)="setFilters({ search: $event })"
+        />
+      </div>
+
+      <!-- Filter Button -->
+      <button
+        type="button"
+        class="btn btn-outline-secondary d-flex align-items-center gap-2 fs-12 px-3 rounded-3"
+        style="height: 2.2rem; border-color: #e5e7eb; color: #374151"
+        data-bs-toggle="modal"
+        data-bs-target="#filterExternalAppModal"
+      >
+        <i class="fa-solid fa-sliders"></i>
+        <span>Filter</span>
+      </button>
+
+      <!-- View Toggle (Grid / List) -->
+      <div class="d-flex align-items-center border rounded-3 overflow-hidden" style="height: 2.2rem">
+        <button
+          type="button"
+          class="btn btn-sm border-0 rounded-0 px-3"
+          [class.bg-light]="viewMode === 'grid'"
+          [class.text-dark]="viewMode === 'grid'"
+          [class.text-muted]="viewMode !== 'grid'"
+          (click)="viewMode = 'grid'"
+          title="Grid View"
+          style="height: 100%"
+        >
+          <i class="fa-solid fa-grip"></i>
+        </button>
+        <button
+          type="button"
+          class="btn btn-sm border-0 rounded-0 px-3 border-start"
+          [class.bg-light]="viewMode === 'list'"
+          [class.text-dark]="viewMode === 'list'"
+          [class.text-muted]="viewMode !== 'list'"
+          (click)="viewMode = 'list'"
+          title="List View"
+          style="height: 100%"
+        >
+          <i class="fa-solid fa-list"></i>
+        </button>
+      </div>
+
+      <!-- Register Button -->
+      <button
+        type="button"
+        class="btn fs-12 border-0 text-white px-3 rounded-3 d-flex align-items-center gap-2"
+        style="height: 2.2rem; background-color: #ffb944"
+        (click)="openAddModal()" [disabled]="!isPrivilegeAdd"
+      >
+        <i class="fa-solid fa-plus"></i>
+        <span>Register External Application</span>
+      </button>
+    </div>
+
+    <!-- Card / List content -->
+    <div class="flex-grow-1 overflow-auto">
+
+  <!-- Empty state (both views) -->
+  <div
+    *ngIf="!loading() && filteredItems.length === 0"
+    class="d-flex flex-column align-items-center justify-content-center text-muted py-5"
+    style="min-height: 16rem"
+  >
+    <p class="mb-0 fs-14">No data available</p>
+  </div>
+
+      <!-- ========== GRID VIEW ========== -->
+      <div class="list" *ngIf="viewMode === 'grid' && filteredItems.length > 0">
+        <div
+          class="mcp-card position-relative"
+          *ngFor="let item of paginatedData"
+          (click)="openEditModal(item)"
+           style="cursor: pointer"
+        >
+          <!-- Actions + Status Dot -->
+          <div
+            class="card-action d-flex align-items-center position-absolute pe-2 pt-1"
+            style="top: 0; right: 0"
+          >
+            <button
+              class="btn bg-white btn-sm text-muted border-0"
+              type="button"
+              title="Edit"  [disabled]="!isPrivilegeEdit" 
+              (click)="openEditModal(item); $event.stopPropagation()"
+            >
+              <i class="fa-regular fa-pen-to-square"></i>
+            </button>
+                        <button
+              class="btn bg-white btn-sm text-muted border-0"
+              type="button"
+              title="Delete"
+              [disabled]="!isPrivilegeDelete" 
+              (click)="openDeleteConfirmModal($event, item)"
+            >
+              <i class="fa-regular fa-trash-can"></i>
+            </button>
+           <span
+            *ngIf="item.status === 'active'"
+            class="rounded-circle ms-1"
+            style="width: 10px; height: 10px; background-color: #29b14b"
+          ></span>
+          </div>
+
+          <div class="card-header">
+            <div class="icon">
+              <img
+                [src]="getAppIcon(item.connector_type)"
+                [alt]="item.connector_type"
+                style="width: 28px; height: 28px; object-fit: contain"
+              />
+            </div>
+            <div style="min-width: 0">
+              <div class="card-title" [title]="item.title">{{ item.title }}</div>
+              <div class="card-description text-capitalize">{{ item.connector_type }}</div>
+            </div>
+          </div>
+
+          <div class="card-body">
+            <div class="d-flex align-items-start gap-2">
+              <div
+                class="text-truncate"
+                style="color: #6b7280; font-size: 0.85rem; line-height: 1.4; flex: 1; min-width: 0"
+              >
+                {{ item.description }}
+              </div>
+              <i
+                *ngIf="item.description"
+                class="fa-solid fa-circle-info text-muted"
+                style="font-size: 0.8rem; cursor: pointer; flex-shrink: 0; margin-top: 2px"
+                [appTooltip]="item.description"
+              ></i>
+            </div>
+          </div>
+
+          <div class="border-top fs-14 pt-2 d-flex align-items-center text-muted">
+            <i class="fa-regular fa-calendar"></i>
+            <span class="ps-1">{{ item.createdAt | date: 'dd/MM/yyyy' }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ========== LIST / TABLE VIEW ========== -->
+      <div class="table-responsive mt-3" *ngIf="viewMode === 'list' && filteredItems.length > 0">
+        <table class="table table-hover align-middle ext-app-table mb-0">
+          <thead>
+            <tr>
+              <th scope="col">Application Name</th>
+              <th scope="col">Application Type</th>
+              <th scope="col">Description</th>
+              <th scope="col">Date Created</th>
+              <th scope="col" class="text-end">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let item of paginatedData">
+              <!-- Name -->
+              <td class="text-truncate">
+                {{ item.title }}
+              </td>
+
+              <!-- Type with icon -->
+              <td>
+                <div class="d-flex align-items-center gap-2">
+                  <img
+                    [src]="getAppIcon(item.connector_type)"
+                    [alt]="item.connector_type"
+                    class="table-type-icon"
+                  />
+                  <span>{{ item.connector_type }}</span>
+                </div>
+              </td>
+
+              <!-- Description + info -->
+              <td style="max-width: 28rem">
+                <div class="d-flex align-items-center gap-2">
+                  <span class="text-truncate table-desc" [title]="item.description">
+                    {{ item.description || '—' }}
+                  </span>
+                  <i
+                    *ngIf="item.description"
+                    class="fa-solid fa-circle-info text-muted flex-shrink-0"
+                    style="font-size: 0.8rem; cursor: pointer"
+                    [appTooltip]="item.description"
+                  ></i>
+                </div>
+              </td>
+
+              <!-- Date -->
+              <td class="text-muted text-nowrap">
+                {{ item.createdAt | date: 'dd/MM/yyyy' }}
+              </td>
+
+              <!-- Actions -->
+              <td class="text-end text-nowrap">
+                <button
+                  type="button"
+                  class="btn btn-sm text-muted border-0"
+                  title="Delete"
+                  (click)="openDeleteConfirmModal($event, item)"
+                >
+                  <i class="fa-regular fa-trash-can"></i>
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-sm text-muted border-0"
+                  title="Edit"
+                  (click)="openEditModal(item)"
+                >
+                  <i class="fa-regular fa-pen-to-square"></i>
+                </button>
+              </td>
+            </tr>
+
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Pagination -->
+    <div
+      style="margin: 0 -1rem"
+      class="pt-2 px-2 border-top d-flex justify-content-between align-items-center fs-12"
+    >
+      <!-- Showing X to Y of Z -->
+      <div>
+        <span *ngIf="filteredItems.length > 0">
+          Showing {{ startIndex + 1 }} to {{ endIndex }} of {{ filteredItems.length }} items
+        </span>
+        <span *ngIf="filteredItems.length === 0">
+          No items found
+        </span>
+      </div>
+
+      <div class="d-flex align-items-center gap-3">
+        <!-- Results per page -->
+        <div class="d-flex align-items-center gap-2">
+          <label class="mb-0" for="page-size">Results per page</label>
+          <select
+            id="page-size"
+            class="form-select form-select-sm w-auto"
+            [ngModel]="pageSize()"
+            (ngModelChange)="onPageSizeChange($event)"
+          >
+            <option *ngFor="let size of pageSizeOptions" [value]="size">
+              {{ size }}
+            </option>
+          </select>
+        </div>
+
+        <!-- Pagination controls -->
+        <nav>
+          <ul class="pagination pagination-sm mb-0">
+            <!-- First page -->
+            <li class="page-item" [class.disabled]="!hasPrevPage">
+              <a class="page-link" (click)="setPage(1)" style="cursor: pointer">
+                <i class="fa fa-angle-double-left"></i>
+              </a>
+            </li>
+
+            <!-- Previous page -->
+            <li class="page-item" [class.disabled]="!hasPrevPage">
+              <a class="page-link" (click)="prevPage()" style="cursor: pointer">
+                <i class="fa fa-angle-left"></i>
+              </a>
+            </li>
+
+            <!-- Page numbers -->
+            <li
+              class="page-item"
+              *ngFor="let p of visiblePages"
+              [class.active]="p === page()"
+            >
+              <a class="page-link" (click)="setPage(p)" style="cursor: pointer">
+                {{ p }}
+              </a>
+            </li>
+
+            <!-- Next page -->
+            <li class="page-item" [class.disabled]="!hasNextPage">
+              <a class="page-link" (click)="nextPage()" style="cursor: pointer">
+                <i class="fa fa-angle-right"></i>
+              </a>
+            </li>
+
+            <!-- Last page -->
+            <li class="page-item" [class.disabled]="!hasNextPage">
+              <a class="page-link" (click)="goToLast()" style="cursor: pointer">
+                <i class="fa fa-angle-double-right"></i>
+              </a>
+            </li>
+          </ul>
+        </nav>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Register External Application Modal -->
+<div
+  class="modal fade"
+  #addExternalAppModal
+  id="addExternalAppModal"
+  tabindex="-1"
+  aria-labelledby="addExternalAppModalLabel"
+  aria-hidden="true"
+  data-bs-backdrop="static"
+  data-bs-keyboard="false"
+>
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content ext-app-modal">
+
+      <!-- Header -->
+      <div class="modal-header ext-app-modal__header border-0">
+        <h1 class="modal-title ext-app-modal__title" id="addExternalAppModalLabel">
+          {{ modalTitle }}
+        </h1>
+        <button
+          type="button"
+          class="btn-close"
+          (click)="closeAddModal()"
+          aria-label="Close"
+        ></button>
+      </div>
+
+      <!-- Body -->
+      <div class="modal-body ext-app-modal__body" [formGroup]="addForm">
+
+        <!-- ========== Basic Information ========== -->
+        <div class="ext-app-section">
+          <div class="ext-app-section__header">
+            <span class="ext-app-section__label">Basic Information</span>
+          </div>
+
+          <div class="ext-app-section__body">
+            <!-- Row: Name + Type -->
+            <div class="row g-3">
+              <div class="col-md-6">
+                <div class="ext-app-field">
+                  <label class="ext-app-field__label">
+                    Application Name <span class="ext-app-required">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    class="form-control ext-app-field__input"
+                    placeholder="Enter Name"
+                    formControlName="application_name"
+                    maxlength="100"
+                  />
+                  <div
+                    *ngIf="addForm.get('application_name')?.invalid && addForm.get('application_name')?.touched"
+                    class="ext-app-field__error"
+                  >
+                    Application name is required.
+                  </div>
+                </div>
+              </div>
+
+              <div class="col-md-6">
+                <div class="ext-app-field">
+                  <label class="ext-app-field__label">
+                    Application Type <span class="ext-app-required">*</span>
+                  </label>
+
+                  <!-- Custom dropdown -->
+                  <div class="type-dropdown" (click)="$event.stopPropagation()">
+                    <!-- Trigger -->
+                    <button
+                      type="button"
+                      class="type-dropdown__trigger"
+                      (click)="toggleTypeDropdown($event)"
+                    >
+                      <img
+                        [src]="getSelectedTypeIcon()"
+                        alt=""
+                        class="type-dropdown__icon"
+                      />
+                      <span class="type-dropdown__label">{{ getSelectedTypeLabel() }}</span>
+                      <i
+                        class="fa-solid fa-chevron-down type-dropdown__chevron"
+                        [class.open]="isTypeDropdownOpen"
+                      ></i>
+                    </button>
+
+                    <!-- Menu -->
+                    <div class="type-dropdown__menu" *ngIf="isTypeDropdownOpen">
+                      <button
+                        type="button"
+                        class="type-dropdown__item"
+                        *ngFor="let type of applicationTypes"
+                        [class.active]="addForm.get('application_type')?.value === type.value"
+                        (click)="selectApplicationType(type)"
+                      >
+                        <img [src]="type.icon" [alt]="type.label" class="type-dropdown__icon" />
+                        <span>{{ type.label }}</span>
+                        <i
+                          *ngIf="addForm.get('application_type')?.value === type.value"
+                          class="fa-solid fa-check type-dropdown__check"
+                        ></i>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="ext-app-field" *ngIf="needsApplicationUrl()">
+              <label class="ext-app-field__label">
+                Application URL <span class="ext-app-required">*</span>
+              </label>
+              <input
+                type="text"
+                class="form-control ext-app-field__input"
+                placeholder="Enter Application URL"
+                formControlName="application_url"
+              />
+              <div
+                *ngIf="addForm.get('application_url')?.invalid &&
+                      (addForm.get('application_url')?.touched || addForm.get('application_url')?.dirty)"
+                class="ext-app-field__error"
+              >
+                {{ getUrlErrorMessage() }}
+              </div>
+            </div>
+
+            <!-- Description -->
+            <div class="ext-app-field">
+              <label class="ext-app-field__label">Description</label>
+              <input
+                type="text"
+                class="form-control ext-app-field__input"
+                placeholder="Enter Description"
+                formControlName="description"
+              />
+            </div>
+          </div>
+        </div>
+
+        <!-- ========== Access Control ========== -->
+        <div class="ext-app-section mt-4">
+          <div class="ext-app-section__header">
+            <span class="ext-app-section__label">Access Control</span>
+          </div>
+
+          <div class="ext-app-section__body">
+            <div class="row g-4">
+              <!-- Allowed APIs -->
+              <div class="col-md-5">
+                <div class="ext-app-field">
+                  <label class="ext-app-field__label">
+                    Allowed API Categories<span class="ext-app-required">*</span>
+                  </label>
+                 <div class="ext-app-api-checkboxes">
+  <label
+    class="ext-app-checkbox"
+    *ngFor="let api of allowedApis"
+    [class.disabled]="api.disabled"
+  >
+    <input
+      type="checkbox"
+      [checked]="isApiChecked(api.label)"
+      [disabled]="api.disabled"
+      (change)="toggleApi(api.label, $event)"
+    />
+    <span>{{ api.label }}</span>
+  </label>
+</div>
+                  <div
+                    *ngIf="addForm.get('allowed_apis')?.invalid && addForm.get('allowed_apis')?.touched"
+                    class="ext-app-field__error"
+                  >
+                    Select at least one API.
+                  </div>
+                </div>
+              </div>
+
+              <!-- Authentication Method -->
+              <div class="col-md-4">
+                <div class="ext-app-field">
+                  <label class="ext-app-field__label">
+                    Authentication Method <span class="ext-app-required">*</span>
+                  </label>
+                  <div class="ext-app-radio-group">
+                    <label
+                      class="ext-app-radio"
+                      *ngFor="let method of authenticationMethods"
+                      [class.disabled]="method.disabled"
+                    >
+                      <input
+                        type="radio"
+                        formControlName="authentication_method"
+                        [value]="method.value"
+                        [disabled]="method.disabled"
+                      />
+                      <span class="radio-circle"></span>
+                      <span class="radio-label">{{ method.label }}</span>
+                      <span *ngIf="method.disabled" class="coming-soon">Coming Soon</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Status -->
+              <div class="col-md-3">
+                <div class="ext-app-field">
+                  <label class="ext-app-field__label">
+                    Status <span class="ext-app-required">*</span>
+                  </label>
+                  <div class="ext-app-status-toggle">
+                    <label class="toggle-switch">
+                      <input type="checkbox" formControlName="status" />
+                      <span class="slider"></span>
+                    </label>
+                    <span class="status-text">
+                      {{ addForm.get('status')?.value ? 'Active' : 'Inactive' }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="modal-footer ext-app-modal__footer border-0">
+        <button
+          type="button"
+          class="btn ext-app-btn ext-app-btn--cancel"
+          (click)="closeAddModal()"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          class="btn ext-app-btn ext-app-btn--primary"
+          (click)="submitAddForm()" 
+          [disabled]="isSubmitting ||!addForm.valid ||
+        (modalAction === 'create' && !isPrivilegeAdd) ||
+        (modalAction === 'update' && !isPrivilegeEdit)"
+        >
+          <span
+            *ngIf="isSubmitting"
+            class="spinner-border spinner-border-sm me-2"
+            role="status"
+          ></span>
+          {{ modalAction === 'create' ? 'Register Application' : 'Update Application' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" #deleteConfirmModal tabindex="-1" aria-labelledby="deleteConfirmLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header border-0">
+        <h5 class="modal-title fw-semibold" id="deleteConfirmLabel">Confirm Delete</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p class="fs-14">Are you sure you want to delete this application? This action cannot be undone.</p>
+      </div>
+      <div class="modal-footer border-0">
+        <button type="button" class="btn btn-secondary fs-12" data-bs-dismiss="modal">Cancel</button>
+        <button 
+          type="button" 
+          class="btn btn-danger fs-12" 
+          (click)="confirmDelete()"
+          [disabled]="isDeleting"
+        >
+          <span *ngIf="isDeleting" class="spinner-border spinner-border-sm me-1"></span>
+          Delete
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Toast for Success -->
+<div
+  id="successToast"
+  class="toast align-items-center text-white bg-success border-0 position-fixed top-0 end-0 m-4"
+  role="alert"
+  aria-live="assertive"
+  aria-atomic="true"
+  data-bs-delay="4000"
+  style="z-index: 1060"
+  data-bs-autohide="true"
+>
+  <div class="d-flex">
+    <div class="toast-body">{{ toastMessage }}</div>
+    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+  </div>
+</div>
+
+<!-- Toast for Error -->
+<div
+  id="errorToast"
+  class="toast align-items-center text-white bg-danger border-0 position-fixed top-0 end-0 m-4"
+  role="alert"
+  aria-live="assertive"
+  aria-atomic="true"
+  data-bs-delay="4000"
+  style="z-index: 1060"
+  data-bs-autohide="true"
+>
+  <div class="d-flex">
+    <div class="toast-body">{{ toastMessage }}</div>
+    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+  </div>
+</div>
+
+<!-- Filter Modal -->
+<div class="modal fade" id="filterExternalAppModal" tabindex="-1" aria-labelledby="filterExternalAppModalLabel" aria-hidden="true">
+  <div class="modal-dialog filter-cont">
+    <div class="modal-content h-100">
+      <div class="modal-header border-0">
+        <h1 class="modal-title fs-5 fw-semibold" id="filterExternalAppModalLabel">Filters</h1>
+        <button type="button" class="btn-close b-close" data-bs-dismiss="modal" aria-label="Close">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="modal-body pt-3">
+        <div class="mb-4">
+          <label class="form-label fw-semibold">Application Name</label>
+          <select class="form-select" [(ngModel)]="filterName">
+            <option value="">All Applications</option>
+            <option *ngFor="let item of items" [value]="item.title">
+              {{ item.title }}
+            </option>
+          </select>
+        </div>
+
+        <!-- Application Type -->
+        <div class="mb-4">
+          <label class="form-label fw-semibold">Application Type</label>
+          <select class="form-select" [(ngModel)]="filterType">
+            <option value="">All Types</option>
+            <!-- Fixed: changed [value]="type" to [value]="type.value" -->
+            <option *ngFor="let type of applicationTypes" [value]="type.value">
+              {{ type.label }}
+            </option>
+          </select>
+        </div>
+
+        <!-- Authentication Method -->
+        <div class="mb-4">
+          <label class="form-label fw-semibold">Authentication Method</label>
+          <select class="form-select" [(ngModel)]="filterAuthMethod">
+            <option value="">All Methods</option>
+            <option value="API Key">API Key</option>
+            <option value="JWT">JWT</option>
+            <option value="OAuth 2.0">OAuth 2.0</option>
+          </select>
+        </div>
+
+        <!-- Status -->
+        <!-- <div class="mb-4">
+          <label class="form-label fw-semibold">Status</label>
+          <select class="form-select" [(ngModel)]="filterStatus">
+            <option value="">All Status</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+          </select>
+        </div> -->
+
+        <!-- Created Date -->
+      <!-- <div class="mb-4">
+        <label class="form-label fw-semibold">Created Date</label>
+        <input
+          type="date"
+          class="form-control"
+          [(ngModel)]="filterCreatedDate"
+        />
+      </div> -->
+
+      </div>
+
+      <div class="modal-footer border-0">
+        <button
+          type="button"
+          class="btn bg-white border fs-12"
+          (click)="clearFilters()"
+          data-bs-dismiss="modal"
+        >
+          Clear Filters
+        </button>
+        <button
+          type="button"
+          class="btn btn-primary bg-orange border-0 fs-12"
+          (click)="applyAdvancedFilters()"
+          data-bs-dismiss="modal"
+        >
+          Apply Filters
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

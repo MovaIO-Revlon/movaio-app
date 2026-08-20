@@ -46,7 +46,7 @@ export class MarketPlace implements AfterViewInit {
 
   ngOnInit(): void {
     if (
-      !['/marketplace/workflows', '/marketplace/mcpconnectors','/marketplace/promptrepository'].includes(
+      !['/marketplace/workflows', '/marketplace/mcpconnectors','/marketplace/promptrepository','/marketplace/externalApplications'].includes(
         this._router.url,
       )
     ) {

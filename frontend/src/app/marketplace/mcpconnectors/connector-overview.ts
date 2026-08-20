@@ -2,7 +2,7 @@ import { Component, computed, inject, input, output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CONNECTOR_ICON_MAP } from './constants';
-import { ISearchIndex } from '../../types';
+import { IConnection, ISearchIndex, TConnectorType } from '../../types';
 import { NgxSpinnerService } from 'ngx-spinner';
 import { SemarketplaceService } from '../../services/semarketplace.service';
 import { ToastService } from '../../services/toast.service';
@@ -15,7 +15,7 @@ import { TimeAgoPipe } from '../../timeago/time-ago-pipe';
   template: `
     @let details = overview();
 
-    <div class="d-flex align-items-center gap-3 py-3 border-bottom">
+    <div class="d-flex align-items-center gap-3 p-3 border-bottom">
       <span
         class="border rounded-3 entity-icon d-flex align-items-center justify-content-center"
       >
@@ -52,7 +52,7 @@ import { TimeAgoPipe } from '../../timeago/time-ago-pipe';
         >
       </div>
     </div>
-    <div class="row py-3">
+    <div class="row p-3">
       <div class="col-6">
         <table class="table table-striped table-bordered overflow-hidden fs-12">
           <tbody>
@@ -83,24 +83,26 @@ import { TimeAgoPipe } from '../../timeago/time-ago-pipe';
           </tbody>
         </table>
       </div>
-      <div class="col-6">
-        <button
-          (click)="syncToOpenSearch($event)"
-          class="btn btn-sm text-success rounded-2"
-          style="
+      @if (details.lastSync !== 'N/A') {
+        <div class="col-6">
+          <button
+            (click)="syncToOpenSearch($event)"
+            class="btn btn-sm text-success rounded-2"
+            style="
                 background-color: #e5f3e7;
                 color: #29b14b;
                 min-width: 10rem;
               "
-        >
-          @if (details.lastSync) {
-            Last sync: {{ details.lastSync | timeAgo }}
-          } @else {
-            Sync Now
-          }
-        </button>
-        <i (click)="syncToOpenSearch($event)" class="fa-solid fa-rotate"></i>
-      </div>
+          >
+            @if (details.lastSync) {
+              Last sync: {{ details.lastSync | timeAgo }}
+            } @else {
+              Sync Now
+            }
+          </button>
+          <i (click)="syncToOpenSearch($event)" class="fa-solid fa-rotate"></i>
+        </div>
+      }
     </div>
   `,
   styles: `
@@ -126,7 +128,9 @@ export class ConnectorOverView {
   private readonly service = inject(SemarketplaceService);
   private readonly toast = inject(ToastService);
 
-  data = input<ISearchIndex>();
+  data = input<
+    ISearchIndex | (IConnection & { connector_type: TConnectorType })
+  >();
   onDelete = output();
 
   overview = computed(() => {
@@ -146,6 +150,20 @@ export class ConnectorOverView {
 
     if (!data) return obj;
 
+    if ('connection_name' in data) {
+      obj.name = data.connection_name;
+      obj.connectorType = data.connector_type;
+      obj.icon = this.connectorIconsMap[data.connector_type];
+      obj.isActive = true;
+      obj.sourceType = '';
+      obj.entity = 'N/A';
+      obj.agent = 'N/A';
+      obj.createdBy = data.user_id;
+      obj.createdOn = data.created_at;
+      obj.lastSync = 'N/A';
+      return obj;
+    }
+
     obj.name = data.index_name;
     obj.connectorType = data.connector_type;
     obj.icon = this.connectorIconsMap[data.connector_type];
@@ -164,7 +182,10 @@ export class ConnectorOverView {
   });
 
   syncToOpenSearch(e: Event) {
-    const { index_id, index_name } = this.data() || {};
+    const d = this.data();
+    if (!d || 'connection_name' in d) return;
+
+    const { index_id, index_name } = d;
 
     e.stopPropagation();
 
