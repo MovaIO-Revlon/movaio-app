@@ -3678,6 +3678,7 @@ class FlaskApp(DatabaseCollections):
         
         # User Management Routes
         self.app.add_url_rule('/DoLogin', 'do_login', self.do_login, methods=['POST'])
+        self.app.add_url_rule('/api/DoLogin', 'do_login', self.do_login, methods=['POST'])
         self.app.add_url_rule('/refresh-token', 'refresh_token', session_manager.refresh_token, methods=['POST'])
         self.app.add_url_rule('/session-token', 'session', self.session_token, methods=['POST'])
         self.app.add_url_rule('/verify-token', 'verify-token', self.verify_token, methods=['POST'])
@@ -16635,4 +16636,4 @@ if __name__ == '__main__':
         port = port[0]  # extract first item
     
     flask_app = FlaskApp()        
-    flask_app.socketio.run(app=flask_app.app,host='0.0.0.0',port=int(port),debug=True,log_output=True, use_reloader=False)
+    flask_app.socketio.run(app=flask_app.app,host='0.0.0.0',port=int(port),debug=True,log_output=True, use_reloader=False,allow_unsafe_werkzeug=True)
