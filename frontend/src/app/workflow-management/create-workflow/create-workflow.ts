@@ -618,13 +618,13 @@ export class CreateWorkflow implements OnInit, AfterViewInit {
 
     // ====================== UPDATE CONDITION STATE ======================
     // Only update if source is a Condition node
-    if (sourceIsCondition) {
+	if (sourceIsCondition) {
       const conditionData = this.nodesFormState[source] as IConditionFormData;
 
-      if (sourceHandle === 'true') {
-        conditionData.true_cond_id = target;        // or true_cond_ids.push(target) if multiple
+      if (sourceHandle === 'true' || sourceHandle === undefined && conditionData.true_cond_ids.length === 0) {
+        this.nodesFormState[source].true_cond_ids = [target];        // or true_cond_ids.push(target) if multiple
       } else {
-        conditionData.false_cond_ids = [target];    // or .push(target) if multiple false paths allowed
+        this.nodesFormState[source].false_cond_ids = [target];    // or .push(target) if multiple false paths allowed
       }
     }
 
@@ -1164,10 +1164,40 @@ export class CreateWorkflow implements OnInit, AfterViewInit {
 		return false;          // not even a tree (disconnected or too few edges)
 	  }
 
+	const isExternal = this.workflowDetails?.IsExternal;
+    if(!isExternal)
+    return this.validateNodeForms();
+
 	  return true;
 
 	}
 
+ private validateNodeForms(): boolean {
+
+    const nodeFromState = Object.values(this.nodesFormState);
+
+       // 1. Filter by type first, then validate specific properties
+    const isValidAgent = nodeFromState
+      .filter((node: any) => node.type === 'agent')
+      .every((node: IAgentFormData) => node?.agent && node?.input);
+
+    const isValidItrative = nodeFromState
+      .filter((node: any) => node.type === 'iterative')
+      .every((node: IIterativeFormData) => node?.loop_condition);
+
+    const isValidApi = nodeFromState
+      .filter((node: any) => node.type === 'api')
+      .every((node: IApiFormData) => node?.api_url && node?.http_method);
+
+    const isValidCondition = nodeFromState
+      .filter((node: any) => node.type === 'condition')
+      .every((node: IConditionFormData) => {
+        return node?.condition;
+      });
+
+    // 2. Return false if ANY of the node type validations fail
+    return isValidAgent && isValidItrative && isValidApi && isValidCondition;
+  }
 
   private mapTaskToFormData(
     task: IFlowTask,
@@ -1259,8 +1289,8 @@ export class CreateWorkflow implements OnInit, AfterViewInit {
         falseTargets = workflowdetails.flow_data.edges.filter(edge => edge.condition === "false").map(edge => edge.target);
       }
       else{
-        trueTargets = normalizeTargets(task.params.config?.true_cond_ids || task.params?.true);
-       falseTargets = normalizeTargets(task.params.config?.false_cond_ids || task.params?.false);
+        trueTargets = task.params.config?.true_cond_ids || task.params?.true;
+       falseTargets = task.params.config?.false_cond_ids || task.params?.false;
       }
 
       return {
