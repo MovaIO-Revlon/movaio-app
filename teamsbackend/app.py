@@ -49,11 +49,14 @@ TENANT_ID = os.getenv("TENANT_ID", "")
 AUTHORITY = f"https://login.microsoftonline.com/{TENANT_ID}"
 SCOPES = ["https://graph.microsoft.com/.default"]
 
-#logger.info(f"BotAppId: {CLIENT_ID}")
-#logger.info(f"BotAppPassword: {CLIENT_SECRET}")
+MS_APP_ID = os.getenv("MICROSOFT_APP_ID", "")
+MS_APP_PWD = os.getenv("MICROSOFT_APP_PWD", "")
+
+logger.info(f"BotAppId: {MS_APP_ID}")
+logger.info(f"BotAppPassword: {bool(MS_APP_PWD)}")
 
 # Initialize the Teams app
-app = App(token=None)
+app = App(app_id=MS_APP_ID, app_password=MS_APP_PWD)
 
 async def send_message_activity(ctx: ActivityContext[MessageActivity], text="", attachments=None, suggested_actions=None) -> None:
     """Send a message activity with optional text, attachments, and suggested actions."""
