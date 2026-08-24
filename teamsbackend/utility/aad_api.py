@@ -25,9 +25,9 @@ def get_app_token(scope="https://graph.microsoft.com/.default"):
     # Acquire a token (log non-sensitive details)
     # logger.info("Requesting app token for client_id=%s scopes=%s", CLIENT_ID, SCOPES)
     result = app.acquire_token_for_client(scopes=SCOPES)
-    print(f"Connection Result : {result}"-------)
+    print(f"Connection Result : {result}")
     if "access_token" not in result:
-        print(f"Connection Error Result : {result}"-------)
+        print(f"Connection Error Result : {result}")
         raise RuntimeError(f"Token acquisition failed: {result}")
     return result["access_token"]
 
