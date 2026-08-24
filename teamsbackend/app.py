@@ -56,7 +56,7 @@ logger.info(f"BotAppId: {MS_APP_ID}")
 logger.info(f"BotAppPassword: {bool(MS_APP_PWD)}")
 
 # Initialize the Teams app
-app = App(app_id=MS_APP_ID, app_password=MS_APP_PWD)
+app = App(client_id=MS_APP_ID, client_secret=MS_APP_PWD)
 
 async def send_message_activity(ctx: ActivityContext[MessageActivity], text="", attachments=None, suggested_actions=None) -> None:
     """Send a message activity with optional text, attachments, and suggested actions."""
