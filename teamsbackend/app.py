@@ -50,7 +50,7 @@ AUTHORITY = f"https://login.microsoftonline.com/{TENANT_ID}"
 SCOPES = ["https://graph.microsoft.com/.default"]
 
 # Initialize the Teams app
-app = App(token= get_app_token)
+app = App(token= None)
 
 async def send_message_activity(ctx: ActivityContext[MessageActivity], text="", attachments=None, suggested_actions=None) -> None:
     """Send a message activity with optional text, attachments, and suggested actions."""
