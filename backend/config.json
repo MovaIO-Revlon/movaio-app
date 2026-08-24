@@ -160,15 +160,15 @@
   "agent_config_url": "https://agent-prod.studio.lyzr.ai/v3/agents/",
   "title_recovery_agent": {
     "Agent_api_url": "https://agent-prod.studio.lyzr.ai/v3/inference/chat/",
-    "x_api_key": "sk-default-88iCeEjGi7r0GL4Flnw7knzMpooe9fOu",
-    "user_id": "meena.rahulmalu@movate.com",
+    "x_api_key": "",
+    "user_id": "",
     "agent_id": "6a7311895d95ea89aa47cf84",
     "session_id": "6a632d764436490b33bf06ab-ptd69oln"
   },
   "analysis_instruction_agent": {
     "Agent_api_url": "https://agent-prod.studio.lyzr.ai/v3/inference/chat/",
-    "x_api_key": "sk-default-88iCeEjGi7r0GL4Flnw7knzMpooe9fOu",
-    "user_id": "meena.rahulmalu@movate.com",
+    "x_api_key": "",
+    "user_id": "",
     "agent_id": "6a7310dea67c4e6b2357ebef",
     "session_id": "6a43817b1e8f4820f5bc7267-15q3aox4"
   },
@@ -177,12 +177,12 @@
   "JWT_SECRET_KEY": "MovateAIInfusedQEKey",
   "SN_INSTANCE": "https://trianzdemo1.service-now.com/",
  "SN_CLIENT_ID": "9994a7e54f5b462a85252439fd884727",
- "SN_CLIENT_SECRET": "2,P,sUqAI!",
+ "SN_CLIENT_SECRET": "",
  "SN_TIMEOUT": 15,
  "SN_WORK_NOTE_RESOLVED": "The end user has confirmed that their reported issue has been successfully resolved through the AI-guided self-service recommendation. This ticket has been marked as Resolved per the user's confirmation. No further action is required.",
  "SN_WORK_NOTE_UNRESOLVED": "The end user has reviewed the AI-guided self-service recommendation and indicated that the suggested resolution did not fully address their concern. This ticket remains open and has been flagged for further review and investigation by the assigned team.",
- "SN_SECRET": "4TzOlRxOzwWDjFgdTytOuBlMNipsRk96/Wt9CbgYcJg=",
- "LYZR_API_KEY_WEBHOOK": "sk-default-YGyEbr5iukahQN5rFLdEPR5I33ERw3bs",
+ "SN_SECRET": "",
+ "LYZR_API_KEY_WEBHOOK": "",
  "LYZR_AGENT_API_URL_WEBHOOK": "https://agent-prod.studio.lyzr.ai/v3/inference/chat/",
  "LYZR_RUN_DAG_URL": "https://lao.studio.lyzr.ai/run-dag/",
  "LYZR_FLOW_NAME": "ITOps Incident Resolution Workflow",
@@ -199,6 +199,6 @@
  "ROUTER_USER_ID": "769f202d-9840-4048-84c4-4c4b47f4cc8a",
  "ROUTER_AGENT_ID": "6a0edee962f0d8d86c46a032",
  "SESSION_TOKEN_SECRET": "kg1iGunG8MDUoO5w",
- "TICKET_FUNCTIONS_API_KEY": "sk-movaio-s2oDUXRL4q7W63oCWpYbDoe3OK7dvKO4"
+ "TICKET_FUNCTIONS_API_KEY": ""
 }
 
