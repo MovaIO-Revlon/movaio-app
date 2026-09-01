@@ -159,7 +159,7 @@ async def send_agent_cards_by_aaid(aad_id, ctx):
                             "wrap": True
                         }
                     ],
-                    "actions": actions,
+                    #"actions": actions,
                     "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
                     "version": "1.5"
                 }
@@ -172,18 +172,18 @@ async def send_agent_cards_by_aaid(aad_id, ctx):
         logger.error(f"Error sending agent cards: {e}")
         await send_message_activity(ctx, text="Unable to load available agents at this time.")
 
-@app.on_message_pattern(re.compile(r"hello|hi|greetings", re.IGNORECASE))
-async def handle_greeting(ctx: ActivityContext[MessageActivity]) -> None:
-    """Handle greeting messages."""
-    logger.info(f'Handling greeting from user: {ctx.activity.from_.aad_object_id}')
+# @app.on_message_pattern(re.compile(r"hello|hi|greetings", re.IGNORECASE))
+# async def handle_greeting(ctx: ActivityContext[MessageActivity]) -> None:
+    # """Handle greeting messages."""
+    # logger.info(f'Handling greeting from user: {ctx.activity.from_.aad_object_id}')
     
-    try:
-        await ctx.reply(TypingActivityInput())
-        await send_message_activity(ctx, text="Hello! How can I assist you today?")
-        await send_agent_cards_by_aaid(ctx.activity.from_.aad_object_id, ctx)
-    except Exception as e:
-        logger.error(f"Error in greeting handler: {e}")
-        await send_message_activity(ctx, text="Hello! I'm experiencing some technical difficulties.")
+    # try:
+        # await ctx.reply(TypingActivityInput())
+        # await send_message_activity(ctx, text="Hello! How can I assist you today?")
+        # await send_agent_cards_by_aaid(ctx.activity.from_.aad_object_id, ctx)
+    # except Exception as e:
+        # logger.error(f"Error in greeting handler: {e}")
+        # await send_message_activity(ctx, text="Hello! I'm experiencing some technical difficulties.")
 
 @app.on_message
 async def handle_message(ctx: ActivityContext[MessageActivity]):
