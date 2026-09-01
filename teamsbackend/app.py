@@ -275,35 +275,35 @@ async def handle_message(ctx: ActivityContext[MessageActivity]):
                                 "wrap": True,
                                 "width": "stretch"
                             },
-                            {
-                                "type": "ColumnSet",
-                                "spacing": "Medium",
-                                "columns": [
-                                    {
-                                        "type": "Column",
-                                        "width": "stretch"
-                                    },
-                                    {
-                                        "type": "Column",
-                                        "width": "auto",
-                                        "items": [
-                                            {
-                                                "type": "ActionSet",
-                                                "actions": [
-                                                    {
-                                                        "type": "Action.Submit",
-                                                        "title": "Download",
-                                                        "data": {
-                                                            "action": "download_transcript", 
-                                                            "transcript": output_data
-                                                        }
-                                                    }
-                                                ]
-                                            }
-                                        ]
-                                    }
-                                ]
-                            }
+                            # {
+                                # "type": "ColumnSet",
+                                # "spacing": "Medium",
+                                # "columns": [
+                                    # {
+                                        # "type": "Column",
+                                        # "width": "stretch"
+                                    # },
+                                    # {
+                                        # "type": "Column",
+                                        # "width": "auto",
+                                        # "items": [
+                                            # {
+                                                # "type": "ActionSet",
+                                                # "actions": [
+                                                    # {
+                                                        # "type": "Action.Submit",
+                                                        # "title": "Download",
+                                                        # "data": {
+                                                            # "action": "download_transcript", 
+                                                            # "transcript": output_data
+                                                        # }
+                                                    # }
+                                                # ]
+                                            # }
+                                        # ]
+                                    # }
+                                # ]
+                            # }
                         ],
                         "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
                         "version": "1.4"
