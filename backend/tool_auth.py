@@ -287,7 +287,7 @@ class ToolAuthService(DatabaseCollections):
                 print("Received OAuth2 token response", response.json())
                 response.raise_for_status()
                 result = response.json()
-            except Exception:
+            except Exception as e:
                  # Print the exception from the first attempt
                 print(f"[ERROR] Initial token request failed: {type(e).__name__} - {e}")
                 
