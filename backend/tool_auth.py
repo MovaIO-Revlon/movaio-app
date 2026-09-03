@@ -288,13 +288,18 @@ class ToolAuthService(DatabaseCollections):
                 response.raise_for_status()
                 result = response.json()
             except Exception:
+                 # Print the exception from the first attempt
+                print(f"[ERROR] Initial token request failed: {type(e).__name__} - {e}")
+                
                 try:
                     basic_headers = dict(headers)
                     basic_headers["Authorization"] = "Basic " + base64.b64encode(f"{client_id}:{client_secret}".encode()).decode("ascii")
                     response = requests.post(token_url, data=payload, headers=basic_headers, timeout=15)
                     response.raise_for_status()
                     result = response.json()
-                except Exception:
+                except Exception as e2:
+                    # Print the exception from the fallback attempt
+                    print(f"[ERROR] Fallback Basic Auth request failed: {type(e2).__name__} - {e2}")
                     return None
 
             token = result.get("access_token")
