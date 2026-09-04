@@ -331,7 +331,7 @@ async def handle_message(ctx: ActivityContext[MessageActivity]):
             ]
 
             await send_message_activity(ctx, attachments=output_data_card_attachment)
-            await send_message_activity(ctx, attachments=start_new_conversation_card_attachment)
+            #await send_message_activity(ctx, attachments=start_new_conversation_card_attachment)
         else:
             await send_message_activity(ctx, text="The service returned an empty response.")
 
