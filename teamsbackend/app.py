@@ -192,23 +192,31 @@ def get_current_utc():
 
 def is_session_expired(session_data):
     """
-    Check whether user session has expired.
+    Returns True when the session has been inactive
+    longer than SESSION_TIMEOUT_MINUTES.
     """
+
     last_activity = session_data.get("last_activity")
 
     if not last_activity:
         return True
 
-    # Handle MongoDB datetime type
+    # Handle string values if any old records exist
     if isinstance(last_activity, str):
         last_activity = datetime.fromisoformat(last_activity)
 
-    expiry_time = last_activity + timedelta(
-        minutes=SESSION_TIMEOUT_MINUTES
+    # MongoDB often returns naive datetime objects
+    if last_activity.tzinfo is None:
+        last_activity = last_activity.replace(
+            tzinfo=timezone.utc
+        )
+
+    expiry_time = (
+        last_activity
+        + timedelta(minutes=SESSION_TIMEOUT_MINUTES)
     )
 
     return get_current_utc() > expiry_time
-
 
 @app.on_message
 async def handle_message(ctx: ActivityContext[MessageActivity]):
