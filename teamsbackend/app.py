@@ -7,6 +7,7 @@ import uuid
 import pypandoc
 import requests
 import httpx
+from datetime import datetime, timedelta, timezone
 from microsoft_teams.api import MessageActivity, TypingActivityInput, MessageActivityInput, Attachment, SuggestedActions, CardAction
 from microsoft_teams.apps import ActivityContext, App
 import os
@@ -46,6 +47,7 @@ except OSError:
 CLIENT_ID = os.getenv("CLIENT_ID", "")
 CLIENT_SECRET = os.getenv("CLIENT_SECRET", "")
 TENANT_ID = os.getenv("TENANT_ID", "")
+SESSION_TIMEOUT_MINUTES = int(os.getenv("SESSION_TIMEOUT_MINUTES", "30"))
 AUTHORITY = f"https://login.microsoftonline.com/{TENANT_ID}"
 SCOPES = ["https://graph.microsoft.com/.default"]
 
@@ -79,7 +81,7 @@ async def handle_value_for_action_cards(ctx: ActivityContext[MessageActivity], v
 
             mydb['UserSessions'].update_one(
                 {'aad_object_id': aad_object_id},
-                {'$set': {'session_id': uuid.uuid4().hex}}
+                {'$set': {'session_id': uuid.uuid4().hex,'last_activity': get_current_utc()}}
             )
             await send_agent_cards_by_aaid(ctx.activity.from_.aad_object_id, ctx)
             return
@@ -115,7 +117,7 @@ async def handle_value_for_action_cards(ctx: ActivityContext[MessageActivity], v
             
             mydb['UserSessions'].update_one(
                 {'aad_object_id': aad_object_id},
-                {'$set': {'selected_agent_id': selected_agent_id, 'session_id': uuid.uuid4().hex}}, 
+                {'$set': {'selected_agent_id': selected_agent_id, 'session_id': uuid.uuid4().hex,'last_activity': get_current_utc() }}, 
                 upsert=True
             )
             return
@@ -185,6 +187,29 @@ async def send_agent_cards_by_aaid(aad_id, ctx):
         # logger.error(f"Error in greeting handler: {e}")
         # await send_message_activity(ctx, text="Hello! I'm experiencing some technical difficulties.")
 
+def get_current_utc():
+    return datetime.now(timezone.utc)
+
+def is_session_expired(session_data):
+    """
+    Check whether user session has expired.
+    """
+    last_activity = session_data.get("last_activity")
+
+    if not last_activity:
+        return True
+
+    # Handle MongoDB datetime type
+    if isinstance(last_activity, str):
+        last_activity = datetime.fromisoformat(last_activity)
+
+    expiry_time = last_activity + timedelta(
+        minutes=SESSION_TIMEOUT_MINUTES
+    )
+
+    return get_current_utc() > expiry_time
+
+
 @app.on_message
 async def handle_message(ctx: ActivityContext[MessageActivity]):
     """Handle message activities."""
@@ -199,25 +224,77 @@ async def handle_message(ctx: ActivityContext[MessageActivity]):
             return
 
         # Retrieve or create session
-        session_data = mydb['UserSessions'].find_one({'aad_object_id': aad_object_id})
+                
+        session_data = mydb['UserSessions'].find_one(
+            {'aad_object_id': aad_object_id}
+        )
+        
+        session_expired = False
+        
         if session_data:
-            session_id = session_data['session_id']
-            selected_agent_id = session_data.get('selected_agent_id')
+            selected_agent_id = session_data.get(
+                'selected_agent_id'
+            )
+        
+            if is_session_expired(session_data):
+        
+                session_expired = True
+        
+                session_id = uuid.uuid4().hex
+        
+                mydb['UserSessions'].update_one(
+                    {'aad_object_id': aad_object_id},
+                    {
+                        '$set': {
+                            'session_id': session_id,
+                            'last_activity': get_current_utc()
+                        }
+                    }
+                )
+        
+                logger.info(
+                    f"Session expired for user "
+                    f"{aad_object_id}. "
+                    f"Created new session: {session_id}"
+                )
+        
+            else:
+                session_id = session_data['session_id']
         else:
-            session_id = uuid.uuid4().hex
-            default_agent = mydb['Agents'].find_one({"enabled": True})
+        
+            default_agent = mydb['Agents'].find_one(
+                {"enabled": True}
+            )
+        
             if not default_agent:
-                await send_message_activity(ctx, text="No agents are available. Please contact support.")
+                await send_message_activity(
+                    ctx,
+                    text="No agents are currently available."
+                )
                 return
+        
             selected_agent_id = default_agent['agent_id']
+            session_id = uuid.uuid4().hex
+        
             mydb['UserSessions'].insert_one({
-                'aad_object_id': aad_object_id, 
+                'aad_object_id': aad_object_id,
+                'selected_agent_id': selected_agent_id,
                 'session_id': session_id,
-                'selected_agent_id': selected_agent_id
+                'last_activity': get_current_utc()
             })
 
         text = (ctx.activity.text or "").strip()
 
+        if session_expired:
+            await send_message_activity(
+                ctx,
+                text=(
+                    "Your previous session expired due to "
+                    "inactivity. I've started a new "
+                    "conversation."
+                )
+            )
+        
         # Call agent API
         agent_data = mydb['Agents'].find_one({'agent_id': selected_agent_id})
         if not agent_data:
@@ -250,6 +327,15 @@ async def handle_message(ctx: ActivityContext[MessageActivity]):
             )
             response.raise_for_status()
             data = response.json()
+
+        mydb['UserSessions'].update_one(
+            {'aad_object_id': aad_object_id},
+            {
+                '$set': {
+                    'last_activity': get_current_utc()
+                }
+            }
+        )
 
         logger.info("Received response from external API")
 
