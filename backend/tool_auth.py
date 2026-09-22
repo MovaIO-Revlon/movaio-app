@@ -294,6 +294,7 @@ class ToolAuthService(DatabaseCollections):
                     response = requests.post(token_url, data=payload, headers=basic_headers, timeout=15)
                     response.raise_for_status()
                     result = response.json()
+                    print("Exception - Received OAuth2 token response", response.json())
                 except Exception:
                     return None
 
