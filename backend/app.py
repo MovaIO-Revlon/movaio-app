@@ -1771,7 +1771,7 @@ class ChatbotAgent(DatabaseCollections):
         custom_tool_config = tool_res.get("Iscustomtool",'')
         internal_tool_data = tool_res.get("internal_tool", [])
         print(f"Custom tool configuration: {custom_tool_config}")
-        if custom_tool_config and internal_tool_data:
+        if internal_tool_data:
             print("Custom tool configuration detected. Using agent_api_key from agent collection.")
             api_key = tool_res.get("agent_api_key")
             # session_id = data.get('session_id')
@@ -3291,7 +3291,7 @@ class FlaskApp(DatabaseCollections):
         # CRITICAL FIXES for IIS/ARR compatibility
         self.socketio = SocketIO(
         self.app,
-        cors_allowed_origins="*",
+        cors_allowed_origins="*,http://localhost:4200/",
         async_mode='threading',
         path='/socket.io',
         perMessageDeflate=False,
@@ -3968,18 +3968,29 @@ class FlaskApp(DatabaseCollections):
             response = self.user_manager.perform_login(user_details)
             
             if response.get("Success"):
-                session_id = session_manager.create_session(response)
-                response["SessionId"] = session_id
+
+                if response.get("IsOTP", False):
+                    if config_loader.OTP_EXTERNAL_SERVICE:
+                        self.user_manager.send_otp_details_external({
+                            "UserId": user_details.get("EmployeeId", "CSS151837"),
+                            "UserEmail": user_details.get("EmailId"),
+                            "ClientName": self.configloader.CLIENT_NAME,
+                            "otp": ""
+                        })
+                    else:
+                        self.user_manager.send_otp_details_internal({ "EmailId": user_details.get("EmailId")})
+
+                    return jsonify(response), 200
 
                 tokens = session_manager.get_tokens({
-                    "user_id": response.get("Email"),
-                    "name": response.get("UserName"),
-                    "role": response.get("Role"),
-                    "ActiveProject": response.get("ActiveProject"),
-                })
-
+                        "user_id": response.get("Email"),
+                        "name": response.get("UserName"),
+                        "role": response.get("Role"),
+                        "ActiveProject": response.get("ActiveProject"),
+                    })
+                
                 return jsonify({ **response, **tokens }), 200
-
+                
             return jsonify({"Success": False, "Message": response.get('Message', 'Login error') }), 500
         except Exception as ex:
             self.utils.log_error("Error in DoLogin:")
@@ -4075,7 +4086,18 @@ class FlaskApp(DatabaseCollections):
             result = self.user_manager.validate_otp_service_external(user_details)                
         else:
             result = self.user_manager.validate_otp_service_internal(user_details)
-        return buildResponse("OTP validated", result, 200)
+
+        user = self.user_manager.get_user_by_email(user_details.get("EmailId"))
+        details = self.user_manager.get_user_login_details(user)
+        tokens = session_manager.get_tokens({
+                    "user_id": details.get("Email"),
+                    "name": details.get("UserName"),
+                    "role": details.get("Role"),
+                    "ActiveProject": details.get("ActiveProject"),
+                })
+        
+        return buildResponse("OTP validated", { "Success": True, **tokens, **details }, 200)
+    
     
     @require_session  
     def get_teams_by_project(self):

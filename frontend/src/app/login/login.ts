@@ -22,12 +22,15 @@ import { environment as config } from '../../environments/environment';
 import { V } from '../utils';
 import { FormError } from '../components/form-error/form-error';
 import { setToken } from '../services/auth.interceptor';
+import { ToastService } from '../services/toast.service';
+import { Toast } from '../components/toast/toast';
+import { finalize } from 'rxjs';
 
 declare var $: any;
 
 @Component({
   selector: 'login',
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, FormError],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, FormError, Toast],
   templateUrl: './login.html',
   styleUrl: './login.css',
 })
@@ -36,6 +39,7 @@ export class Login implements OnInit, AfterViewInit, OnDestroy {
 
   readonly fb = inject(FormBuilder);
   readonly router = inject(Router);
+  readonly toast = inject(ToastService);
 
   readonly service = inject(LoginService);
   readonly loading = inject(NgxSpinnerService);
@@ -52,7 +56,7 @@ export class Login implements OnInit, AfterViewInit, OnDestroy {
   });
 
   forgotPasswordForm = this.fb.nonNullable.group({
-    email: ['', V.string('Username').email().required().build()],
+    email: ['', V.string('Email').email().required().build()],
   });
 
   loginError = signal('');
@@ -93,10 +97,6 @@ export class Login implements OnInit, AfterViewInit, OnDestroy {
         console.error('Failed to get reCAPTCHA config', error);
       },
     });
-
-    this.state.clearLoginDetails();
-    this.state.clearLoginOTPDetails();
-    this.state.clearLogoutOTPDetails();
   }
 
   ngOnDestroy(): void {
@@ -124,70 +124,67 @@ export class Login implements OnInit, AfterViewInit, OnDestroy {
     const params = {
       EmailId: trimmedEmail!,
       Password: this.loginForm.value.password!,
-      RecaptchaResponse: this.captchaResponse,
     };
 
-    this.service.UserLogin(params).subscribe({
-      next: (res) => {
-        if (!res) {
+    this.service
+      .UserLogin(params)
+      .pipe(
+        finalize(() => {
           this.loading.hide();
-          this.loginError.set('Error Occurred...');
-          return;
-        }
+        }),
+      )
+      .subscribe({
+        next: (res) => {
+          this.loginError.set('');
 
-        if (!res.Success) {
-          this.loading.hide();
-          this.loginError.set(res.Message || 'Something went wrong!!');
-          return;
-        }
+          if (!res) {
+            this.loading.hide();
+            this.loginError.set('Error Occurred...');
+            return;
+          }
 
-        setToken({
-          accessToken: res.Token,
-          refreshToken: res.RefreshToken,
-        });
+          if (!res.Success) {
+            this.loading.hide();
+            this.loginError.set(res.Message || 'Something went wrong!!');
+            return;
+          }
 
-        const { Token: _t, RefreshToken: _r, ...userData } = res;
-        this.state.setLoginDetails(userData);
-        this.state.setLoginOTPDetails({
-          IsOTPverified: false,
-          IsOTP: this.captcha(),
-        });
-        this.loginError.set('');
+          if ('Token' in res) {
+            setToken({
+              accessToken: res.Token,
+              refreshToken: res.RefreshToken,
+            });
 
-        if (res.IsOTP) {
-          return this.sendOtp({
-            EmailId: res.Email!,
-            EmployeeId: res.EmployeeId!,
-            Otp: 0,
-          });
-        }
+            const { Token: _t, RefreshToken: _r, ...userData } = res;
+            if (userData.Avatar?.includes(';base64'))
+              userData.Avatar = '/assets/img/profile_image.png';
 
-        this.loading.hide();
-        const route = localStorage.getItem('redirectRoute');
-        if (route) {
-          localStorage.removeItem('redirectRoute');
+            this.state.setLoginDetails(userData);
+          }
+
+          if (res.IsOTP) {
+            this.router.navigate(['/otp'], {
+              queryParams: {
+                email: res.Email,
+                employeeId: res.EmployeeId,
+              },
+            });
+            return;
+          }
+
+          const route =
+            localStorage.getItem('redirectRoute') || '/managesubscription';
+          if (localStorage.getItem('redirectRoute'))
+            localStorage.removeItem('redirectRoute');
+
           this.router.navigate([route]);
-          return;
-        }
-
-        this.router.navigate(['/managesubscription']);
-      },
-      error: (err) => {
-        this.loading.hide();
-        this.loginError.set(
-          err?.error?.Message || 'An error occurred during login.',
-        );
-      },
-    });
-  }
-
-  sendOtp(params: { EmailId: string; EmployeeId: string; Otp: number }) {
-    this.service.SentOtp(params).subscribe({
-      next: (data) => {
-        if (!data) return;
-        this.router.navigate(['/otp']);
-      },
-    });
+        },
+        error: (err) => {
+          this.loginError.set(
+            err?.error?.Message || 'An error occurred during login.',
+          );
+        },
+      });
   }
 
   sendRecoveryEmail(): void {
@@ -196,27 +193,24 @@ export class Login implements OnInit, AfterViewInit, OnDestroy {
 
     this.loading.show();
 
-    this.service.sentforgotEmail(email).subscribe({
-      next: () => {
-        this.loading.show();
+    this.service
+      .sentforgotEmail(email)
+      .pipe(finalize(() => this.loading.hide()))
+      .subscribe({
+        next: () => {
+          this.loading.show();
+          this.toast.showToast(
+            'success',
+            'Your new password has been sent to your registered email.',
+          );
+          const el = this.forgotPassword()?.nativeElement;
+          if (el) $(el).modal('hide');
+        },
 
-        const el = this.forgotPassword()?.nativeElement;
-        if (el) $(el).modal('hide');
-
-        this.loading.hide();
-        this.openModal('exampleModalLabel1');
-      },
-
-      error: () => {
-        this.loading.hide();
-      },
-    });
-  }
-
-  openModal(modalId: string) {
-    const element = this.document.getElementById(modalId);
-    if (!element) return;
-    element.style.display = 'block';
+        error: () => {
+          this.toast.showToast('error', 'Failed to send recovery email');
+        },
+      });
   }
 
   closeForgotEmail() {
@@ -260,7 +254,6 @@ export class Login implements OnInit, AfterViewInit, OnDestroy {
       callback: (response: string) =>
         this.zone.run(() => {
           this.recaptcha = response;
-          this.captchaResponse = response;
 
           if (response) {
             this.captchaCompleted.set(true);

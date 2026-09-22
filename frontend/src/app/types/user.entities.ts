@@ -17,7 +17,7 @@ export interface ILoginResponse {
   UserName: string;
 
   // otp
-  IsOTP?: string;
+  IsOTP?: false;
   Email?: string;
   EmployeeId?: string;
   Success?: boolean;
@@ -26,6 +26,14 @@ export interface ILoginResponse {
   // token
   Token: string;
   RefreshToken: string;
+}
+
+export interface ILoginOtpResponse {
+  IsOTP: true;
+  Email: string;
+  EmployeeId: string;
+  Success?: boolean;
+  Message?: string;
 }
 
 export interface UserDetails {
@@ -100,4 +108,33 @@ export interface IAddUserResponse {
   RoleId: string;
   TeamId: string;
   PrjDetails: ProjectDetail[];
+}
+
+export interface MappingItem {
+  projectName: string;
+  projectId: string;
+  teamName: string;
+  teamId: string;
+  roleName: string;
+  roleId: string;
+}
+
+export interface IOnboardUserRequest {
+  Email: string;
+  FirstName: string;
+  LastName: string;
+  RoleId: string | null;
+  TeamId: string | null;
+  ActiveProject: string | null;
+  PrjDetails: {
+    project_name: string;
+    project_id: number;
+    team_name: string;
+    team_id: string;
+    role_name: string;
+    role_id: string;
+  }[];
+  CreatedBy: string;
+  CreatedDate: string;
+  IsEdit?: boolean;
 }

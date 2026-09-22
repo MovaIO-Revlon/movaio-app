@@ -34,7 +34,7 @@
                 </div>
                 
                 <!-- Popular Query Section -->
-                <div class="popular-query-section" *ngIf="selectedAgent">
+                <!-- <div class="popular-query-section" *ngIf="selectedAgent">
                     <div class="popular-query-header">
                         <button class="collapse-arrow" (click)="toggleRecentQueryCollapse()" [attr.aria-expanded]="!isRecentQueryCollapsed">
                             <svg class="chevron-icon" [class.collapsed]="isRecentQueryCollapsed" width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -44,7 +44,35 @@
                         <h3 class="popular-query-heading">Recent query</h3>
                     </div>
                     <div class="query-card" (click)="selectRecentQuery()" *ngIf="!isRecentQueryCollapsed">
-                        <p class="query-text">{{ selectedAgent?.recent_query || '' }}</p>
+                        <p class="query-text">{{ recentQueryText || '' }}</p>
+                    </div>
+                </div> -->
+
+                <div class="history-section" *ngIf="selectedAgent">
+                    <div class="popular-query-header">
+                        <button class="collapse-arrow" (click)="toggleSessionHistoryCollapse()" [attr.aria-expanded]="!isSessionHistoryCollapsed">
+                            <svg class="chevron-icon" [class.collapsed]="isSessionHistoryCollapsed" width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                            </svg>
+                        </button>
+                        <h3 class="popular-query-heading">Conversation History</h3>
+                    </div>
+                    <div class="session-history-list" *ngIf="!isSessionHistoryCollapsed">
+                        <div class="session-list-loading" *ngIf="sessionHistoryLoading">Loading sessions…</div>
+                        <div class="session-list-empty" *ngIf="!sessionHistoryLoading && !sessionHistory.length">No conversation history found.</div>
+                        <div class="session-item" role="button" tabindex="0" *ngFor="let session of sessionHistory; trackBy: trackBySession" (click)="loadSessionConversation(session)" (keydown.enter)="loadSessionConversation(session)" (keydown.space)="loadSessionConversation(session)">
+                            <div class="session-item-header">
+                                <span class="session-agent-name">{{ session?.initiative_query || session?.agent_name }}</span>
+                                <span class="status-pill" [ngClass]="session?.status || 'unknown'">{{ session?.status || 'Unknown' }}</span>
+                            </div>
+                            <!-- <div class="session-item-body">
+                                <span class="session-id-label">Session ID</span>
+                                <span class="session-id-value">{{ session?.session_id || 'N/A' }}</span>
+                            </div> -->
+                            <div class="session-item-body">
+                                <span class="session-id-value">{{ formatSessionDate(session?.created_ts) }}</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 

@@ -1,62 +1,57 @@
 import { Injectable } from '@angular/core';
-import { CanActivate, ActivatedRouteSnapshot, RouterStateSnapshot, UrlTree, Router } from '@angular/router';
-import { Observable } from 'rxjs';
+import {
+  CanActivate,
+  ActivatedRouteSnapshot,
+  RouterStateSnapshot,
+  Router,
+  UrlTree,
+} from '@angular/router';
 import { AIInfuseStateService } from '../aiinfuse-state.service';
-import { MatDialog } from '@angular/material/dialog';
-import { NgxSpinnerService } from 'ngx-spinner';
-
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class AuthGuardService implements CanActivate {
+  constructor(
+    private _stateService: AIInfuseStateService,
+    private _router: Router,
+  ) {}
 
-  constructor(private _stateService: AIInfuseStateService, private _router: Router, private dialog: MatDialog,private _loadingService: NgxSpinnerService) { }
-
-  canActivate(route: ActivatedRouteSnapshot, state: RouterStateSnapshot): Observable<boolean | UrlTree> | Promise<boolean | UrlTree> | boolean | UrlTree {
+  canActivate(
+    route: ActivatedRouteSnapshot,
+    state: RouterStateSnapshot,
+  ): boolean | UrlTree {
     const userDet = this._stateService.getLoginDetails();
-    const IsOTPverifiedDtls = this._stateService.getLoginOTPDetails();
-
     const currentUrl = state.url.split('?')[0];
-    if (currentUrl === '/' || currentUrl === '/login' || currentUrl === '/otp') {
+
+    const isPublicRoute =
+      currentUrl === '/' || currentUrl === '/login' || currentUrl === '/otp';
+
+    if (userDet) {
+      if (isPublicRoute) {
+        const redirectRoute = route.queryParamMap.get('redirectRoute');
+
+        if (redirectRoute) {
+          const agentId = route.queryParamMap.get('agentId');
+          const approvalAction = route.queryParamMap.get('approvalAction');
+
+          if (agentId) localStorage.setItem('agentId', agentId);
+          if (approvalAction)
+            localStorage.setItem('approvalAction', approvalAction);
+
+          return this._router.createUrlTree([redirectRoute]);
+        }
+
+        return this._router.createUrlTree(['/managesubscription']);
+      }
+
       return true;
     }
 
-    const allowedMenus = ['login', 'otp', 'managesubscription']; // Specify the menus allowed for managers
-    const requestedMenu = route.data['menu'];
-
-    if (userDet !== null) {
-      const requestedMenu = route.routeConfig?.path;
-
-      if (requestedMenu === 'managesubscription') {
-
-        if (IsOTPverifiedDtls != null) {
-          if (IsOTPverifiedDtls?.IsOTP) {
-            if (IsOTPverifiedDtls.IsOTP && IsOTPverifiedDtls.IsOTPverified) {
-              return true;
-            }
-            else {
-              this._router.navigate(["/"]);
-              return false;
-            }
-          }
-          else {
-            return true;
-          }
-        }
-        else {
-          this._loadingService.hide();
-          return false;
-        }
-      }
-      else {
-        return true;
-
-      }
-    }
-    else {
-      return this._router.createUrlTree(['/']);
+    if (isPublicRoute) {
+      return true;
     }
 
-  };
+    return this._router.createUrlTree(['/']);
+  }
 }

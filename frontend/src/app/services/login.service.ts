@@ -1,6 +1,6 @@
 import { HttpBackend, HttpClient, HttpHeaders } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import { ApiResponse, ILoginResponse } from '../types';
+import { ApiResponse, ILoginOtpResponse, ILoginResponse } from '../types';
 import { environment as config } from '../../environments/environment';
 
 @Injectable({
@@ -21,12 +21,8 @@ export class LoginService {
 
   //#region UserManagement
 
-  UserLogin(params: {
-    EmailId: string;
-    Password: string;
-    RecaptchaResponse: string;
-  }) {
-    return this._http.post<ILoginResponse>(
+  UserLogin(params: { EmailId: string; Password: string }) {
+    return this._http.post<ILoginResponse | ILoginOtpResponse>(
       `${this.baseURL}/DoLogin`,
       params,
       this.httpOptions,
@@ -60,7 +56,7 @@ export class LoginService {
     );
   }
   ValidateOTP(params: any) {
-    return this._http.post<ApiResponse<object>>('/ValidateOTP', params);
+    return this._http.post<ApiResponse<ILoginResponse>>('/ValidateOTP', params);
   }
   sentforgotEmail(mailID: any) {
     return this._http.post<ApiResponse<null>>(

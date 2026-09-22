@@ -287,19 +287,14 @@ class ToolAuthService(DatabaseCollections):
                 print("Received OAuth2 token response", response.json())
                 response.raise_for_status()
                 result = response.json()
-            except Exception as e:
-                 # Print the exception from the first attempt
-                print(f"[ERROR] Initial token request failed: {type(e).__name__} - {e}")
-                
+            except Exception:
                 try:
                     basic_headers = dict(headers)
                     basic_headers["Authorization"] = "Basic " + base64.b64encode(f"{client_id}:{client_secret}".encode()).decode("ascii")
                     response = requests.post(token_url, data=payload, headers=basic_headers, timeout=15)
                     response.raise_for_status()
                     result = response.json()
-                except Exception as e2:
-                    # Print the exception from the fallback attempt
-                    print(f"[ERROR] Fallback Basic Auth request failed: {type(e2).__name__} - {e2}")
+                except Exception:
                     return None
 
             token = result.get("access_token")
@@ -328,9 +323,9 @@ class ToolAuthService(DatabaseCollections):
             tenant_id = data.get("tenant_id")
             client_id = data.get("client_id")
             client_secret = data.get("client_secrets")
-            auth_url = data.get("server_url")
+            # auth_url = data.get("server_url")
 
-            token_url = f"{auth_url}/{tenant_id}/oauth2/v2.0/token"
+            token_url = f"https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token"
             token_data = {
                 "grant_type": "client_credentials",
                 "client_id": client_id,

@@ -1249,7 +1249,7 @@ class AgentManager(DatabaseCollections):
             mapped_data = self._get_external_voice_agent_data(agent_data)
 
         else:
-            mapped_data = self._get_external_agent_data(agent_data)
+            mapped_data = self._get_external_agent_data(agent_data,api_key)
         
 
         # self.utils.update_document(
@@ -1632,7 +1632,7 @@ class AgentManager(DatabaseCollections):
        
         return mapped_data
          
-    def _get_external_agent_data(self, agent_data):
+    def _get_external_agent_data(self, agent_data,api_key):
         
         if isinstance(agent_data, list):
             if not agent_data:
@@ -1642,7 +1642,7 @@ class AgentManager(DatabaseCollections):
         
         knowledge_store = {"id": None, "name": None, "enabled": False}
         features = agent_data.get("features", [])
-        api_kg_id = agent_data.get("api_key","")
+        api_kg_id = api_key
         agent_new_id = agent_data.get("_id","")
         user_id = agent_data.get("user_id","")
         
@@ -1733,7 +1733,7 @@ class AgentManager(DatabaseCollections):
                     rag_config = feature.get("config", {}).get("lyzr_rag", {})
                     if not rag_config:
                         rag_config = feature.get("config", {}).get("agentic_rag", {})
-                    
+                    print("new............",rag_config)
                     # 2. Normalize to list for uniform iteration
                     if isinstance(rag_config, dict):
                         rag_items = [rag_config] if rag_config else []
@@ -1766,6 +1766,7 @@ class AgentManager(DatabaseCollections):
                             response = requests.get(rag_url, headers=headers, timeout=120)
                             response.raise_for_status()
                             configs = response.json()
+                            print("old.....",configes)
                             
                             if isinstance(configs, dict) and "configs" in configs:
                                 configs = configs["configs"]
@@ -1799,6 +1800,7 @@ class AgentManager(DatabaseCollections):
                             return 0  # Default on error
                         
                         # 5. Process each RAG config
+                        print("sap.....",rag_entries)
                         for item in rag_entries:
                             rag_id = item.get("rag_id")
                             rag_name = item.get("rag_name")

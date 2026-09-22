@@ -367,12 +367,14 @@ export class TestcaseDeduplication {
         optimizationCandidates: d?.summary?.optimization_candidates ?? 0,
         obsoleteTests: d?.summary?.potentially_obsolete_tests ?? 0,
         affectedTestCase,
-        avgConfidence: Math.round(
-          (d.optimization_findings.reduce(
-            (a, b) => a + b?.confidence_score,
-            0,
-          ) || 0) / (d.optimization_findings?.length || 1),
-        ),
+        avgConfidence: d?.optimization_findings
+          ? Math.round(
+              (d.optimization_findings.reduce(
+                (a, b) => a + b?.confidence_score,
+                0,
+              ) || 0) / (d.optimization_findings?.length || 1),
+            )
+          : 0,
         optimization_findings: d.optimization_findings,
         summary: d.summary,
         highPriorityActions,

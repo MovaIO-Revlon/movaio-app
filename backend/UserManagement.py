@@ -318,26 +318,37 @@ class UserManager(DatabaseCollections):
     def perform_login(self, user_details):
         email = user_details.get("EmailId", "").lower()
         input_password = user_details.get("Password")
-        user_type = "master"
         
         # Find user using database manager
-        user_op = {
-            'type': 'find_one',
-            'filter': {
-                "Email": re.compile(f"^{re.escape(email)}$", re.IGNORECASE),
-                "IsActive": True,
-                "IsDelete": False
-            }
-            
-        }
-        user_data = self._query_db('user', user_op,user_type)
-        
+        user_data = self.get_user_by_email(email)
+
         if not user_data:
             raise NotFoundError("User not found or is not active.")
+
+        is_match = self.pwd_are_equal(input_password, user_data["Password"], self.config.SECRET_KEY, user_data["Salt"])
+        if not is_match:
+            ##raise AuthorizationError("Username or Password not matched")
+            return {"Success": False, "Message": "Username or Password not matched"}
+
+        if self.config.OTP_RECAPTCHA:
+            return {
+                        "Success": True,
+                        "Email": email,
+                        "IsOTP": self.config.OTP_RECAPTCHA,
+                        "EmployeeId": user_data.get("EmployeeId", "CSS151837")
+                    }
+                     
+        return {
+            "Success": True,
+            **self.get_user_login_details(user_data)
+        }
         
+    def get_user_login_details(self, user_data: dict):
+        user_type = 'master'
+      
         # Get all active users
         all_users_op = {'type': 'find', 'filter': {"IsActive": True}}
-        all_users = self._query_db('user', all_users_op,user_type)
+        all_users = self._query_db('user', all_users_op, user_type)
         
         user_data["_id"] = str(user_data["_id"])
         all_users = [self.clean_document(u) for u in all_users]
@@ -358,17 +369,10 @@ class UserManager(DatabaseCollections):
             user["TeamName"] = teams.get(user.get("TeamId"), "Unknown")
         user_data["TeamName"] = teams.get(user_data.get("TeamId"), "Unknown")
         
-        is_match = self.pwd_are_equal(input_password, user_data["Password"], self.config.SECRET_KEY, user_data["Salt"])
-        print("Is_Match",is_match)
-        if not is_match:
-            ##raise AuthorizationError("Username or Password not matched")
-            return {"Success": False, "Message": "Username or Password not matched"}
-        
         full_name = f"{user_data['FirstName']} {user_data['LastName']}"
         
-            # Get prjDetails safely (default to empty list)
+        # Get prjDetails safely (default to empty list)
         prj_details = user_data.get("PrjDetails", [])
-        ##print("prj_details",prj_details)
         role = None
 
         # Check if RoleName exists in user_data and is not empty
@@ -380,17 +384,31 @@ class UserManager(DatabaseCollections):
             role = self.get_user_role(user_data)
                             
         return {
-            "Success": True,
-            "Email": user_data["Email"],
+            "Email": user_data.get("Email", ''),
             "UserName": full_name,
             "Role": role,
             "Team": user_data["TeamName"],
             "IsOTP": self.config.OTP_RECAPTCHA,
             "Avatar": user_data.get("Avatar", ""),
             "ActiveProject": user_data.get("ActiveProject", ""),
-            "ProjectDtl":prj_details
+            "ProjectDtl": prj_details
         }
     
+
+    def get_user_by_email(self, email: string): 
+        user_op = {
+            'type': 'find_one',
+            'filter': {
+                "Email": re.compile(f"^{re.escape(email)}$", re.IGNORECASE),
+                "IsActive": True,
+                "IsDelete": False
+            }
+            
+        }
+        return  self._query_db('user', user_op, 'master')
+
+                
+        
     def get_user_role(self, user_data: dict) -> str | None:
         """Get role_name by matching prj_name from PrjDetails with ActiveProject"""
     

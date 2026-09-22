@@ -49,7 +49,9 @@
     box-shadow: inset -1px 0 0 rgba(148, 163, 184, 0.08);
     transition: flex 0.3s ease, padding 0.3s ease;
     position: relative;
-    overflow: hidden;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
 }
 
 .sidebar.collapsed {
@@ -70,7 +72,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
+    margin-bottom: 8px;
     gap: 12px;
 }
 
@@ -122,6 +124,11 @@
     flex-direction: column;
     gap: 20px;
     margin-top: 20px;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: 4px;
 }
 
 .agent-intro {
@@ -390,6 +397,35 @@
     display: flex;
     gap: 8px;
     flex-wrap: wrap;
+}
+
+/* When suggestions are marked as stacked, show them vertically with a max width
+   and truncate overflow with ellipsis. Buttons show full text via the title attr. */
+.suggested.stacked {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    max-width: 320px;
+}
+
+.suggested.stacked button {
+    display: block;
+    width: 100%;
+    padding: 8px 12px;
+    background: #ffffff;
+    border: 1px solid #e8eaf1;
+    border-radius: 20px;
+    text-align: left;
+    cursor: pointer;
+    color: #0f172a;
+    font-size: 14px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.suggested.stacked button:hover {
+    background: #f8fafc;
 }
 
 .suggested button {
@@ -864,8 +900,9 @@
 }
 
 /* Popular Query Section Styles */
-.popular-query-section {
-    margin-top: 24px;
+.popular-query-section,
+.history-section {
+    /* margin-top: 24px; */
     padding-top: 20px;
     border-top: 1px solid #e8eaf1;
 }
@@ -934,4 +971,103 @@
     font-size: 13px;
     color: #475569;
     line-height: 1.5;
+}
+
+.session-history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-height: 280px;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.session-history-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.session-history-list::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 999px;
+}
+
+.session-item {
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    background: #f8fafc;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.session-item:hover {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.session-item-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.session-agent-name {
+    color: #0f172a;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.status-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 82px;
+    padding: 4px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: capitalize;
+    background: #e2e8f0;
+    color: #334155;
+}
+
+.status-pill.completed {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.status-pill.inprogress {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.session-item-body {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.session-id-label {
+    font-size: 11px;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.session-id-value {
+    font-size: 12px;
+    color: #0f172a;
+    word-break: break-all;
+}
+
+.session-list-loading,
+.session-list-empty {
+    font-size: 13px;
+    color: #64748b;
+    padding: 6px 0;
 }

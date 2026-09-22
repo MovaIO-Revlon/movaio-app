@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
 import MarkdownIt from 'markdown-it';
 import { HomeService } from '../services/home.service';
+import { AIInfuseStateService } from '../services/aiinfuse-state.service';
 import { Header } from '../header/header';
 import { trigger, state, style, transition, animate } from '@angular/animations';
 
@@ -50,6 +51,7 @@ export class ConversationalChatbot implements OnInit, AfterViewChecked, OnDestro
   showThinking: boolean = false;
   chatResponses: any[] = [];
   private suggestionSub?: Subscription;
+  private sessionHistorySub?: Subscription;
   private activeStreamSubscriptions: Subscription[] = [];
   private currentSessionId_tracker: string = '';
 
@@ -59,6 +61,10 @@ export class ConversationalChatbot implements OnInit, AfterViewChecked, OnDestro
   selectedAgentId: any = null;
   agencyLoading = false;
   isRecentQueryCollapsed = false;
+  isSessionHistoryCollapsed = false;
+  sessionHistoryLoading = false;
+  sessionHistory: any[] = [];
+  recentQueryText = '';
   currentSessionId: string = '';
   sidebarCollapsed: boolean = false;
   isThinkingCollapsed: boolean = false;
@@ -70,6 +76,7 @@ export class ConversationalChatbot implements OnInit, AfterViewChecked, OnDestro
   toastMessage: string = '';
   activeDownloadMessageId: string | null = null;
   isDownloadMenuOpen = false;
+  private hasStartedConversation = false;
 
   private recognition: any = null;
   private lastUserMessage: Message | null = null;
@@ -77,6 +84,7 @@ export class ConversationalChatbot implements OnInit, AfterViewChecked, OnDestro
 
   constructor(private readonly ngZone: NgZone,
     private readonly _homeService: HomeService,
+    private readonly userState: AIInfuseStateService,
     private readonly cdRef: ChangeDetectorRef,
     private readonly location: Location
   ) {
@@ -130,14 +138,18 @@ export class ConversationalChatbot implements OnInit, AfterViewChecked, OnDestro
   }
 
   selectRecentQuery(): void {
-    if (this.selectedAgent?.recent_query) {
-      this.draft = this.selectedAgent.recent_query;
+    if (this.recentQueryText) {
+      this.draft = this.recentQueryText;
       this.cdRef.detectChanges();
     }
   }
 
   toggleRecentQueryCollapse(): void {
     this.isRecentQueryCollapsed = !this.isRecentQueryCollapsed;
+  }
+
+  toggleSessionHistoryCollapse(): void {
+    this.isSessionHistoryCollapsed = !this.isSessionHistoryCollapsed;
   }
 
   loadAgencies(): void {
@@ -178,6 +190,7 @@ export class ConversationalChatbot implements OnInit, AfterViewChecked, OnDestro
   onAgencyChange(agencyId: any): void {
     // Unsubscribe from any active stream operations
     this.unsubscribeFromActiveStreams();
+    this.sessionHistorySub?.unsubscribe();
     
     this.selectedAgencyId = agencyId;
     this.selectedAgentId = null;
@@ -188,6 +201,9 @@ export class ConversationalChatbot implements OnInit, AfterViewChecked, OnDestro
     this.messages = [];
     this.chatResponses = [];
     this.suggestions = [];
+    this.hasStartedConversation = false;
+    this.sessionHistory = [];
+    this.recentQueryText = '';
     this.draft = '';
     this.pendingAttachments = [];
     this.isLoading = false;
@@ -199,11 +215,14 @@ export class ConversationalChatbot implements OnInit, AfterViewChecked, OnDestro
   onAgentChange(agentId: string): void {
     // Unsubscribe from any active stream operations
     this.unsubscribeFromActiveStreams();
+    this.sessionHistorySub?.unsubscribe();
     
     this.selectedAgentId = agentId;
     this.messages = [];
     this.chatResponses = [];
     this.suggestions = [];
+    this.sessionHistory = [];
+    this.recentQueryText = '';
     this.draft = '';
     this.pendingAttachments = [];
     this.isLoading = false;
@@ -214,7 +233,9 @@ export class ConversationalChatbot implements OnInit, AfterViewChecked, OnDestro
       // this.sidebarCollapsed = true;
       this.currentSessionId = this.generateUUID();
       this.currentSessionId_tracker = this.currentSessionId;
+      this.loadRecentQuery(agentId);
       this.loadRecentQuerySuggestions(agentId);
+      this.loadSessionHistory(agentId);
       const welcomeText = `Welcome to ${this.selectedAgent?.name || 'Agent'}, Please type your query.`;
       this.chatResponses.push({
         id: this.id(),
@@ -234,6 +255,10 @@ export class ConversationalChatbot implements OnInit, AfterViewChecked, OnDestro
 
   trackByAgent(index: number, agent: any) {
     return agent.agent_id;
+  }
+
+  trackBySession(index: number, session: any) {
+    return session?.session_id || index;
   }
 
   canSend(): boolean {
@@ -435,6 +460,7 @@ export class ConversationalChatbot implements OnInit, AfterViewChecked, OnDestro
   startNewChat(): void {
     if (!this.selectedAgentId) return;
 
+    this.hasStartedConversation = false;
     this.currentSessionId = this.generateUUID();
     const welcomeText = `Welcome to ${this.selectedAgent?.name || 'Agent'}, Please type your query.`;
     this.chatResponses = [{
@@ -447,7 +473,9 @@ export class ConversationalChatbot implements OnInit, AfterViewChecked, OnDestro
     }];
     this.draft = '';
     this.pendingAttachments = [];
+    this.loadRecentQuery(this.selectedAgentId);
     this.loadRecentQuerySuggestions(this.selectedAgentId);
+    this.loadSessionHistory(this.selectedAgentId);
     this.cdRef.detectChanges();
   }
 
@@ -512,17 +540,41 @@ export class ConversationalChatbot implements OnInit, AfterViewChecked, OnDestro
     return true;
   }
 
+  private loadRecentQuery(agentId: string | null): void {
+    this.recentQueryText = '';
+
+    if (!agentId) {
+      return;
+    }
+
+    this._homeService.getRecentQuery(agentId).subscribe({
+      next: (res: any) => {
+        this.recentQueryText = res?.data?.top_query || '';
+        this.cdRef.detectChanges();
+      },
+      error: (err: any) => {
+        console.error('Failed to load recent query:', err);
+        this.recentQueryText = '';
+        this.cdRef.detectChanges();
+      }
+    });
+  }
+
   private loadRecentQuerySuggestions(agentId: string | null): void {
     this.suggestionSub?.unsubscribe();
     this.suggestions = [];
 
-    if (!agentId) {
+    if (!agentId || this.hasStartedConversation) {
       return;
     }
 
     const payload = { agent_id: agentId };
     this.suggestionSub = this._homeService.getRecentDataAgent(payload).subscribe({
       next: (res: any) => {
+        if (this.hasStartedConversation) {
+          return;
+        }
+
         const items = Array.isArray(res?.data) ? res.data : [];
         const queries = items
           .map((item: any) => item?.user_query)
@@ -543,6 +595,173 @@ export class ConversationalChatbot implements OnInit, AfterViewChecked, OnDestro
     });
   }
 
+  private loadSessionHistory(agentId: string | null): void {
+    this.sessionHistorySub?.unsubscribe();
+    this.sessionHistory = [];
+
+    if (!agentId) {
+      this.sessionHistoryLoading = false;
+      return;
+    }
+
+    this.sessionHistoryLoading = true;
+    this.sessionHistorySub = this._homeService.getSessionList({ agent_id: agentId }).subscribe({
+      next: (res: any) => {
+        this.sessionHistory = Array.isArray(res?.data) ? res.data : [];
+        this.sessionHistory = this.sessionHistory
+          .filter((item: any) => item?.agent_id === agentId)
+          .sort((a: any, b: any) => {
+            const aDate = new Date(a?.created_ts?.$date || a?.created_ts || 0).getTime();
+            const bDate = new Date(b?.created_ts?.$date || b?.created_ts || 0).getTime();
+            return bDate - aDate;
+          });
+        this.sessionHistoryLoading = false;
+        this.cdRef.detectChanges();
+      },
+      error: (err: any) => {
+        console.error('Failed to load session history:', err);
+        this.sessionHistory = [];
+        this.sessionHistoryLoading = false;
+        this.cdRef.detectChanges();
+      }
+    });
+  }
+
+  loadSessionConversation(session: any): void {
+    if (!session?.session_id) {
+      return;
+    }
+
+    this.currentSessionId = session.session_id;
+    this.currentSessionId_tracker = session.session_id;
+    this.messages = [];
+    this.chatResponses = [];
+    this.suggestions = [];
+    this.draft = '';
+    this.pendingAttachments = [];
+    this.isLoading = false;
+    this.isProcessingCompleted = false;
+    this.logsDuringLoading = [];
+
+    this._homeService.getSessionDetails(session.session_id).subscribe({
+      next: (res: any) => {
+        const items = Array.isArray(res?.data) ? res.data : [];
+
+        items.forEach((item: any, index: number) => {
+          console.log(item?.agent_response?.trim())
+          let raw_response=item?.agent_response?.trim()
+          const userQuery = this.normalizeMarkdownContent(item?.user_query?.trim() || '');
+          let agentResponse = this.normalizeMarkdownContent(item?.agent_response?.trim() || '');
+          const itemTimestamp = this.getMessageTimestamp(item?.created_ts);
+
+          if (raw_response.includes('{\\"actions\\"')){
+            console.log('Detected JSON actions in the response. Extracting output display before JSON.');
+            const jsonStartIndex = raw_response.indexOf('{\\"actions\\"');
+            const outputDisplay = raw_response.substring(0, jsonStartIndex).trim();
+            agentResponse = this.normalizeMarkdownContent(outputDisplay || '');
+            console.log('Extracted output display:', outputDisplay);
+          }
+
+          let jsonToDisplay : any ={};
+          let outputDisplay : any = "";
+          const match = raw_response.match(/\{\\"actions\\"[\s\S]*$/);
+          if (match) {
+            outputDisplay = raw_response.substring(0, match.index).trim();
+            console.log('Detected JSON actions in the response. Extracted output display before JSON:', outputDisplay);
+            let jsonPart = match[0];
+            try {
+            jsonToDisplay = JSON.parse(jsonPart.replace(/\\"/g, '"'));
+            console.log('Extracted JSON part:', jsonToDisplay);
+            } catch (error) {
+              console.error('Failed to parse extracted JSON part:', error);
+            }
+            console.log('Detected JSON actions in the response. Extracted JSON part:', match[0]);
+          }
+
+          console.log(`Session ${session.session_id} - Item ${index}:`, { userQuery, agentResponse, itemTimestamp });
+
+          if (userQuery) {
+            this.chatResponses.push({
+              id: `${session.session_id}-user-${index}`,
+              role: 'user',
+              text: userQuery,
+              timestamp: this.formatTimestamp(itemTimestamp)
+            });
+          }
+
+          if (agentResponse) {
+            const renderedHtml = this.markdownParser.render(agentResponse);
+            this.chatResponses.push({
+              id: `${session.session_id}-assistant-${index}`,
+              role: 'assistant',
+              text: agentResponse,
+              html: `<div class="streamed-response">${renderedHtml}</div>`,
+              timestamp: this.formatTimestamp(itemTimestamp),
+              json: jsonToDisplay,
+              showThinking: false,
+              plain: agentResponse
+            });
+          }
+        });
+
+        if (!items.length) {
+          this.chatResponses.push({
+            id: this.id(),
+            role: 'assistant',
+            text: 'No conversation found for this session.',
+            html: '<div class="streamed-response">No conversation found for this session.</div>',
+            timestamp: this.formatTimestamp(),
+            showThinking: false
+          });
+        }
+
+        this.cdRef.detectChanges();
+      },
+      error: (err: any) => {
+        console.error('Failed to load session conversation details:', err);
+        this.chatResponses = [{
+          id: this.id(),
+          role: 'assistant',
+          text: 'Unable to load conversation for this session.',
+          html: '<div class="streamed-response">Unable to load conversation for this session.</div>',
+          timestamp: this.formatTimestamp(),
+          showThinking: false
+        }];
+        this.cdRef.detectChanges();
+      }
+    });
+  }
+
+  private getMessageTimestamp(value: any): Date {
+    const dateValue = value?.$date || value;
+    if (!dateValue) {
+      return new Date();
+    }
+
+    const date = new Date(dateValue);
+    return Number.isNaN(date.getTime()) ? new Date() : date;
+  }
+
+  formatSessionDate(value: any): string {
+    const dateValue = value?.$date || value;
+    if (!dateValue) {
+      return 'Unknown date';
+    }
+
+    const date = new Date(dateValue);
+    if (Number.isNaN(date.getTime())) {
+      return 'Unknown date';
+    }
+
+    return date.toLocaleString([], {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  }
+
   truncateSuggestion(text: string, maxLength = 60): string {
     if (!text) return '';
     return text.length > maxLength ? `${text.slice(0, maxLength).trim()}...` : text;
@@ -550,6 +769,7 @@ export class ConversationalChatbot implements OnInit, AfterViewChecked, OnDestro
 
   ngOnDestroy(): void {
     this.suggestionSub?.unsubscribe();
+    this.sessionHistorySub?.unsubscribe();
     this.unsubscribeFromActiveStreams();
     // Stop voice recognition if active
     if (this.recognition && this.isRecording) {
@@ -630,6 +850,36 @@ export class ConversationalChatbot implements OnInit, AfterViewChecked, OnDestro
     } catch (error) { console.warn('scrollToBottom failed', error); }
   }
 
+  private normalizeMarkdownContent(content: string): string {
+    if (!content) {
+      return '';
+    }
+
+    let normalized = content.trim();
+
+    if (normalized.startsWith('"') && normalized.endsWith('"')) {
+      try {
+        const parsed = JSON.parse(normalized);
+        if (typeof parsed === 'string') {
+          normalized = parsed;
+        }
+      } catch {
+        // Fall back to direct unescape handling below.
+      }
+    }
+
+    return normalized
+      .replace(/\\r\\n/g, '\n')
+      .replace(/\\n/g, '\n')
+      .replace(/\\r/g, '\n')
+      .replace(/\\t/g, '\t')
+      .replace(/\\"/g, '"')
+      .replace(/\\'/g, "'")
+      .replace(/\\u003c/g, '<')
+      .replace(/\\u003e/g, '>')
+      .replace(/\\\\/g, '\\');
+  }
+
   private formatTimestamp(date: Date = new Date()): string {
     const pad = (value: number) => String(value).padStart(2, '0');
     const hours = pad(date.getHours());
@@ -645,12 +895,17 @@ export class ConversationalChatbot implements OnInit, AfterViewChecked, OnDestro
   }
 
   private generateUUID(): string {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-    const r = Math.trunc(Math.random() * 16);
-    const v = c === 'x' ? r : (r & 0x3 | 0x8);
-    return v.toString(16);
-  });
-}
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+      const r = Math.trunc(Math.random() * 16);
+      const v = c === 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
+  }
+
+  private getLoggedInUserId(): string {
+    const loggedUser = this.userState.getLoginDetails();
+    return loggedUser?.Email || loggedUser?.UserId || loggedUser?.ID || loggedUser?.id || loggedUser?.sub || '';
+  }
 
 stopProcessingAndShowResults() {
   this.isProcessingCompleted = true;
@@ -1124,7 +1379,8 @@ extractTitleFromResponse(text:any, agentName?: string) {
 
     // Track this session to prevent updates if agency/agent changes
     this.currentSessionId_tracker = sessionId;
-    this.suggestions = []; // Clear suggestions on new query
+    this.suggestions = [];
+    this.hasStartedConversation = true;
 
     const query = text.trim();
     if (!query) {
@@ -1134,7 +1390,7 @@ extractTitleFromResponse(text:any, agentName?: string) {
     const payload: any = {
       userQuery: query,
       agent_id: agentId,
-      user_id: 'NaveenKumar.ReddyR@movate.com',
+      user_id: this.getLoggedInUserId(),
       master_agent_id: '69a71759ad9aa4e5502916fc',
       session_id: sessionId,
       event_id: eventId,
@@ -1352,7 +1608,7 @@ extractTitleFromResponse(text:any, agentName?: string) {
       // this.suggestions = jsonToDisplay?.recommended_prompts? jsonToDisplay.recommended_prompts : [];
       // console.log('Updated suggestions from JSON:', this.suggestions);
     }
-    if (jsonToDisplay?.recommended_prompts && Array.isArray(jsonToDisplay.recommended_prompts)) {
+    if (!this.hasStartedConversation && jsonToDisplay?.recommended_prompts && Array.isArray(jsonToDisplay.recommended_prompts)) {
       this.suggestions = jsonToDisplay.recommended_prompts;
       console.log('Updated suggestions from JSON:', this.suggestions);
     }
