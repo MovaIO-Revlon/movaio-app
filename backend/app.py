@@ -16193,6 +16193,7 @@ class FlaskApp(DatabaseCollections):
             auth_service = ToolAuthService() 
             if connector_type == "ServiceNow":
                 result = auth_service.authenticate_servicenow(data)
+                print(f"ServiceNow-Athentication Result : {result}")
                 if result and result.get("status")=="success":
                     return buildResponse("ServiceNow authentication successful", result, 200)
                 else:
