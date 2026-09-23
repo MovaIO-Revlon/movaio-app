@@ -3670,7 +3670,7 @@ class FlaskApp(DatabaseCollections):
 
     def setup_routes(self):
         # Health check endpoint
-        #self.app.add_url_rule('/health', 'health_check', self.health_check, methods=['GET'])   
+        self.app.add_url_rule('/health', 'health_check', self.health_check, methods=['GET'])   
         self.app.add_url_rule('/test-sensitive-encryption', 'test_sensitive_encryption', self.test_sensitive_encryption, methods=['POST'])
 
         #Subscription-Re_Sync_All
