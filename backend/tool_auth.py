@@ -266,9 +266,6 @@ class ToolAuthService(DatabaseCollections):
         try:
             #print(data)
             data = decrypt_data(data)
-            print("Decrypted data-Client_Id:", data.get('client_id'))
-            print("Decrypted data-Client_Secret:", data.get('client_secrets'))
-            print("Decrypted data-Server_URL:", data.get('server_url'))
             client_id = data.get("client_id")
             client_secret = data.get("client_secrets")
             auth_url = data.get("server_url")
@@ -286,7 +283,6 @@ class ToolAuthService(DatabaseCollections):
 
             try:
                 response = requests.post(token_url, data=payload, headers=headers, timeout=15)
-                print("Received OAuth2 token response", response.json())
                 response.raise_for_status()
                 result = response.json()
             except Exception:
@@ -296,7 +292,6 @@ class ToolAuthService(DatabaseCollections):
                     response = requests.post(token_url, data=payload, headers=basic_headers, timeout=15)
                     response.raise_for_status()
                     result = response.json()
-                    print("Exception - Received OAuth2 token response--1", response.json())
                 except Exception as e:
                     print("Exception - Received OAuth2 token response--2", e)
                     return None
