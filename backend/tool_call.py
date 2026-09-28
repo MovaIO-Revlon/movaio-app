@@ -67,12 +67,19 @@ class DynamicToolExecutor:
             # base_url = self._resolve_variables(protocol_data.get("server_url", "")).rstrip("/")
             server_url = self.secrets.get("server_url")
 
+            print(f"Get the Server_URL from Secret : {server_url}")
+            
             if server_url is None:
                 server_url = protocol_data.get("server_url", "")
+                print(f"Get the Server_URL from JSON : {server_url}")
 
             base_url = self._resolve_variables(str(server_url)).rstrip("/")
-
+    
+            print(f"base_url : {base_url}")
+            
             path = protocol_data.get("path", "").lstrip("/")
+
+            print(f"path : {path}")
             
             # 3. Dynamic Headers setup
             headers = self._build_auth_headers()
@@ -107,6 +114,8 @@ class DynamicToolExecutor:
                     body_data[key] = value
 
             url = f"{base_url}/{path}"
+
+            print(f"Concate base URL with Path : {url}")
             
             # 5. Execute Request directly via requests module
             logger.debug(f"Making {method} request to {url}")
