@@ -114,7 +114,9 @@ class ToolAuthService(DatabaseCollections):
     # ---------------------------------------------------------
 
     def _load_connector_app_json(self, connector_type: str):
+        print(f"Connector Type:{connector_type}")
         file_path = os.path.join(self.connectors_dir_path, connector_type, "app.json")
+        print(f"App.json path:{file_path}")
         try:
             if os.path.exists(file_path):
                 with open(file_path, "r", encoding="utf-8") as f:
