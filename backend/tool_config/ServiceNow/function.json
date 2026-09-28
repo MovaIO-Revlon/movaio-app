@@ -14,7 +14,7 @@
       "protocol_data": {
         "method": "GET",
         "path": "/api/now/table/incident",
-        "server_url": "{{ server_url }}"
+        "server_url": "https://revlon.service-now.com"
       },
       "parameters": {
         "type": "object",
@@ -61,7 +61,7 @@
       "protocol_data": {
         "method": "POST",
         "path": "/api/now/table/incident",
-        "server_url": "{{ server_url }}"
+        "server_url": "https://revlon.service-now.com"
       },
       "parameters": {
         "type": "object",
@@ -121,7 +121,7 @@
       "protocol_data": {
         "method": "GET",
         "path": "/api/now/table/incident/{sys_id}",
-        "server_url": "{{ server_url }}"
+        "server_url": "https://revlon.service-now.com"
       },
       "parameters": {
         "type": "object",
@@ -149,7 +149,7 @@
       "protocol_data": {
         "method": "PUT",
         "path": "/api/now/table/incident/{sys_id}",
-        "server_url": "{{ server_url }}"
+        "server_url": "https://revlon.service-now.com"
       },
       "parameters": {
         "type": "object",
@@ -184,7 +184,7 @@
       "protocol_data": {
         "method": "GET",
         "path": "/api/now/table/change_request",
-        "server_url": "{{ server_url }}"
+        "server_url": "https://revlon.service-now.com"
       },
       "parameters": {
         "type": "object",
@@ -215,7 +215,7 @@
       "protocol_data": {
         "method": "POST",
         "path": "/api/now/table/change_request",
-        "server_url": "{{ server_url }}"
+        "server_url": "https://revlon.service-now.com"
       },
       "parameters": {
         "type": "object",
@@ -258,7 +258,7 @@
       "protocol_data": {
         "method": "GET",
         "path": "/api/now/table/sys_user",
-        "server_url": "{{ server_url }}"
+        "server_url": "https://revlon.service-now.com"
       },
       "parameters": {
         "type": "object",
@@ -289,7 +289,7 @@
       "protocol_data": {
         "method": "DELETE",
         "path": "/api/now/table/incident/{sys_id}",
-        "server_url": "{{ server_url }}"
+        "server_url": "https://revlon.service-now.com"
       },
       "parameters": {
         "type": "object",
@@ -317,7 +317,7 @@
       "protocol_data": {
         "method": "GET",
         "path": "/api/now/table/sys_user_group",
-        "server_url": "{{ server_url }}"
+        "server_url": "https://revlon.service-now.com"
       },
       "parameters": {
         "type": "object",
