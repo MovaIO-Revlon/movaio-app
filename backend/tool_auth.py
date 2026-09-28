@@ -63,7 +63,7 @@ class ToolAuthService(DatabaseCollections):
             logger.warning(f"Connection {connection_id} not found.")
             return {}
         
-        connector_type = connection.get("connector_type", "").lower()
+        connector_type = connection.get("connector_type", "")
         auth_type = connection.get("auth_type", "no_auth").lower().replace(" ", "")
         raw_credentials = connection.get("credentials", {})
         credentials = decrypt_data(raw_credentials)
