@@ -1,10 +1,13 @@
 python-dotenv>=0.9.9
 opensearch-py>=2.0.0
 azure-identity>=1.12.0
-microsoft-teams-apps>=2.0.0a5
+microsoft-teams-apps>=2.0.0a5,<3.0.0
 pymongo
 python-docx
 pypandoc
 pydantic-settings
 starlette
 uvicorn
+dotenv>=0.9.9
+cryptography
+PyJWT
