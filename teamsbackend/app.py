@@ -54,6 +54,10 @@ SCOPES = ["https://graph.microsoft.com/.default"]
 MS_APP_ID = os.getenv("MICROSOFT_APP_ID", "")
 MS_APP_PWD = os.getenv("MICROSOFT_APP_PWD", "")
 
+MOVAIO_API=os.getenv("MOVAIO_API", "")
+MOVAIO_API_KEY=os.getenv("MOVAIO_API_KEY", "")
+SELECTED_AGENT_ID=os.getenv("SELECTED_AGENT_ID", None)
+
 logger.info(f"BotAppId: {MS_APP_ID}")
 logger.info(f"BotAppPassword: {bool(MS_APP_PWD)}")
 
@@ -217,6 +221,16 @@ def is_session_expired(session_data):
     )
 
     return get_current_utc() > expiry_time
+
+def generate_auth_token(email):
+
+    payload = {
+        "user_id": email,
+        "iat": datetime.utcnow(),
+        "exp": datetime.utcnow() + timedelta(hours=1)
+    }
+
+    return jwt.encode(payload, os.getenv("JWT_SECRET_KEY"), algorithm="HS256")
 
 @app.on_message
 async def handle_message(ctx: ActivityContext[MessageActivity]):
