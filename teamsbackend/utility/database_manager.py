@@ -4,5 +4,5 @@ from pymongo import MongoClient
 
 load_dotenv()
 
-client = MongoClient(os.getenv("DB_URL", "mongodb://localhost:27017/"))
-mydb = client[os.getenv("DB_NAME", "MovaiO-Bot")]
+client = MongoClient(os.getenv("MONGODB_URL", "mongodb://admin_user:Movate$20261@mongodb:27017/"))
+mydb = client[os.getenv("MONGODB_NAME", "teamsapp")]

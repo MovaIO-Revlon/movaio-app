@@ -30,19 +30,34 @@ from starlette.responses import JSONResponse
 from dotenv import load_dotenv
 load_dotenv()
 
-# client = MongoClient(os.getenv("DB_URL", "mongodb://localhost:27017/"))
-# mydb = client[os.getenv("DB_NAME", "MovaiO-Bot")]
-
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("teams-app")
 
+# Database connection with error handling
+try:
+    client = MongoClient(os.getenv("MONGODB_URL", "mongodb://admin_user:Movate$20261@mongodb:27017/"))
+    mydb = client[os.getenv("MONGODB_NAME", "teamsapp")]
+    # Test connection
+    client.admin.command('ping')
+    logger.info(f'Successfully connected to MongoDB: {mydb}')
+except Exception as e:
+    logger.error(f"Failed to connect to MongoDB: {e}")
+    raise
+
+# Set pandoc path for Linux container
+try:
+    pypandoc.get_pandoc_version()
+    logger.info("Pandoc is available")
+except OSError:
+    logger.warning("Pandoc not found in PATH")
 
 # AAD should have required permissions like Files.ReadWrite.All , User.Read.All .
 CLIENT_ID = os.getenv("CLIENT_ID", "")
 CLIENT_SECRET = os.getenv("CLIENT_SECRET", "")
 TENANT_ID = os.getenv("TENANT_ID", "")
+SESSION_TIMEOUT_MINUTES = int(os.getenv("SESSION_TIMEOUT_MINUTES", "30"))
 AUTHORITY = f"https://login.microsoftonline.com/{TENANT_ID}"
-SCOPES = ["https://graph.microsoft.com/.default"]  # IMPORTANT: .default for client credentials
+SCOPES = ["https://graph.microsoft.com/.default"]
 
 MOVAIO_API=os.getenv("MOVAIO_API", "")
 MOVAIO_API_KEY=os.getenv("MOVAIO_API_KEY", "")
