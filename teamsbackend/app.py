@@ -5,6 +5,7 @@ import json
 import logging
 import uuid
 import requests
+import pypandoc
 import httpx
 from microsoft_teams.api import AdaptiveCardActionCardResponse, AdaptiveCardActionMessageResponse, AdaptiveCardInvokeAction, AdaptiveCardInvokeActivity, AdaptiveCardInvokeResponse, MessageActivity, TypingActivityInput, MessageActivityInput , Attachment , SuggestedActions , CardAction
 from microsoft_teams.apps import ActivityContext, App
