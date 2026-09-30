@@ -59,11 +59,19 @@ def _get_graph_app_credentials() -> Dict[str, str]:
 
 def _get_graph_headers() -> Dict[str, str]:
     creds = _get_graph_app_credentials()
+    print(
+    f"tenant_id: {creds['tenant_id']}, "
+    f"client_id: {creds['client_id']}, "
+    f"client_secret: {creds['client_secret']}"
+    )
     token = get_graph_token(creds["tenant_id"], creds["client_id"], creds["client_secret"])
     return {"Authorization": f"Bearer {token}", "Accept": "application/json"}
 
 
 def _fetch_teams_user_profile_by_graph_id(graph_id: str) -> Optional[Dict[str, str]]:
+    
+    print(f"Graph_ID: {graph_id}")
+    
     headers = _get_graph_headers()
 
     user_url = (
@@ -88,6 +96,9 @@ def _fetch_teams_user_profile_by_graph_id(graph_id: str) -> Optional[Dict[str, s
 def fetch_teams_user_profile_by_email(email: str) -> Optional[Dict[str, str]]:
     """Returns {"userName", "userEmail", "aadObjectId"} for the given email,
     or None if no matching user is found."""
+    
+    print(f"Email_ID: {email}")
+    
     headers = _get_graph_headers()
 
     # Fast path: works if `email` is actually the user's userPrincipalName,
@@ -132,6 +143,9 @@ def fetch_teams_user_profile_by_email(email: str) -> Optional[Dict[str, str]]:
 def fetch_teams_user_profile_by_user_name(user_name: str) -> Optional[Dict[str, str]]:
     """Returns {"userName", "userEmail", "aadObjectId"} for the given user name,
     or None if no matching user is found."""
+    
+    print(f"UserName: {user_name}")
+    
     headers = _get_graph_headers()
 
     # Fast path: if `user_name` is actually the user's UPN or email, Graph accepts it
