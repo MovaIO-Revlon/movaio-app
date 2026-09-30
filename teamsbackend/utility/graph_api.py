@@ -38,7 +38,11 @@ def _get_graph_app_credentials() -> Dict[str, str]:
 
 def _get_graph_headers() -> Dict[str, str]:
     creds = _get_graph_app_credentials()
-    print(f"tenant_id :{creds["tenant_id"]},client_id:{creds["client_id"]},client_secret:{creds["client_secret"]}")
+    print(
+    f"tenant_id: {creds['tenant_id']}, "
+    f"client_id: {creds['client_id']}, "
+    f"client_secret: {creds['client_secret']}"
+    )
     token = get_graph_token(creds["tenant_id"], creds["client_id"], creds["client_secret"])
     return {"Authorization": f"Bearer {token}", "Accept": "application/json"}
 
