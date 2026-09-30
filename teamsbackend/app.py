@@ -403,7 +403,8 @@ async def handle_message(ctx: ActivityContext[MessageActivity]):
     aad_object_id = ctx.activity.from_.aad_object_id
 
     # user_data = await get_userdata_by_aaid(aad_object_id)
-    user_data = await get_userdata_by_aaid_cross_tenant(ctx, aad_object_id)
+    #user_data = await get_userdata_by_aaid_cross_tenant(ctx, aad_object_id)
+    user_data = await get_userdata_by_username(aad_object_id, ctx.activity.from_.name)
     if not user_data:
         user_data = await get_userdata_by_username(aad_object_id, ctx.activity.from_.name)
 
@@ -1254,7 +1255,8 @@ async def handle_need_more_help(ctx, value, user_data):
         aad_object_id=ctx.activity.from_.aad_object_id
 
         # user_data = await get_userdata_by_aaid(aad_object_id)
-        user_data = await get_userdata_by_aaid_cross_tenant(ctx, aad_object_id)
+        #user_data = await get_userdata_by_aaid_cross_tenant(ctx, aad_object_id)
+        user_data = await get_userdata_by_username(aad_object_id, ctx.activity.from_.name)
         if not user_data:
             user_data = await get_userdata_by_username(aad_object_id, ctx.activity.from_.name)
 
