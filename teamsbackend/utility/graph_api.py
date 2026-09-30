@@ -38,12 +38,16 @@ def _get_graph_app_credentials() -> Dict[str, str]:
 
 def _get_graph_headers() -> Dict[str, str]:
     creds = _get_graph_app_credentials()
+    print(f"tenant_id :{creds["tenant_id"]},client_id:{creds["client_id"]},client_secret:{creds["client_secret"]}")
     token = get_graph_token(creds["tenant_id"], creds["client_id"], creds["client_secret"])
     return {"Authorization": f"Bearer {token}", "Accept": "application/json"}
 
 
 def _fetch_teams_user_profile_by_graph_id(graph_id: str) -> Optional[Dict[str, str]]:
     try:
+        
+        print(f"Graph_ID: {graph_id}")
+        
         headers = _get_graph_headers()
 
         user_url = (
@@ -147,5 +151,3 @@ def fetch_teams_user_profile_by_aad_object_id_cross_tenant(aad_object_id: str, t
     except Exception as e:
         print(f"Error fetching user profile by Graph ID {aad_object_id} in tenant {tenant_id}: {e}")
         return None
-
-
