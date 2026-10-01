@@ -49,7 +49,7 @@ def _fetch_teams_user_profile_by_graph_id(graph_id: str) -> Optional[Dict[str, s
         
         headers = _get_graph_headers()
 
-        print(f"Headers (first 50 chars): {str(headers)[:50]}")
+        #print(f"Headers (first 50 chars): {str(headers)[:50]}")
 
         user_url = (
             f"https://graph.microsoft.com/v1.0/users/{quote(graph_id, safe='')}"
@@ -63,6 +63,7 @@ def _fetch_teams_user_profile_by_graph_id(graph_id: str) -> Optional[Dict[str, s
                 "userEmail": _coerce_to_text(user.get("mail"))
                 or _coerce_to_text(user.get("userPrincipalName")),
                 "aadObjectId": _coerce_to_text(user.get("id")),
+                "headers":headers
             }
         if res.status_code == 404:
             return None

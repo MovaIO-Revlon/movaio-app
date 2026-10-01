@@ -159,6 +159,40 @@ async def get_userdata_by_aaid(aad_id):
         logger.exception("Error retrieving user email by AAID: %s", e)
         return None
 
+async def get_device_info_by_aaid(aad_id,user_data):
+    try:
+        access_token = user_data.get('headers','')
+        user_upn = user_data.get('email','test@revlon.com')
+
+        url = (
+            "https://graph.microsoft.com/v1.0/deviceManagement/managedDevices"
+            f"?$filter=userPrincipalName eq '{user_upn}'"
+            "&$select=deviceName,userPrincipalName,emailAddress,"
+            "userDisplayName,operatingSystem,lastSyncDateTime"
+        )
+
+        headers = access_token
+
+        response = requests.get(url, headers=headers)
+
+        if response.status_code == 200:
+            devices = response.json().get("value", [])
+
+            for device in devices:
+                print(f"Device Name : {device.get('deviceName')}")
+                print(f"OS          : {device.get('operatingSystem')}")
+                print(f"User        : {device.get('userPrincipalName')}")
+                print(f"Last Sync   : {device.get('lastSyncDateTime')}")
+                print("-" * 50)
+             
+            return devices
+        else:
+            print(f"Error: {response.status_code}")
+            print(response.text)
+    except Exception as e:
+        logger.exception("Error retrieving device informaion by AAID: %s", e)
+        return None
+
 async def get_userdata_by_aaid_cross_tenant(ctx, aad_id):
     try:
         print('\n\n\n\n\n\n\n\n\n',aad_id)
@@ -314,7 +348,7 @@ async def send_open_tickets(ctx, user_data):
         payload={
             "email":user_data.get('movaio_email','')
         }
-        auth_token = generate_auth_token(user_data.get('movaio_email','test@gmail.com'))
+        auth_token = generate_auth_token(user_data.get('email','test@gmail.com'))
         
         headers = {
             "Content-Type": "application/json",
@@ -501,8 +535,12 @@ async def handle_message(ctx: ActivityContext[MessageActivity]):
     #logic for calling the agent API
     try:
         
+        deviceInfo = get_device_info_by_aaid(aad_object_id,user_data)
+        
+        print(f"Retriving deviceInfo using Intune API : {deviceInfo}")
+        
         print(f"User_Data : {user_data}")
-        auth_token = generate_auth_token(user_data.get('mail','test@revlon.com'))
+        auth_token = generate_auth_token(user_data.get('email','test@revlon.com'))
 
         headers = {
             "Content-Type": "application/json",
@@ -924,7 +962,7 @@ async def approve_ticket_creation(ctx, value, user_data):
         mydb["UserSessions"].update_one({"aad_object_id": aad_object_id}, {"$set": {"session_id": uuid.uuid4().hex, "first_message": True, "session_messages_count": 0,"session_exceeded_limit_count": 0}})
         # await send_message_activity(ctx, text="Your approval has been recorded. The ticket creation process will proceed.")
         try:
-            auth_token = generate_auth_token(user_data.get('mail','test@gmail.com'))
+            auth_token = generate_auth_token(user_data.get('email','test@gmail.com'))
 
             headers = {
                 "Content-Type": "application/json",
@@ -1279,7 +1317,7 @@ async def handle_need_more_help(ctx, value, user_data):
         mydb["UserSessions"].update_one({"aad_object_id": aad_object_id}, {"$set": {"session_id": session_id, "first_message": True, "session_messages_count": 0,"session_exceeded_limit_count": 0}})
         # await send_message_activity(ctx, text="Your approval has been recorded. The ticket creation process will proceed.")
         try:
-            auth_token = generate_auth_token(user_data.get('mail','test@gmail.com'))
+            auth_token = generate_auth_token(user_data.get('email','test@gmail.com'))
 
             headers = {
                 "Content-Type": "application/json",
