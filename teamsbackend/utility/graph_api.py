@@ -169,7 +169,7 @@ def get_device_info_by_aaid(aad_object_id: str) -> Optional[Dict[str, str]]:
 
         headers = _get_graph_headers()
 
-        response = requests.get(url, headers=headers)
+        response = httpx.get(url, headers=headers, timeout=10)
 
         if response.status_code == 200:
             devices = response.json().get("value", [])
