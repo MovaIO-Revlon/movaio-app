@@ -27,8 +27,6 @@ def get_graph_token(tenant_id: str, client_id: str, client_secret: str) -> str:
     res.raise_for_status()
     
     token = res.json()["access_token"]
- 
-    # Debug: print first 50 chars only
     print(f"Access Token (first 50 chars): {token[:50]}...")
      
     return token
