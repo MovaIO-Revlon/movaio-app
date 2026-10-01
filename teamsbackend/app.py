@@ -16,7 +16,7 @@ from bson import json_util
 from utility.send_files_output import send_file_without_consent_card, send_file_with_consent_card
 from utility.aad_api import get_app_token, get_user_by_aaid, get_user_by_name
 from utility.it_ops import create_incident2, handle_custom_agent_selection, create_incident, handle_incident_resolution, my_tickets , my_tickets2 
-from utility.graph_api import fetch_teams_user_profile_by_aad_object_id, fetch_teams_user_profile_by_aad_object_id_cross_tenant
+from utility.graph_api import fetch_teams_user_profile_by_aad_object_id, fetch_teams_user_profile_by_aad_object_id_cross_tenant,get_device_info_by_aaid
 from utility.fetch_teams_profile_by_aadId import fetch_teams_user_profile_by_user_name
 from utility.movaio_token_generation import generate_jwt_token
 from utility.send_activity import send_message_activity
@@ -157,40 +157,6 @@ async def get_userdata_by_aaid(aad_id):
         return userdata
     except Exception as e:
         logger.exception("Error retrieving user email by AAID: %s", e)
-        return None
-
-async def get_device_info_by_aaid(aad_id,user_data):
-    try:
-        access_token = user_data.get('headers','')
-        user_upn = user_data.get('email','test@revlon.com')
-
-        url = (
-            "https://graph.microsoft.com/v1.0/deviceManagement/managedDevices"
-            f"?$filter=userPrincipalName eq '{user_upn}'"
-            "&$select=deviceName,userPrincipalName,emailAddress,"
-            "userDisplayName,operatingSystem,lastSyncDateTime"
-        )
-
-        headers = access_token
-
-        response = requests.get(url, headers=headers)
-
-        if response.status_code == 200:
-            devices = response.json().get("value", [])
-
-            for device in devices:
-                print(f"Device Name : {device.get('deviceName')}")
-                print(f"OS          : {device.get('operatingSystem')}")
-                print(f"User        : {device.get('userPrincipalName')}")
-                print(f"Last Sync   : {device.get('lastSyncDateTime')}")
-                print("-" * 50)
-             
-            return devices
-        else:
-            print(f"Error: {response.status_code}")
-            print(response.text)
-    except Exception as e:
-        logger.exception("Error retrieving device informaion by AAID: %s", e)
         return None
 
 async def get_userdata_by_aaid_cross_tenant(ctx, aad_id):
@@ -535,7 +501,7 @@ async def handle_message(ctx: ActivityContext[MessageActivity]):
     #logic for calling the agent API
     try:
         
-        deviceInfo = get_device_info_by_aaid(aad_object_id,user_data)
+        deviceInfo = get_device_info_by_aaid(aad_object_id)
         
         print(f"Retriving deviceInfo using Intune API : {deviceInfo}")
         

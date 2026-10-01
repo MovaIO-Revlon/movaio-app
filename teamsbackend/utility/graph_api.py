@@ -62,8 +62,7 @@ def _fetch_teams_user_profile_by_graph_id(graph_id: str) -> Optional[Dict[str, s
                 "userName": _coerce_to_text(user.get("displayName")),
                 "userEmail": _coerce_to_text(user.get("mail"))
                 or _coerce_to_text(user.get("userPrincipalName")),
-                "aadObjectId": _coerce_to_text(user.get("id")),
-                "headers":headers
+                "aadObjectId": _coerce_to_text(user.get("id"))
             }
         if res.status_code == 404:
             return None
@@ -152,4 +151,40 @@ def fetch_teams_user_profile_by_aad_object_id_cross_tenant(aad_object_id: str, t
         return None
     except Exception as e:
         print(f"Error fetching user profile by Graph ID {aad_object_id} in tenant {tenant_id}: {e}")
+        return None
+        
+def get_device_info_by_aaid(aad_object_id: str) -> Optional[Dict[str, str]]:
+    try:
+        
+        user_data = _fetch_teams_user_profile_by_graph_id(aad_object_id)
+        
+        user_upn = user_data.get('email','test@revlon.com')
+
+        url = (
+            "https://graph.microsoft.com/v1.0/deviceManagement/managedDevices"
+            f"?$filter=userPrincipalName eq '{user_upn}'"
+            "&$select=deviceName,userPrincipalName,emailAddress,"
+            "userDisplayName,operatingSystem,lastSyncDateTime"
+        )
+
+        headers = _get_graph_headers()
+
+        response = requests.get(url, headers=headers)
+
+        if response.status_code == 200:
+            devices = response.json().get("value", [])
+
+            for device in devices:
+                print(f"Device Name : {device.get('deviceName')}")
+                print(f"OS          : {device.get('operatingSystem')}")
+                print(f"User        : {device.get('userPrincipalName')}")
+                print(f"Last Sync   : {device.get('lastSyncDateTime')}")
+                print("-" * 50)
+             
+            return devices
+        else:
+            print(f"Error: {response.status_code}")
+            print(response.text)
+    except Exception as e:
+        logger.exception("Error retrieving device informaion by AAID: %s", e)
         return None
