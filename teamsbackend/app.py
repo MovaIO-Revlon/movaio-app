@@ -474,12 +474,17 @@ async def handle_message(ctx: ActivityContext[MessageActivity]):
         selected_agent_id = default_agent['agent_id']
         session_id = uuid.uuid4().hex
         
-        mydb['UserSessions'].insert_one({
-            'aad_object_id': aad_object_id,
-            'selected_agent_id': selected_agent_id,
-            'session_id': session_id,
-            'last_activity': get_current_utc()
-        })
+        mydb['UserSessions'].update_one(
+            {'aad_object_id': aad_object_id},
+            {
+                '$set': {
+                    'selected_agent_id': selected_agent_id,
+                    'session_id': session_id,
+                    'last_activity': get_current_utc()
+                }
+            },
+            upsert=True
+        )
 
     text = (ctx.activity.text or "").strip()
     

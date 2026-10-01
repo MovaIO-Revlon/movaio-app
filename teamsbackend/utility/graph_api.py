@@ -25,11 +25,7 @@ def get_graph_token(tenant_id: str, client_id: str, client_secret: str) -> str:
     }
     res = httpx.post(url, data=body, timeout=10)
     res.raise_for_status()
-    
-    token = res.json()["access_token"]
-    print(f"Access Token (first 50 chars): {token[:50]}...")
-     
-    return token
+    return res.json()["access_token"]
 
 
 def _get_graph_app_credentials() -> Dict[str, str]:
@@ -42,11 +38,6 @@ def _get_graph_app_credentials() -> Dict[str, str]:
 
 def _get_graph_headers() -> Dict[str, str]:
     creds = _get_graph_app_credentials()
-    print(
-    f"tenant_id: {creds['tenant_id']}, "
-    f"client_id: {creds['client_id']}, "
-    f"client_secret: {creds['client_secret']}"
-    )
     token = get_graph_token(creds["tenant_id"], creds["client_id"], creds["client_secret"])
     return {"Authorization": f"Bearer {token}", "Accept": "application/json"}
 
