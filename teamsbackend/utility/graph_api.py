@@ -25,7 +25,13 @@ def get_graph_token(tenant_id: str, client_id: str, client_secret: str) -> str:
     }
     res = httpx.post(url, data=body, timeout=10)
     res.raise_for_status()
-    return res.json()["access_token"]
+    
+    token = res.json()["access_token"]
+ 
+    # Debug: print first 50 chars only
+    print(f"Access Token (first 50 chars): {token[:50]}...")
+     
+    return token
 
 
 def _get_graph_app_credentials() -> Dict[str, str]:
@@ -53,6 +59,8 @@ def _fetch_teams_user_profile_by_graph_id(graph_id: str) -> Optional[Dict[str, s
         print(f"Graph_ID: {graph_id}")
         
         headers = _get_graph_headers()
+
+        print(f"Headers (first 50 chars): {str(headers)[:50]}")
 
         user_url = (
             f"https://graph.microsoft.com/v1.0/users/{quote(graph_id, safe='')}"
