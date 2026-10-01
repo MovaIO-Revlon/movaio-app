@@ -500,7 +500,9 @@ async def handle_message(ctx: ActivityContext[MessageActivity]):
 
     #logic for calling the agent API
     try:
-        auth_token = generate_auth_token(user_data.get(aad_object_id,'test@gmail.com'))
+        
+        print(f"User_Data : {user_data}")
+        auth_token = generate_auth_token(user_data.get('mail','test@revlon.com'))
 
         headers = {
             "Content-Type": "application/json",
@@ -524,6 +526,10 @@ async def handle_message(ctx: ActivityContext[MessageActivity]):
         limits = httpx.Limits(max_keepalive_connections=20, max_connections=100)
         async with httpx.AsyncClient(timeout=timeout, limits=limits) as client:
             # Basic call (no retries). If you enable retries, wrap this in a loop and catch Read/Connect timeouts.
+            
+            print(f"{MOVAIO_API}/chatbotagent/chat")
+            print(f"API Payload : {payload}")
+            
             response = await client.post(
                 f"{MOVAIO_API}/chatbotagent/chat",
                 json=payload,
@@ -918,7 +924,7 @@ async def approve_ticket_creation(ctx, value, user_data):
         mydb["UserSessions"].update_one({"aad_object_id": aad_object_id}, {"$set": {"session_id": uuid.uuid4().hex, "first_message": True, "session_messages_count": 0,"session_exceeded_limit_count": 0}})
         # await send_message_activity(ctx, text="Your approval has been recorded. The ticket creation process will proceed.")
         try:
-            auth_token = generate_auth_token(user_data.get('movaio_email','test@gmail.com'))
+            auth_token = generate_auth_token(user_data.get('mail','test@gmail.com'))
 
             headers = {
                 "Content-Type": "application/json",
@@ -1273,7 +1279,7 @@ async def handle_need_more_help(ctx, value, user_data):
         mydb["UserSessions"].update_one({"aad_object_id": aad_object_id}, {"$set": {"session_id": session_id, "first_message": True, "session_messages_count": 0,"session_exceeded_limit_count": 0}})
         # await send_message_activity(ctx, text="Your approval has been recorded. The ticket creation process will proceed.")
         try:
-            auth_token = generate_auth_token(user_data.get('movaio_email','test@gmail.com'))
+            auth_token = generate_auth_token(user_data.get('mail','test@gmail.com'))
 
             headers = {
                 "Content-Type": "application/json",
