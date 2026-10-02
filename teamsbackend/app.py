@@ -516,7 +516,7 @@ async def handle_message(ctx: ActivityContext[MessageActivity]):
         print(f"Calling external API for user {aad_object_id}, agent {selected_agent_id}, session {session_id} with text: {text}")
 
         payload = {
-            "user_id": aad_object_id,
+            "user_id": user_data.get('email','test@revlon.com'),
             "agent_id": selected_agent_id,
             "session_id": session_id,
             "userQuery": text
