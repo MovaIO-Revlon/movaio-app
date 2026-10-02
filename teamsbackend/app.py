@@ -517,7 +517,7 @@ async def handle_message(ctx: ActivityContext[MessageActivity]):
 
         payload = {
             "user_id": user_data.get('email','test@revlon.com'),
-            "agent_id": selected_agent_id,
+            "agent_id": SELECTED_AGENT_ID,
             "session_id": session_id,
             "userQuery": text
         }
