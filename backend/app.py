@@ -2759,7 +2759,12 @@ class ChatbotAgent(DatabaseCollections):
         # insert_event_op = {'type': 'insert_one', 'document': new_event}
         # self._query_db('chatbot_tracking', insert_event_op)
 
+        print(f"Teams-bot Chat input agent_id :{agent_id}")
+
         tool_res = self.agent_collection.find_one({'agent_id': agent_id})
+        
+        print(f"Agent Details :{tool_res}")
+        
         custom_tool_config = tool_res.get("Iscustomtool", False)
         internal_tool_data = tool_res.get("internal_tool", [])
         api_key = tool_res.get("agent_api_key")
@@ -6256,6 +6261,8 @@ class FlaskApp(DatabaseCollections):
             
             # Check if prompt_title is present (from prompt repository)
             has_prompt_title = "prompt_title" in data
+            
+            print(f"Teams-bot Chat input :{data}")
             
             # Process the request with or without prompt_title
             return self.chatbot_agent.process_chat(request, data, has_prompt_title)
