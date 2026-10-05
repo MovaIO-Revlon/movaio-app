@@ -189,13 +189,18 @@ async def get_userdata_by_username(aad_id , username):
         user = mydb['UserSessions'].find_one({'aad_object_id': aad_id})
         if user and 'email' in user:
             email = user['email']
+            print(f"Validation 1------------ {email}")
         elif user and 'email' not in user:
-            aad_user = fetch_teams_user_profile_by_user_name(username)
+            UserEmail = user['email']
+            print(f"Validation 2------------ {UserEmail}")
+            aad_user = fetch_teams_user_profile_by_user_name(UserEmail or username)
             print('aad_user:', aad_user)
             email = aad_user.get('userEmail') or aad_user.get('userPrincipalName')
             mydb['UserSessions'].update_one({'aad_object_id': aad_id},{'$set': {'email': email, 'session_id': uuid.uuid4().hex, 'first_message': True}}, upsert=True)
         else:
-            aad_user = fetch_teams_user_profile_by_user_name(username)
+            UserEmail = user['email']
+            print(f"Validation 3------------ {UserEmail}")
+            aad_user = fetch_teams_user_profile_by_user_name(UserEmail or username)
             print('aad_user:', aad_user)
             email = aad_user.get('userEmail') or aad_user.get('userPrincipalName')
             mydb['UserSessions'].insert_one({'aad_object_id': aad_id, 'email': email, 'selected_agent_id':None, 'session_id': uuid.uuid4().hex, 'first_message': True})
