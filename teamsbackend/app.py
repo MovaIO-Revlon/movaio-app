@@ -143,17 +143,25 @@ async def get_userdata_by_aaid(aad_id):
         user = mydb['UserSessions'].find_one({'aad_object_id': aad_id})
         if user and 'email' in user:
             email = user['email']
+            print(f"Validation_Id 1------------ {email}")
         elif user and 'email' not in user:
+            print(f"Validation_Id 2------------ {aad_id}")
             aad_user = fetch_teams_user_profile_by_aad_object_id(aad_id)
             print('aad_user:', aad_user)
             email = aad_user.get('userEmail') or aad_user.get('userPrincipalName')
             mydb['UserSessions'].update_one({'aad_object_id': aad_id},{'$set': {'email': email, 'session_id': uuid.uuid4().hex, 'first_message': True}}, upsert=True)
         else:
+            print(f"Validation_Id 3------------ {aad_id}")
             aad_user = fetch_teams_user_profile_by_aad_object_id(aad_id)
             print('aad_user:', aad_user)
             email = aad_user.get('userEmail') or aad_user.get('userPrincipalName')
             mydb['UserSessions'].insert_one({'aad_object_id': aad_id, 'email': email, 'selected_agent_id':None, 'session_id': uuid.uuid4().hex, 'first_message': True})
-        userdata = mydb['Users'].find_one({'email': email.lower()})
+        userdata = mydb['Users'].find_one({
+            'email': {
+                '$regex': f'^{email}$',
+                '$options': 'i'
+            }
+        })
         return userdata
     except Exception as e:
         logger.exception("Error retrieving user email by AAID: %s", e)
@@ -177,7 +185,12 @@ async def get_userdata_by_aaid_cross_tenant(ctx, aad_id):
             print('aad_user:', aad_user)
             email = aad_user.get('userEmail') or aad_user.get('userPrincipalName')
             mydb['UserSessions'].insert_one({'aad_object_id': aad_id, 'email': email, 'selected_agent_id':None, 'session_id': uuid.uuid4().hex, 'first_message': True})
-        userdata = mydb['Users'].find_one({'email': email.lower()})
+        userdata = mydb['Users'].find_one({
+            'email': {
+                '$regex': f'^{email}$',
+                '$options': 'i'
+            }
+        })
         return userdata
     except Exception as e:
         logger.exception("Error retrieving user email by AAID: %s", e)
@@ -204,7 +217,12 @@ async def get_userdata_by_username(aad_id , username):
             print('aad_user:', aad_user)
             email = aad_user.get('userEmail') or aad_user.get('userPrincipalName')
             mydb['UserSessions'].insert_one({'aad_object_id': aad_id, 'email': email, 'selected_agent_id':None, 'session_id': uuid.uuid4().hex, 'first_message': True})
-        userdata = mydb['Users'].find_one({'email': email.lower()})
+        userdata = mydb['Users'].find_one({
+            'email': {
+                '$regex': f'^{email}$',
+                '$options': 'i'
+            }
+        })
         return userdata
     except Exception as e:
         logger.exception("Error retrieving user email by AAID: %s", e)
