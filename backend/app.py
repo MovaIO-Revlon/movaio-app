@@ -2845,7 +2845,8 @@ class ChatbotAgent(DatabaseCollections):
                         properties_only = parameters.get("properties", parameters) if isinstance(parameters, dict) else {}
                         tools_prompt += f"- {name}: {description}\n Parameters: {json.dumps(properties_only)}\n"
 
-        current_message = tools_prompt + "\nUser Query:" + user_input
+        #current_message = tools_prompt + "\nUser Query:" + user_input
+        current_message = "User Query:" + user_input
         max_rounds = 10
         final_content = ""
         agent_api_base = "https://agent-prod.studio.lyzr.ai"
