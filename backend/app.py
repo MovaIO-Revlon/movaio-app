@@ -1308,8 +1308,8 @@ class ChatbotAgent(DatabaseCollections):
 
                         tools_prompt += f"- {name}: {description}\n Parameters: {json.dumps(properties_only)}\n"
 
-        #current_message = "User Query:" + user_input
-        current_message = tools_prompt + "\nUser Query:" + user_input
+        current_message = "User Query:" + user_input
+        #current_message = tools_prompt + "\nUser Query:" + user_input
         final_input_message = current_message
         max_rounds = 10
         final_content = ""
