@@ -6,6 +6,10 @@ from urllib.parse import quote
 import httpx
 from dotenv import load_dotenv
 
+import logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("teams-app")
+
 load_dotenv()
 
 
