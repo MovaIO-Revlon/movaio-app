@@ -1374,6 +1374,11 @@ class ChatbotAgent(DatabaseCollections):
                     decrypted_args = process_sensitive_fields(args, "decrypt")
                     print(f"Executing tool: {tool_name} with arguments: {decrypted_args}")
 
+                    print(f"ServiceNow Tool_Name: {tool_name}")
+                    print(f"ServiceNow Raw_Tool_Docs Args: {args}")
+                    print(f"ServiceNow Raw_Tool_Docs Args decrypted: {decrypted_args}")
+                    print(f"ServiceNow Raw_Tool_Docs: {raw_tools_docs}")
+
                     def run_tool_func():
                         auth_service = ToolAuthService()
                         return auth_service._execute_tool(
@@ -2890,6 +2895,12 @@ class ChatbotAgent(DatabaseCollections):
                     decrypted_args = process_sensitive_fields(args, "decrypt")
                     
                     auth_service = ToolAuthService()
+                    
+                    print(f"ServiceNow Tool_Name-1: {tool_name}")
+                    print(f"ServiceNow Raw_Tool_Docs Args-1: {args}")
+                    print(f"ServiceNow Raw_Tool_Docs Args decrypted-1: {decrypted_args}")
+                    print(f"ServiceNow Raw_Tool_Docs-1: {raw_tools_docs}")
+                    
                     tool_result = auth_service._execute_tool(tool_name, decrypted_args, raw_tools_docs, user_id)
                     masked_tool_result = self.mask_pii_sensitive_data(tool_result)
                     
