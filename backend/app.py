@@ -83,7 +83,7 @@ api_key = config_loader.API_KEY_LYZR
 trend_agent_id = config_loader.TREND_AGENT_ID_LYZR
 insight_agent_id = config_loader.INSIGHT_AGENT_ID_LYZR
 insight_limit = config_loader.INSIGHT_LIMIT
-snow_folder_path = config_loader.SNOW_FOLDER_PATH
+snow_folder_path = "tool_config"
 
 JWT_SECRET_KEY = config_loader.JWT_SECRET_KEY
 
@@ -1215,7 +1215,7 @@ class ChatbotAgent(DatabaseCollections):
                     is_snow_folder_created = True
 
                      # Use current application directory
-                    backend_dir = os.getcwd()
+                    backend_dir = snow_folder_path
 
                     folder_path = os.path.join(backend_dir, "ServiceNowstate")
                     os.makedirs(folder_path, exist_ok=True)
@@ -1741,6 +1741,16 @@ class ChatbotAgent(DatabaseCollections):
     def process_request(self, request, data, has_prompt_title=False):
         """Process chatbot request with optional prompt_title and agency_id"""
         print("Processing chatbot request...")
+        
+        
+        base_dir = snow_folder_path
+        file_path = os.path.join(base_dir, "ServiceNowstate", "SNow_tool_output.json")
+
+        with open(file_path, "r", encoding="utf-8") as f:
+            file_data = json.load(f)
+
+        print(file_data)
+        
         user_query = data.get('userQuery', "")
         agent_id = data.get('agent_id', "")
         master_agent_id = data.get('master_agent_id', "")
