@@ -1191,7 +1191,7 @@ class ChatbotAgent(DatabaseCollections):
         # 1. WEBSOCKET HANDLERS
         # ------------------------------------------------------------------
         def on_message(ws_inst, message):
-            try:
+            try:                
                 log_data = json.loads(message)
                 print("\n=== WEBSOCKET LOG RECEIVED ===")
                 # print(json.dumps(log_data, indent=2))
@@ -1204,6 +1204,8 @@ class ChatbotAgent(DatabaseCollections):
                 }
                 log_queue.put(log_entry)
                 collected_logs.append(log_data)
+                
+                nonlocal is_snow_folder_created
                 
                 if ( not is_snow_folder_created
                     and log_data.get("event_type") == "tool_output"
