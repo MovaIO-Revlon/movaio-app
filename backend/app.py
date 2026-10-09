@@ -83,6 +83,7 @@ api_key = config_loader.API_KEY_LYZR
 trend_agent_id = config_loader.TREND_AGENT_ID_LYZR
 insight_agent_id = config_loader.INSIGHT_AGENT_ID_LYZR
 insight_limit = config_loader.INSIGHT_LIMIT
+snow_folder_path = config_loader.SNOW_FOLDER_PATH
 
 JWT_SECRET_KEY = config_loader.JWT_SECRET_KEY
 
@@ -1213,7 +1214,7 @@ class ChatbotAgent(DatabaseCollections):
                 ):
                     is_snow_folder_created = True
 
-                    folder_path = "ServiceNowstate"
+                    folder_path = snow_folder_path
                     os.makedirs(folder_path, exist_ok=True)
 
                     file_path = os.path.join(folder_path, "SNow_tool_output.json")
