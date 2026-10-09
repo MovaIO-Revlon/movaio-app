@@ -200,6 +200,6 @@
  "ROUTER_AGENT_ID": "",
  "SESSION_TOKEN_SECRET": "",
  "TICKET_FUNCTIONS_API_KEY": "",
- "SNOW_FOLDER_PATH": "ServiceNowstate"
+ "SNOW_FOLDER_PATH": "/home/cadm_mohamed.luthufullah/movaio-app/backend/ServiceNowstate"
 }
 
