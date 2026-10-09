@@ -1214,10 +1214,16 @@ class ChatbotAgent(DatabaseCollections):
                 ):
                     is_snow_folder_created = True
 
-                    folder_path = snow_folder_path
+                     # Use current application directory
+                    backend_dir = os.getcwd()
+
+                    folder_path = os.path.join(backend_dir, "ServiceNowstate")
                     os.makedirs(folder_path, exist_ok=True)
 
-                    file_path = os.path.join(folder_path, "SNow_tool_output.json")
+                    file_path = os.path.join(
+                        folder_path,
+                        "SNow_tool_output.json"
+                    )
 
                     data = {
                         "event_type": log_data.get("event_type"),
@@ -1227,9 +1233,13 @@ class ChatbotAgent(DatabaseCollections):
                     with open(file_path, "w", encoding="utf-8") as f:
                         json.dump(data, f, indent=4, ensure_ascii=False)
 
-                    print(f"Created file: {os.path.abspath(file_path)}")
-                    print(f"Created folder: {os.path.abspath(folder_path)}")
-                    print(f"Current working directory: {os.getcwd()}")
+                    print("=" * 80)
+                    print(f"Current Working Directory : {backend_dir}")
+                    print(f"Created Folder           : {folder_path}")
+                    print(f"Created File             : {file_path}")
+                    print(f"Folder Exists            : {os.path.isdir(folder_path)}")
+                    print(f"File Exists              : {os.path.isfile(file_path)}")
+                    print("=" * 80)
                 
             except Exception as e:
                 print(f"Error parsing WebSocket message: {e}")
