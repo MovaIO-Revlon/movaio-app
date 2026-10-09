@@ -1742,14 +1742,18 @@ class ChatbotAgent(DatabaseCollections):
         """Process chatbot request with optional prompt_title and agency_id"""
         print("Processing chatbot request...")
         
-        
         base_dir = snow_folder_path
         file_path = os.path.join(base_dir, "ServiceNowstate", "SNow_tool_output.json")
 
-        with open(file_path, "r", encoding="utf-8") as f:
-            file_data = json.load(f)
+        file_data = {}
 
-        print(file_data)
+        if os.path.exists(file_path):
+            with open(file_path, "r", encoding="utf-8") as f:
+                file_data = json.load(f)
+
+            print("File data:", file_data)
+        else:
+            print(f"File not found: {file_path}")        
         
         user_query = data.get('userQuery', "")
         agent_id = data.get('agent_id', "")
