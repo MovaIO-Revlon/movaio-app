@@ -1149,6 +1149,7 @@ class ChatbotAgent(DatabaseCollections):
         collected_logs = []
         ws_thread = None
         ws = None
+        is_snow_folder_created = False
 
         # Helper generator to drain and yield ONLY WebSocket logs in real-time
         def flush_log_queue():
@@ -1203,6 +1204,28 @@ class ChatbotAgent(DatabaseCollections):
                 }
                 log_queue.put(log_entry)
                 collected_logs.append(log_data)
+                
+                if ( not is_snow_folder_created
+                    and log_data.get("event_type") == "tool_output"
+                    and "STATEFUL" in log_data.get("tool_output", "").upper()
+                ):
+                    is_snow_folder_created = True
+
+                    folder_path = "ServiceNowstate"
+                    os.makedirs(folder_path, exist_ok=True)
+
+                    file_path = os.path.join(folder_path, "SNow_tool_output.json")
+
+                    data = {
+                        "event_type": log_data.get("event_type"),
+                        "tool_output": log_data.get("tool_output", "")
+                    }
+
+                    with open(file_path, "w", encoding="utf-8") as f:
+                        json.dump(data, f, indent=4, ensure_ascii=False)
+
+                    print(f"Created {file_path}")
+                
             except Exception as e:
                 print(f"Error parsing WebSocket message: {e}")
 
