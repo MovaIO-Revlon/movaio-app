@@ -1226,7 +1226,9 @@ class ChatbotAgent(DatabaseCollections):
                     with open(file_path, "w", encoding="utf-8") as f:
                         json.dump(data, f, indent=4, ensure_ascii=False)
 
-                    print(f"Created {file_path}")
+                    print(f"Created file: {os.path.abspath(file_path)}")
+                    print(f"Created folder: {os.path.abspath(folder_path)}")
+                    print(f"Current working directory: {os.getcwd()}")
                 
             except Exception as e:
                 print(f"Error parsing WebSocket message: {e}")
