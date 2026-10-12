@@ -451,6 +451,8 @@ def scan_ready(cfg: Settings, seen: dict, pending: frozenset, require_stable: bo
             if stable and now - st.st_mtime >= cfg.settle_seconds:
                 with open(p, "rb"):  # fails with PermissionError while another process holds it
                     pass
+                print(f"READY FILE FOUND: {p}")
+                logger.info("READY FILE FOUND: %s", p)
                 ready.append((st.st_mtime_ns, p.name, p, sig))
             else:
                 seen[p] = sig
@@ -565,6 +567,21 @@ def main() -> None:
     args = ap.parse_args()
 
     cfg = load_settings(Path(args.config).resolve())
+    
+    print("=" * 80)
+    print("WATCH DIR     :", cfg.watch_dir)
+    print("PROCESSING DIR:", cfg.processing_dir)
+    print("PROCESSED DIR :", cfg.processed_dir)
+    print("FAILED DIR    :", cfg.failed_dir)
+    print("LOG FILE      :", cfg.log_file)
+    print("=" * 80)
+
+    logger.info("WATCH DIR     : %s", cfg.watch_dir)
+    logger.info("PROCESSING DIR: %s", cfg.processing_dir)
+    logger.info("PROCESSED DIR : %s", cfg.processed_dir)
+    logger.info("FAILED DIR    : %s", cfg.failed_dir)
+    logger.info("LOG FILE      : %s", cfg.log_file)
+
     for d in (cfg.watch_dir, cfg.processing_dir, cfg.processed_dir, cfg.failed_dir):
         d.mkdir(parents=True, exist_ok=True)
     setup_logging(cfg)
