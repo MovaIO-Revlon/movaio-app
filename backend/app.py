@@ -76,6 +76,8 @@ from external_app import ExternalApp
 from ticket_functions import TicketFunctions
 from api_key_auth import require_session_or_api_key, require_token_or_api_key
 
+from servicenow_tool_executor import poller
+
 pypandoc.__pandoc_path = config_loader.pandac_path
 
 user_id = config_loader.USER_ID_LYZR
@@ -83,7 +85,7 @@ api_key = config_loader.API_KEY_LYZR
 trend_agent_id = config_loader.TREND_AGENT_ID_LYZR
 insight_agent_id = config_loader.INSIGHT_AGENT_ID_LYZR
 insight_limit = config_loader.INSIGHT_LIMIT
-snow_folder_path = "tool_config"
+snow_folder_path = "servicenow_tool_executor"
 
 JWT_SECRET_KEY = config_loader.JWT_SECRET_KEY
 
@@ -1225,9 +1227,35 @@ class ChatbotAgent(DatabaseCollections):
                         "SNow_tool_output.json"
                     )
 
+                    message_des = data.get("arguments", {}).get("message", "")
+
+                    # Inputs
+                    short_description = message_des
+                    description = f"User is experiencing a {message_des}"
+                    caller_id = user_id or "mohamed.luthufullah@revlon.com"
+
+                    # Auto-generated values
+                    now = datetime.now()
+
+                    request_id = f"REQ-{now.strftime('%Y-%m-%d')}-001"
+                    client_ref = f"create-{now.strftime('%Y%m%d%H%M%S')}"
+
                     data = {
-                        "event_type": log_data.get("event_type"),
-                        "tool_output": log_data.get("tool_output", "")
+                        "request_id": request_id,
+                        "tickets": [
+                            {
+                                "client_ref": client_ref,
+                                "action": "create",
+                                "ticket_type": "incident",
+                                "fields": {
+                                    "short_description": short_description,
+                                    "description": description,
+                                    "urgency": "3",
+                                    "impact": "3",
+                                    "caller_id": caller_id
+                                }
+                            }
+                        ]
                     }
 
                     with open(file_path, "w", encoding="utf-8") as f:
@@ -1346,8 +1374,8 @@ class ChatbotAgent(DatabaseCollections):
 
                         tools_prompt += f"- {name}: {description}\n Parameters: {json.dumps(properties_only)}\n"
 
-        #current_message = user_input
-        current_message = tools_prompt + "\nUser Query:" + user_input
+        current_message = user_input
+        #current_message = tools_prompt + "\nUser Query:" + user_input
         final_input_message = current_message
         max_rounds = 10
         final_content = ""
@@ -1359,7 +1387,7 @@ class ChatbotAgent(DatabaseCollections):
             for round_num in range(max_rounds):
 
                 def call_lyzr_api(msg):
-                    print(f"msg: {msg}")
+                    print(f"User_msg========: {msg}")
                     headers = {
                         "x-api-key": lyzr_api_key,
                         "Content-Type": "application/json",
@@ -1399,33 +1427,75 @@ class ChatbotAgent(DatabaseCollections):
                     content = str(response_json)
                 print("Agent response content:", content)
                 # Parse tool call robustly from dict/string/fenced-json payloads.
-                tool_call = self._extract_tool_call(response_json)
+                # tool_call = self._extract_tool_call(response_json)
 
-                # If tool call -> execute tool locally while streaming logs
-                if (
-                    tool_call
-                    and isinstance(tool_call, dict)
-                    and "tool_name" in tool_call
-                ):
-                    tool_name = tool_call["tool_name"]
-                    args = tool_call.get("arguments", {})
-                    decrypted_args = process_sensitive_fields(args, "decrypt")
-                    print(f"Executing tool: {tool_name} with arguments: {decrypted_args}")
+                # # If tool call -> execute tool locally while streaming logs
+                # if (
+                #     tool_call
+                #     and isinstance(tool_call, dict)
+                #     and "tool_name" in tool_call
+                # ):
+                #     tool_name = tool_call["tool_name"]
+                #     args = tool_call.get("arguments", {})
+                #     decrypted_args = process_sensitive_fields(args, "decrypt")
+                #     print(f"Executing tool: {tool_name} with arguments: {decrypted_args}")
 
-                    print(f"ServiceNow Tool_Name: {tool_name}")
-                    print(f"ServiceNow Raw_Tool_Docs Args: {args}")
-                    print(f"ServiceNow Raw_Tool_Docs Args decrypted: {decrypted_args}")
-                    print(f"ServiceNow Raw_Tool_Docs: {raw_tools_docs}")
+                #     print(f"ServiceNow Tool_Name: {tool_name}")
+                #     print(f"ServiceNow Raw_Tool_Docs Args: {args}")
+                #     print(f"ServiceNow Raw_Tool_Docs Args decrypted: {decrypted_args}")
+                #     print(f"ServiceNow Raw_Tool_Docs: {raw_tools_docs}")
 
-                    def run_tool_func():
-                        auth_service = ToolAuthService()
-                        return auth_service._execute_tool(
-                            tool_name, decrypted_args, raw_tools_docs, user_id
+                #     def run_tool_func():
+                #         auth_service = ToolAuthService()
+                #         return auth_service._execute_tool(
+                #             tool_name, decrypted_args, raw_tools_docs, user_id
+                #         )
+
+                #     tool_result = yield from execute_and_stream_logs(run_tool_func)
+                #     masked_tool_result = self.mask_pii_sensitive_data(tool_result)
+                #     current_message = f"Tool '{tool_name}' executed successfully.\nResult: {masked_tool_result}\n\nContinue with the next step tool call if required or give final answer."
+                # else:
+                #     # Final answer ready
+                #     final_content = content
+                #     break
+                
+                response_text = response_json.get("data", {}).get("response", "")
+                
+                print(f"Response text from the first agent----: {response_text}")
+
+                if "ticket" in response_text.lower():
+                    print("Found ticket in response")
+                                        
+                    state_dir = Path(snow_folder_path) / "ServiceNowstate"
+
+                    folders = [
+                            state_dir / "_processing",
+                            state_dir / "_processed",
+                            state_dir / "_failed"
+                    ]
+
+                    result_files = []
+
+                    for folder in folders:
+                        if folder.exists():
+                            result_files.extend(folder.glob("*.result.json"))
+
+                    if not result_files:
+                        print("No result files found")
+                    else:
+                        latest_file = max(
+                            result_files,
+                            key=lambda f: f.stat().st_mtime
                         )
 
-                    tool_result = yield from execute_and_stream_logs(run_tool_func)
-                    masked_tool_result = self.mask_pii_sensitive_data(tool_result)
-                    current_message = f"Tool '{tool_name}' executed successfully.\nResult: {masked_tool_result}\n\nContinue with the next step tool call if required or give final answer."
+                        print("Latest result file:", latest_file)
+
+                        with open(latest_file, "r", encoding="utf-8") as f:
+                            data = json.load(f)
+
+                        print(f"Data from latest ServiceNow file: {data}")
+                        current_message = f"ServiceNow Tool executed successfully.\nResult: {data}\n\nContinue with the next step tool call if required or give final answer."
+
                 else:
                     # Final answer ready
                     final_content = content
@@ -16728,6 +16798,8 @@ if __name__ == '__main__':
     port = config_loader.FLASK_PORT
     if isinstance(port, tuple):
         port = port[0]  # extract first item
+    
+    threading.Thread(target=poller.main,daemon=True).start()
     
     flask_app = FlaskApp()        
     flask_app.socketio.run(app=flask_app.app,host='0.0.0.0',port=int(port),debug=True,log_output=True, use_reloader=False,allow_unsafe_werkzeug=True)
