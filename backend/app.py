@@ -1227,7 +1227,7 @@ class ChatbotAgent(DatabaseCollections):
                         "SNow_tool_output.json"
                     )
 
-                    message_des = data.get("arguments", {}).get("message", "")
+                    message_des = inputdata.get("arguments", {}).get("message", "")
 
                     # Inputs
                     short_description = message_des
