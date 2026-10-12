@@ -1240,7 +1240,7 @@ class ChatbotAgent(DatabaseCollections):
                     request_id = f"REQ-{now.strftime('%Y-%m-%d')}-001"
                     client_ref = f"create-{now.strftime('%Y%m%d%H%M%S')}"
 
-                    data = {
+                    inputdata = {
                         "request_id": request_id,
                         "tickets": [
                             {
@@ -1259,7 +1259,7 @@ class ChatbotAgent(DatabaseCollections):
                     }
 
                     with open(file_path, "w", encoding="utf-8") as f:
-                        json.dump(data, f, indent=4, ensure_ascii=False)
+                        json.dump(inputdata, f, indent=4, ensure_ascii=False)
 
                     print("=" * 80)
                     print(f"Current Working Directory : {backend_dir}")
@@ -1458,6 +1458,8 @@ class ChatbotAgent(DatabaseCollections):
                 #     # Final answer ready
                 #     final_content = content
                 #     break
+                
+                print(f"Response from the first agent----: {response_json}")
                 
                 response_text = response_json.get("data", {}).get("response", "")
                 
