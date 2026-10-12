@@ -1460,9 +1460,15 @@ class ChatbotAgent(DatabaseCollections):
                 #     break
                 
                 print(f"Response from the first agent----: {response_json}")
-                
-                response_text = response_json.get("data", {}).get("response", "")
-                
+                                
+                if isinstance(response_json, dict):
+                    response_text = (
+                        response_json.get("response")
+                        or response_json.get("data", {}).get("response", "")
+                        or response_json.get("message", "")
+                        or ""
+                    )
+
                 print(f"Response text from the first agent----: {response_text}")
 
                 if "ticket" in response_text.lower():
