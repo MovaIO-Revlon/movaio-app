@@ -51,14 +51,13 @@ from datetime import datetime
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from typing import Any, Optional
+from tool_auth import ToolAuthService # noqa: E402  (existing ServiceNow entry point)
 
 # ToolAuthService reads "tool_config/..." relative to the CWD, so always run from this folder.
 BASE_DIR = Path(__file__).resolve().parent
 os.chdir(BASE_DIR)
 if str(BASE_DIR) not in sys.path:
     sys.path.insert(0, str(BASE_DIR))
-
-from app import execute_tool  # noqa: E402  (existing ServiceNow entry point)
 
 logger = logging.getLogger("servicenow_poller")
 
@@ -205,7 +204,10 @@ class Ctx:
 
 
 def _call_once(tool_name: str, args: dict, ctx: Ctx) -> tuple[bool, Any, Optional[str]]:
-    raw = execute_tool(tool_name, args, ctx.tools_docs, POLLER_USER_ID)
+    
+    auth_service = ToolAuthService()
+    
+    raw = auth_service._execute_tool(tool_name, args, ctx.tools_docs, POLLER_USER_ID)
     if not isinstance(raw, str):
         return True, raw, None
     try:
