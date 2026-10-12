@@ -55,7 +55,7 @@ from tool_auth import ToolAuthService # noqa: E402  (existing ServiceNow entry p
 
 # ToolAuthService reads "tool_config/..." relative to the CWD, so always run from this folder.
 BASE_DIR = Path(__file__).resolve().parent
-os.chdir(BASE_DIR)
+#os.chdir(BASE_DIR)
 if str(BASE_DIR) not in sys.path:
     sys.path.insert(0, str(BASE_DIR))
 
@@ -511,9 +511,14 @@ async def run(cfg: Settings, once: bool) -> None:
     def _request_stop(*_):
         loop.call_soon_threadsafe(stop.set)
 
-    for sig_name in ("SIGINT", "SIGTERM", "SIGBREAK"):
-        if hasattr(signal, sig_name):
-            signal.signal(getattr(signal, sig_name), _request_stop)
+    # for sig_name in ("SIGINT", "SIGTERM", "SIGBREAK"):
+    #     if hasattr(signal, sig_name):
+    #         signal.signal(getattr(signal, sig_name), _request_stop)
+    
+    if threading.current_thread() is threading.main_thread():
+        for sig_name in ("SIGINT", "SIGTERM", "SIGBREAK"):
+            if hasattr(signal, sig_name):
+                signal.signal(getattr(signal, sig_name), _request_stop)
 
     loop.set_default_executor(ThreadPoolExecutor(max_workers=cfg.max_workers, thread_name_prefix="worker"))
     scan_pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix="scanner")
