@@ -2937,160 +2937,212 @@ class ChatbotAgent(DatabaseCollections):
 
                 time.sleep(2)
 
-                max_retries = 5
-                retry_delay = 1
+                def fetch_trace_data():
 
-                for retry in range(max_retries):
+                    trace_url = (
+                        f"{config_loader.LYZR_AGENT_URL.rstrip('/')}/v3/traces"
+                    )
 
-                    try:
+                    trace_headers = {
+                        "x-api-key": lyzr_api_key,
+                        "Content-Type": "application/json",
+                    }
 
-                        trace_url = (f"{config_loader.LYZR_AGENT_URL.rstrip('/')}/v3/traces")
+                    trace_params = {
+                        "agent_id": lyzr_agent_id,
+                        "limit": 1,
+                        "sort": "desc",
+                    }
 
-                        trace_headers = {
-                            "x-api-key": lyzr_api_key,
-                            "Content-Type": "application/json",
-                        }
+                    max_retries = 5
+                    retry_delay = 1
 
-                        trace_params = {
-                            "agent_id": lyzr_agent_id,
-                            "limit": 20,
-                            "sort": "desc",
-                        }
+                    for retry in range(max_retries):
 
-                        trace_response = requests.get(
-                            trace_url,
-                            headers=trace_headers,
-                            params=trace_params,
-                            timeout=30,
-                        )
+                        try:
 
-                        trace_response.raise_for_status()
-
-                        traces = trace_response.json()
-
-                        if not traces:
-                            raise Exception("No traces found")
-
-                        for latest_trace in traces:
-
-                            candidate_trace_id = latest_trace.get("trace_id")
-
-                            if not candidate_trace_id:
-                                continue
-
-                            detail_response = requests.get(
-                                f"{trace_url}/{candidate_trace_id}",
+                            trace_response = requests.get(
+                                trace_url,
                                 headers=trace_headers,
+                                params=trace_params,
                                 timeout=30,
                             )
 
-                            detail_response.raise_for_status()
+                            trace_response.raise_for_status()
 
-                            detail = detail_response.json()
+                            traces = trace_response.json()
 
-                            if isinstance(detail, list):
-                                detail = (
-                                    detail[0]
-                                    if detail
-                                    else {}
+                            if traces and len(traces) > 0:
+
+                                latest_trace = traces[0]
+
+                                candidate_trace_id = latest_trace.get(
+                                    "trace_id"
                                 )
 
-                            spans = detail.get("spans",[])
+                                if not candidate_trace_id:
+                                    continue
 
-                            our_session = False
+                                detail_response = requests.get(
+                                    f"{trace_url}/{candidate_trace_id}",
+                                    headers=trace_headers,
+                                    timeout=30,
+                                )
 
-                            for span in spans:
+                                detail_response.raise_for_status()
 
-                                span_attrs = span.get("SpanAttributes",{})
+                                detail = detail_response.json()
 
-                                if (
-                                    span_attrs.get("session_id")
-                                    == session_id
-                                    or (
-                                        span_attrs.get("input")
-                                        and user_input in str(
-                                            span_attrs.get(
-                                                "input",
-                                                ""
+                                if isinstance(detail, list):
+                                    detail = (
+                                        detail[0]
+                                        if detail
+                                        else {}
+                                    )
+
+                                spans = detail.get(
+                                    "spans",
+                                    []
+                                )
+
+                                our_session = False
+
+                                for span in spans:
+
+                                    span_attrs = span.get(
+                                        "SpanAttributes",
+                                        {}
+                                    )
+
+                                    if (
+                                        span_attrs.get("session_id")
+                                        == session_id
+                                        or (
+                                            span_attrs.get("input")
+                                            and user_input in str(
+                                                span_attrs.get(
+                                                    "input",
+                                                    ""
+                                                )
                                             )
                                         )
-                                    )
-                                ):
-                                    our_session = True
-                                    break
+                                    ):
+                                        our_session = True
+                                        break
 
-                            if not our_session:
-                                continue
+                                if our_session:
 
-                            formatted_spans = []
+                                    formatted_spans = []
 
-                            for span in spans:
+                                    for span in spans:
 
-                                clean_attrs = (span.get("SpanAttributes",{}).copy())
+                                        clean_attrs = (
+                                            span.get(
+                                                "SpanAttributes",
+                                                {}
+                                            ).copy()
+                                        )
 
-                                clean_attrs.pop("input",None)
-                                
-                                clean_attrs.pop("output",None)
-                                clean_attrs.pop("llm_output",None)
+                                        clean_attrs.pop(
+                                            "input",
+                                            None
+                                        )
+                                        clean_attrs.pop(
+                                            "output",
+                                            None
+                                        )
+                                        clean_attrs.pop(
+                                            "llm_output",
+                                            None
+                                        )
 
-                                clean_events_attrs = []
+                                        clean_events_attrs = []
 
-                                for attr in span.get("Events.Attributes",[]):
-
-                                    clean_attr = attr.copy()
-
-                                    clean_attr.pop("query",None)
-
-                                    clean_events_attrs.append(clean_attr)
-
-                                formatted_spans.append(
-                                    {
-                                        "SpanName": span.get(
-                                            "SpanName",
-                                            ""
-                                        ),
-                                        "SpanAttributes": clean_attrs,
-                                        "Events.Name": span.get(
-                                            "Events.Name",
+                                        for attr in span.get(
+                                            "Events.Attributes",
                                             []
-                                        ),
-                                        "Events.Attributes": (
-                                            clean_events_attrs
-                                        ),
-                                        "chat_messages": {
-                                            "input_message": user_input,
-                                            "output_message": content,
-                                        },
+                                        ):
+
+                                            clean_attr = attr.copy()
+
+                                            clean_attr.pop(
+                                                "query",
+                                                None
+                                            )
+
+                                            clean_events_attrs.append(
+                                                clean_attr
+                                            )
+
+                                        formatted_span = {
+                                            "SpanName": span.get(
+                                                "SpanName",
+                                                ""
+                                            ),
+                                            "SpanAttributes": clean_attrs,
+                                            "Events.Name": span.get(
+                                                "Events.Name",
+                                                []
+                                            ),
+                                            "Events.Attributes": (
+                                                clean_events_attrs
+                                            ),
+                                            "chat_messages": {
+                                                "input_message": (
+                                                    user_input
+                                                ),
+                                                "output_message": (
+                                                    content
+                                                ),
+                                            },
+                                        }
+
+                                        formatted_spans.append(
+                                            formatted_span
+                                        )
+
+                                    return {
+                                        "trace_id": candidate_trace_id,
+                                        "spans": formatted_spans,
+                                        "raw_spans": spans,
                                     }
-                                )
 
-                            trace_id = candidate_trace_id
+                        except Exception as trace_err:
 
-                            trace_details = {
-                                "trace_id": trace_id,
-                                "spans": formatted_spans,
-                                "raw_spans": spans,
-                            }
+                            print(
+                                f"Attempt "
+                                f"{retry + 1} "
+                                f"trace fetch error: "
+                                f"{trace_err}"
+                            )
 
-                            break
-
-                        if trace_details:
-                            break
-
-                    except Exception as trace_err:
-
-                        print(
-                            f"Trace fetch retry "
-                            f"{retry + 1} failed : "
-                            f"{trace_err}"
+                        time.sleep(
+                            retry_delay * (retry + 1)
                         )
 
-                    time.sleep(
-                        retry_delay * (retry + 1)
+                    return None
+
+                trace_result = fetch_trace_data()
+
+                if trace_result:
+
+                    trace_id = trace_result.get(
+                        "trace_id"
                     )
 
-                print(f"Matched Trace Id : {trace_id}")
+                    trace_details = {
+                        "trace_id": trace_id,
+                        "spans": trace_result.get(
+                            "spans",
+                            []
+                        ),
+                        "raw_spans": trace_result.get(
+                            "raw_spans",
+                            []
+                        ),
+                    }
 
+                print(f"Matched Trace Id : {trace_id}")
                 #
                 # SERVICENOW DETECTION FROM TRACE
                 #
@@ -3102,6 +3154,8 @@ class ChatbotAgent(DatabaseCollections):
                         "spans",
                         []
                     )
+
+                    print(f"Span details from traces :{spans}")
 
                     for span in spans:
 
@@ -3199,17 +3253,8 @@ class ChatbotAgent(DatabaseCollections):
                         # Only continue if result found
                         #
                         if result_data:
-
                             servicenow_processed = True
-
-                            current_message = (
-                                "ServiceNow Tool executed successfully.\n"
-                                f"Result: "
-                                f"{json.dumps(result_data)}\n\n"
-                                "Continue with next step tool call "
-                                "if required or give final answer."
-                            )
-
+                            current_message = ("ServiceNow Tool executed successfully.\n Result: {json.dumps(result_data)}\n\n Continue with next step tool call if required or give final answer.")
                             continue
 
                 #
@@ -3236,21 +3281,23 @@ class ChatbotAgent(DatabaseCollections):
                     span_text = json.dumps(span)
 
                     if "SERVICENOW__CREATE_INCIDENT" in span_text:
+                        tools_called.append("SERVICENOW__CREATE_INCIDENT")
                         comparison["incident_found"] = True
                         comparison["incident_type"] = "create"
                         break
 
                     if "SERVICENOW__UPDATE_INCIDENT" in span_text:
+                        tools_called.append("SERVICENOW__UPDATE_INCIDENT")
                         comparison["incident_found"] = True
                         comparison["incident_type"] = "update"
                         break
 
-            compare_file = (Path(snow_folder_path)/ "ServiceNowstate"/ "trace_comparison.json")
+            # compare_file = (Path(snow_folder_path)/ "ServiceNowstate"/ "trace_comparison.json")
 
-            compare_file.parent.mkdir(parents=True,exist_ok=True)
+            # compare_file.parent.mkdir(parents=True,exist_ok=True)
 
-            with open(compare_file,"w",encoding="utf-8") as f:
-                json.dump(comparison,f,indent=4)
+            # with open(compare_file,"w",encoding="utf-8") as f:
+            #     json.dump(comparison,f,indent=4)
 
             return {
                 "type": "final_response",
