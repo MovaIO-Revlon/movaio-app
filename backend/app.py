@@ -1231,7 +1231,7 @@ class ChatbotAgent(DatabaseCollections):
                         "SNow_tool_output.json"
                     )
 
-                    message_des = log_data.get("arguments", {}).get("message", "")
+                    message_des = log_data.get("message", "")
 
                     # Inputs
                     short_description = message_des
@@ -1257,7 +1257,8 @@ class ChatbotAgent(DatabaseCollections):
                                     "urgency": "3",
                                     "impact": "3",
                                     "caller_id": caller_id
-                                }
+                                },
+                                raw_tools_docs: raw_tools_docs
                             }
                         ]
                     }
