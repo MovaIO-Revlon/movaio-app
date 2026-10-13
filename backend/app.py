@@ -1216,10 +1216,14 @@ class ChatbotAgent(DatabaseCollections):
                 ):
                     is_snow_folder_created = True
 
-                     # Use current application directory
-                    backend_dir = snow_folder_path
+                     # Use current application directory                    
+                    backend_dir = os.path.abspath(snow_folder_path)
 
-                    folder_path = os.path.join(backend_dir, "ServiceNowstate")
+                    folder_path = os.path.join(
+                        backend_dir,
+                        "ServiceNowstate"
+                    )
+
                     os.makedirs(folder_path, exist_ok=True)
 
                     file_path = os.path.join(
