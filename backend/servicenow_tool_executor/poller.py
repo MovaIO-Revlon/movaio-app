@@ -207,7 +207,9 @@ def _call_once(tool_name: str, args: dict, ctx: Ctx) -> tuple[bool, Any, Optiona
     
     auth_service = ToolAuthService()
     
-    raw = auth_service._execute_tool(tool_name, args, ctx.tools_docs, POLLER_USER_ID)
+    print(f"Calling tool: {tool_name} with args: {args} and ctx: {ctx} and POLLER_USER_ID: {POLLER_USER_ID}")
+    
+    raw = auth_service._execute_tool("SERVICENOW__CREATE_INCIDENT", args, ctx.tools_docs, POLLER_USER_ID)
     if not isinstance(raw, str):
         return True, raw, None
     try:
@@ -283,6 +285,7 @@ def _validate_and_build(ticket: dict) -> tuple[Optional[str], Optional[dict], Op
 
 
 def process_ticket(ticket: Any, ctx: Ctx) -> dict:
+    print(f"Processing ticket: {ticket}")
     if not isinstance(ticket, dict):
         return {"status": "failed", "error": "Ticket entry must be a JSON object"}
     tool_name, args, error, ticket_type, action = _validate_and_build(ticket)
