@@ -2833,7 +2833,7 @@ class ChatbotAgent(DatabaseCollections):
             return self.call_agent_api_chat( user_query, api_key, session_id, user_id,agent_id)
 
 
-    def run_lyzr_chat(self, user_input: str, user_id: str, lyzr_api_key: str, lyzr_agent_id: str, session_id: str):
+    def run_lyzr_chat_old(self, user_input: str, user_id: str, lyzr_api_key: str, lyzr_agent_id: str, session_id: str):
         
         # 1. Prepare Tools and Prompt
         context = self._get_agent_context(lyzr_agent_id)
@@ -2968,6 +2968,307 @@ class ChatbotAgent(DatabaseCollections):
             # Save failure to db and return error
             return {"type": "error", "message": str(e)}
 
+
+    def run_lyzr_chat_new(self, user_input: str, user_id: str, lyzr_api_key: str, lyzr_agent_id: str, session_id: str):
+
+        # 1. Prepare Tools and Prompt
+        context = self._get_agent_context(lyzr_agent_id)
+        raw_tools_docs = context.get("raw_tools_docs", [])
+        tools_called = []
+        user_data = self.user_collection.find_one({
+            "Email": re.compile(f"^{re.escape(user_id.lower())}$", re.IGNORECASE),
+            "IsActive": True,
+            "IsDelete": False
+        }, {"_id": 0, "Email": 1, "FirstName": 1, "LastName": 1})
+        if not user_data:
+            user_data = {"Email": user_id, "FirstName": "", "LastName": ""}
+
+        #encrypted_user_data = process_sensitive_fields(user_data, "encrypt")
+
+
+        current_message = user_input
+        max_rounds = 10
+        final_content = ""
+        agent_api_base = config_loader.LYZR_AGENT_URL.rstrip("/")
+        servicenow_processed = False
+        trace_details = None
+        trace_id = None
+
+        try:
+
+            for round_num in range(max_rounds):
+
+                print("=" * 100)
+                print(f"ROUND : {round_num + 1}")
+                print("=" * 100)
+
+                headers = {
+                    "x-api-key": lyzr_api_key,
+                    "Content-Type": "application/json",
+                }
+
+                payload = {
+                    "user_id": user_id,
+                    "agent_id": lyzr_agent_id,
+                    "session_id": session_id,
+                    "message": current_message,
+                }
+
+                response = requests.post(
+                    f"{agent_api_base}/v3/inference/chat/",
+                    headers=headers,
+                    json=payload,
+                    timeout=120
+                )
+
+                response.raise_for_status()
+
+                response_json = response.json()
+
+                print(
+                    "Agent Response JSON:",
+                    json.dumps(response_json, indent=2)
+                )
+
+                content = (
+                    response_json.get("content")
+                    or response_json.get("response")
+                    or response_json.get("message")
+                    or str(response_json)
+                )
+
+                print(f"Agent Content : {content}")
+
+                #
+                # FETCH TRACE FOR CURRENT SESSION
+                #
+                try:
+
+                    time.sleep(2)
+
+                    trace_url = (f"{config_loader.LYZR_AGENT_URL.rstrip('/')}/v3/traces")
+                    trace_headers = {"x-api-key": lyzr_api_key,"Content-Type": "application/json"}
+                    trace_params = {"agent_id": lyzr_agent_id,"limit": 50,"sort": "desc" }
+
+                    list_resp = requests.get(trace_url, headers=trace_headers, params=trace_params, timeout=30)
+
+                    list_resp.raise_for_status()
+
+                    traces = self._normalize_traces_list(list_resp.json())
+
+                    trace_details = None
+                    trace_id = None
+
+                    for trace in traces:
+
+                        candidate_trace_id = trace.get("trace_id")
+
+                        if not candidate_trace_id:
+                            continue
+
+                        detail = self._fetch_trace_detail_raw(trace_url,trace_headers,candidate_trace_id)
+
+                        span_session_id = (self._first_span_session_id(detail))
+
+                        if str(span_session_id) == str(session_id):
+                            trace_details = detail
+                            trace_id = candidate_trace_id
+                            break
+
+                    print(f"Matched Trace Id : {trace_id}")
+
+                except Exception as trace_err:
+                    print(f"Trace fetch failed : {trace_err}")
+
+                #
+                # SERVICENOW DETECTION FROM TRACE
+                #
+                if (not servicenow_processed and trace_details ):
+
+                    snow_action = None
+                    spans = trace_details.get("spans",[])
+
+                    for span in spans:
+                        span_text = json.dumps(span)
+
+                        if ("SERVICENOW__CREATE_INCIDENT"in span_text):
+                            snow_action = "create"
+                            break
+
+                        if ("SERVICENOW__UPDATE_INCIDENT" in span_text):
+                            snow_action = "update"
+                            break
+
+                    if snow_action:
+                        print(f"ServiceNow action detected : {snow_action}" )
+
+                        servicenow_processed = True
+                        #
+                        # Create ServiceNow state file
+                        #
+                        backend_dir = os.path.abspath(snow_folder_path)
+                        folder_path = os.path.join(backend_dir,"ServiceNowstate")
+                        os.makedirs(folder_path,exist_ok=True)
+                        file_path = os.path.join(folder_path,"SNow_tool_output.json")
+                        now = datetime.now()
+                        request_id = (f"REQ-{now.strftime('%Y-%m-%d')}-001")
+                        client_ref = (f"{snow_action}-{now.strftime('%Y%m%d%H%M%S')}")
+
+                        payload_data = {
+                            "request_id": request_id,
+                            "tickets": [
+                                {
+                                    "client_ref": client_ref,
+                                    "action": snow_action,
+                                    "ticket_type": "incident",
+                                    "fields": {
+                                        "short_description": user_input,
+                                        "description":
+                                            f"User is experiencing a {user_input}",
+                                        "urgency": "3",
+                                        "impact": "3",
+                                        "caller_id": user_id
+                                    }
+                                }
+                            ]
+                        }
+
+                        with open(file_path, "w", encoding="utf-8" ) as f:
+                            json.dump(payload_data,f,indent=4,ensure_ascii=False)
+
+                        print(f"Created ServiceNow file: {file_path}" )
+
+                        time.sleep(5)  # Wait for ServiceNow tool to process the file
+
+                        # READ RESULT FILES
+                        state_dir = (Path(snow_folder_path) / "ServiceNowstate" )
+
+                        folders = [
+                            state_dir / "_processing",
+                            state_dir / "_processed",
+                            state_dir / "_failed"
+                        ]
+
+                        result_files = []
+
+                        for folder in folders:
+
+                            if folder.exists():
+                                result_files.extend(folder.glob( "*.result.json") )
+
+                        if result_files:
+                            latest_file = max( result_files, key=lambda f: f.stat().st_mtime )
+
+                            print(f"Latest Result File : {latest_file}" )
+
+                            with open(latest_file, "r", encoding="utf-8" ) as f:
+                                result_data = json.load(f)
+
+                            current_message = ("ServiceNow Tool executed successfully.\n"f"Result: {json.dumps(result_data)}\n\n""Continue with next step tool call ""if required or give final answer.")
+                            continue
+
+                # FINAL RESPONSE
+                final_content = content
+                break
+
+            #
+            # TRACE COMPARISON FILE
+            #
+            comparison = {
+                "session_id": session_id,
+                "trace_id": trace_id,
+                "incident_found": False,
+                "incident_type": None
+            }
+
+            if trace_details:
+                spans = trace_details.get("spans",[])
+
+                for span in spans:
+                    span_text = json.dumps(span)
+
+                    if ("SERVICENOW__CREATE_INCIDENT" in span_text):
+                        comparison["incident_found"] = True
+                        comparison["incident_type"] = "create"
+                        break
+
+                    if ("SERVICENOW__UPDATE_INCIDENT" in span_text ):
+                        comparison["incident_found"] = True
+                        comparison["incident_type"] = "update"
+                        break
+
+            compare_file = (Path(snow_folder_path) / "ServiceNowstate" / "trace_comparison.json")
+
+            compare_file.parent.mkdir(parents=True,exist_ok=True)
+
+            with open(compare_file, "w") as f:
+                json.dump(comparison,f,indent=4)
+
+            return {
+                "type": "final_response",
+                "data": {
+                    "response": final_content,
+                    "session_id": session_id,
+                    "tools_called": tools_called,
+                }
+            }
+
+        except Exception as e:
+
+            print(f"run_lyzr_chat error : {e}")
+
+            return {
+                "type": "error",
+                "message": str(e)
+            }
+
+    def _fetch_trace_detail_raw(self,trace_url,headers,trace_id):
+        
+        detail_resp = requests.get(f"{trace_url}/{trace_id}",headers=headers,timeout=30)
+        detail_resp.raise_for_status()
+        detail = detail_resp.json()
+
+        # Sometimes Lyzr returns list
+        if isinstance(detail, list):
+            detail = detail[0] if detail else {}
+
+        return detail
+
+    def _first_span_session_id(self, trace_detail):
+        """
+        Extract the first session_id found in trace spans.
+        Returns:str | None
+        """
+
+        if not trace_detail:
+            return None
+
+        spans = trace_detail.get("spans", [])
+
+        for span in spans:
+            # Check SpanAttributes
+            attrs = span.get("SpanAttributes", {})
+            session_id = attrs.get("session_id")
+
+            if session_id:
+                return session_id
+
+            # Some traces store it in lower-case keys
+            session_id = attrs.get("sessionId")
+
+            if session_id:
+                return session_id
+
+            # Check Events.Attributes
+            for event_attr in span.get("Events.Attributes",[]):
+
+                if isinstance(event_attr, dict):
+                    session_id = (event_attr.get("session_id")or event_attr.get("sessionId"))
+
+                    if session_id:
+                        return session_id
+
+        return None
 
     def call_agent_api_chat(self, user_query,api_key, session_id, user_id, agent_id):
         
