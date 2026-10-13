@@ -2832,6 +2832,36 @@ class ChatbotAgent(DatabaseCollections):
         session_id: str
     ):
 
+        def get_servicenow_action(spans):
+
+            for span in spans:
+                for event in span.get("Events.Attributes",[]):
+
+                    tool_input = event.get("tool_input")
+
+                    if not tool_input:
+                        continue
+
+                    try:
+                        outer = json.loads(tool_input)
+                        message = outer.get("message")
+
+                        if isinstance(message,str):
+                            message = json.loads(message)
+
+                        request = message.get("request")
+
+                        if request == ("SERVICENOW__CREATE_INCIDENT"):
+                            return "create"
+
+                        if request == ("SERVICENOW__UPDATE_INCIDENT"):
+                            return "update"
+
+                    except Exception:
+                        pass
+
+            return None
+
         context = self._get_agent_context(lyzr_agent_id)
         raw_tools_docs = context.get("raw_tools_docs", [])
 
@@ -2924,7 +2954,7 @@ class ChatbotAgent(DatabaseCollections):
                 trace_details = None
                 trace_id = None
 
-                time.sleep(5)
+                time.sleep(2)
 
                 def fetch_trace_data():
 
@@ -2947,7 +2977,7 @@ class ChatbotAgent(DatabaseCollections):
                         "sort": "desc",
                     }
 
-                    max_retries = 10
+                    max_retries = 5
                     retry_delay = 2
 
                     print(
@@ -2976,18 +3006,11 @@ class ChatbotAgent(DatabaseCollections):
                             )
 
                             if not traces:
-
-                                time.sleep(
-                                    retry_delay * (retry + 1)
-                                )
-
+                                time.sleep(retry_delay * (retry + 1))
                                 continue
 
                             for trace in traces:
-
-                                candidate_trace_id = trace.get(
-                                    "trace_id"
-                                )
+                                candidate_trace_id = trace.get("trace_id")
 
                                 if not candidate_trace_id:
                                     continue
@@ -3007,7 +3030,7 @@ class ChatbotAgent(DatabaseCollections):
                                     if isinstance(detail, list):
                                         detail = (detail[0] if detail else {})
 
-                                    spans = detail.get("raw_spans",detail.get("spans",[]))
+                                    spans = detail.get("spans",[])
 
                                     our_session = False
 
@@ -3015,10 +3038,16 @@ class ChatbotAgent(DatabaseCollections):
 
                                         span_attrs = span.get("SpanAttributes",{} )
                                         span_session_id = (span_attrs.get("session_id"))
-
-                                        if (span_session_id == session_id):
+                                        
+                                        if span_session_id == session_id:
                                             our_session = True
                                             print(f"Matched trace {candidate_trace_id}")
+                                            break
+
+                                        span_text = json.dumps(span)
+
+                                        if user_input.lower() in span_text.lower():
+                                            our_session = True
                                             break
 
                                     if not our_session:
@@ -3117,21 +3146,9 @@ class ChatbotAgent(DatabaseCollections):
                 #
                 if (not servicenow_processed and trace_details):
 
-                    snow_action = None
+                    spans = trace_details.get("raw_spans",trace_details.get("spans",[]))
 
-                    spans = trace_details.get("spans",[])
-                    print(f"Span details from traces :{spans}")
-
-                    for span in spans:
-                        span_text = json.dumps(span)
-
-                        if "SERVICENOW__CREATE_INCIDENT" in span_text:
-                            snow_action = "create"
-                            break
-
-                        if "SERVICENOW__UPDATE_INCIDENT" in span_text:
-                            snow_action = "update"
-                            break
+                    snow_action = get_servicenow_action(spans)
 
                     if snow_action:
 
@@ -3212,7 +3229,12 @@ class ChatbotAgent(DatabaseCollections):
                         #
                         if result_data:
                             servicenow_processed = True
-                            current_message = ("ServiceNow Tool executed successfully.\n Result: {json.dumps(result_data)}\n\n Continue with next step tool call if required or give final answer.")
+                            current_message = (
+                                    "ServiceNow Tool executed successfully.\n"
+                                    f"Result: {json.dumps(result_data)}\n\n"
+                                    "Continue with next step tool call "
+                                    "if required or give final answer."
+                                )
                             continue
 
                 #
@@ -3233,29 +3255,25 @@ class ChatbotAgent(DatabaseCollections):
 
             if trace_details:
 
-                spans = trace_details.get("spans",[])
+                spans = trace_details.get("raw_spans",trace_details.get("spans",[]))
 
-                for span in spans:
-                    span_text = json.dumps(span)
+                action = get_servicenow_action(spans)
 
-                    if "SERVICENOW__CREATE_INCIDENT" in span_text:
-                        tools_called.append("SERVICENOW__CREATE_INCIDENT")
-                        comparison["incident_found"] = True
-                        comparison["incident_type"] = "create"
-                        break
+                if action == "create":
 
-                    if "SERVICENOW__UPDATE_INCIDENT" in span_text:
-                        tools_called.append("SERVICENOW__UPDATE_INCIDENT")
-                        comparison["incident_found"] = True
-                        comparison["incident_type"] = "update"
-                        break
+                    tools_called.append("SERVICENOW__CREATE_INCIDENT")
 
-            # compare_file = (Path(snow_folder_path)/ "ServiceNowstate"/ "trace_comparison.json")
+                    comparison["incident_found"] = True
+                    comparison["incident_type"] = "create"
 
-            # compare_file.parent.mkdir(parents=True,exist_ok=True)
+                elif action == "update":
 
-            # with open(compare_file,"w",encoding="utf-8") as f:
-            #     json.dump(comparison,f,indent=4)
+                    tools_called.append(
+                        "SERVICENOW__UPDATE_INCIDENT"
+                    )
+
+                    comparison["incident_found"] = True
+                    comparison["incident_type"] = "update"
 
             return {
                 "type": "final_response",
