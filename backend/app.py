@@ -1381,7 +1381,7 @@ class ChatbotAgent(DatabaseCollections):
         current_message = user_input
         #current_message = tools_prompt + "\nUser Query:" + user_input
         final_input_message = current_message
-        max_rounds = 10
+        max_rounds = 2
         final_content = ""
 
         try:
