@@ -1465,28 +1465,63 @@ class ChatbotAgent(DatabaseCollections):
                 
                 print(f"Response from the first agent----: {response_json}")
                                 
-                if isinstance(response_json, dict):
-                    response_text = (
-                        response_json.get("response")
-                        or response_json.get("data", {}).get("response", "")
-                        or response_json.get("message", "")
-                        or ""
-                    )
+                def safe_json_loads(value):
+                    """
+                    Safely parse JSON.
+                    Returns:
+                        dict/list if valid JSON
+                        original value otherwise
+                    """
+                    if not isinstance(value, str):
+                        return value
 
-                request_type = None
+                    value = value.strip()
 
-                if isinstance(response_text, dict):
-                    request_type = response_text.get("request")
+                    if not value:
+                        return {}
 
-                elif isinstance(response_text, str):
                     try:
-                        parsed = json.loads(response_text)
-                        if isinstance(parsed, dict):
-                            request_type = parsed.get("request")
-                    except json.JSONDecodeError:
-                        pass
+                        return json.loads(value)
+                    except Exception:
+                        return value
 
-                print(f"Response text from the first agent----: {response_text}")
+
+                def extract_request(data):
+                    """
+                    Find 'request' regardless of structure.
+                    """
+
+                    # Already a dict
+                    if isinstance(data, dict):
+                        request = data.get("request")
+                        if request:
+                            return request
+
+                        # Common nested location
+                        message = (
+                            data.get("data", {})
+                                .get("arguments", {})
+                                .get("message")
+                        )
+
+                        if message:
+                            parsed = safe_json_loads(message)
+
+                            if isinstance(parsed, dict):
+                                return parsed.get("request")
+
+                    # String that might contain JSON
+                    elif isinstance(data, str):
+                        parsed = safe_json_loads(data)
+
+                        if isinstance(parsed, dict):
+                            return parsed.get("request")
+
+                    return None
+                                
+                request_type = extract_request(response_json)
+
+                print(f"Response text from the first agent----: {response_json}")
 
                 if request_type == "SERVICENOW__CREATE_INCIDENT":
                     print("Found SNow state in response")
