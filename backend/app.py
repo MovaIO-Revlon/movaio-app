@@ -3006,107 +3006,137 @@ class ChatbotAgent(DatabaseCollections):
                             )
 
                             if not traces:
-                                time.sleep(retry_delay * (retry + 1))
+                                time.sleep(retry_delay)
                                 continue
 
+                            matched_trace = None
+
                             for trace in traces:
-                                candidate_trace_id = trace.get("trace_id")
 
-                                if not candidate_trace_id:
-                                    continue
+                                trace_session_id = trace.get("session_id")
 
-                                try:
+                                if trace_session_id == session_id:
 
-                                    detail_response = requests.get(
-                                        f"{trace_url}/{candidate_trace_id}",
-                                        headers=trace_headers,
-                                        timeout=30,
+                                    matched_trace = trace
+                                    break
+
+                            if not matched_trace:
+
+                                print(
+                                    f"No matching trace for session "
+                                    f"{session_id}"
+                                )
+
+                                time.sleep(retry_delay)
+                                continue
+
+                            candidate_trace_id = matched_trace.get("trace_id")
+                            
+                            if not candidate_trace_id:
+                                continue
+
+                            print(
+                                f"Matched session "
+                                f"{session_id}"
+                            )
+
+                            print(
+                                f"Matched trace id "
+                                f"{candidate_trace_id}"
+                            )
+
+                            detail_response = requests.get(
+                                f"{trace_url}/{candidate_trace_id}",
+                                headers=trace_headers,
+                                timeout=30,
+                            )
+
+                            detail_response.raise_for_status()
+
+                            detail = detail_response.json()
+
+                            if isinstance(detail, list):
+                                detail = detail[0] if detail else {}
+
+                            spans = detail.get(
+                                "spans",
+                                []
+                            )
+                            
+                            if not spans:
+                                print(
+                                    f"No spans found for "
+                                    f"trace {candidate_trace_id}"
+                                )
+                                continue
+                            
+                            formatted_spans = []
+
+                            for span in spans:
+
+                                clean_attrs = (
+                                    span.get(
+                                        "SpanAttributes",
+                                        {}
+                                    ).copy()
+                                )
+
+                                clean_attrs.pop(
+                                    "input",
+                                    None
+                                )
+                                clean_attrs.pop(
+                                    "output",
+                                    None
+                                )
+                                clean_attrs.pop(
+                                    "llm_output",
+                                    None
+                                )
+
+                                clean_events_attrs = []
+
+                                for attr in span.get(
+                                    "Events.Attributes",
+                                    []
+                                ):
+
+                                    clean_attr = attr.copy()
+
+                                    clean_attr.pop(
+                                        "query",
+                                        None
                                     )
 
-                                    detail_response.raise_for_status()
+                                    clean_events_attrs.append(
+                                        clean_attr
+                                    )
 
-                                    detail = detail_response.json()
-
-                                    if isinstance(detail, list):
-                                        detail = (detail[0] if detail else {})
-
-                                    spans = detail.get("spans",[])
-
-                                    our_session = False
-
-                                    for span in spans:
-
-                                        span_attrs = span.get("SpanAttributes",{} )
-                                        span_session_id = (span_attrs.get("session_id"))
-                                        
-                                        if span_session_id == session_id:
-                                            our_session = True
-                                            print(f"Matched trace {candidate_trace_id}")
-                                            break
-
-                                        span_text = json.dumps(span)
-
-                                        if user_input.lower() in span_text.lower():
-                                            our_session = True
-                                            break
-
-                                    if not our_session:
-                                        continue
-
-                                    formatted_spans = []
-
-                                    for span in spans:
-                                        clean_attrs = (span.get("SpanAttributes",{}).copy())
-                                        clean_attrs.pop("input",None)
-                                        clean_attrs.pop("output",None)
-                                        clean_attrs.pop("llm_output",None)
-                                        clean_events_attrs = []
-
-                                        for attr in span.get("Events.Attributes",[]):
-
-                                            clean_attr = attr.copy()
-                                            clean_attr.pop("query",None)
-                                            clean_events_attrs.append(clean_attr)
-
-                                        formatted_spans.append(
-                                            {
-                                                "SpanName": span.get(
-                                                    "SpanName",
-                                                    ""
-                                                ),
-                                                "SpanAttributes": clean_attrs,
-                                                "Events.Name": span.get(
-                                                    "Events.Name",
-                                                    []
-                                                ),
-                                                "Events.Attributes": (
-                                                    clean_events_attrs
-                                                ),
-                                                "chat_messages": {
-                                                    "input_message":
-                                                        user_input,
-                                                    "output_message":
-                                                        content,
-                                                },
-                                            }
-                                        )
-
-                                    return {
-                                        "trace_id":
-                                            candidate_trace_id,
-                                        "spans":
-                                            formatted_spans,
-                                        "raw_spans":
-                                            spans,
+                                formatted_spans.append(
+                                    {
+                                        "SpanName": span.get(
+                                            "SpanName",
+                                            ""
+                                        ),
+                                        "SpanAttributes": clean_attrs,
+                                        "Events.Name": span.get(
+                                            "Events.Name",
+                                            []
+                                        ),
+                                        "Events.Attributes": clean_events_attrs,
+                                        "chat_messages": {
+                                            "input_message": user_input,
+                                            "output_message": content,
+                                        },
                                     }
+                                )
 
-                                except Exception as inner_err:
-
-                                    print(
-                                        f"Trace detail "
-                                        f"{candidate_trace_id} "
-                                        f"failed : {inner_err}"
-                                    )
+                            return {
+                                "trace_id": candidate_trace_id,
+                                "spans": formatted_spans,
+                                "raw_spans": spans,
+                            }
+                            
 
                         except Exception as trace_err:
 
@@ -3116,9 +3146,8 @@ class ChatbotAgent(DatabaseCollections):
                                 f"{trace_err}"
                             )
 
-                        time.sleep(
-                            retry_delay * (retry + 1)
-                        )
+                        time.sleep(retry_delay)
+                        
 
                     print(
                         f"No matching trace found "
