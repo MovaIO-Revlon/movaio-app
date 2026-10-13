@@ -2675,7 +2675,7 @@ class ChatbotAgent(DatabaseCollections):
 
         tool_res = self.agent_collection.find_one({'agent_id': agent_id})
         
-        print(f"Agent Details :{tool_res}")
+        #print(f"Agent Details :{tool_res}")
         
         custom_tool_config = tool_res.get("Iscustomtool", False)
         internal_tool_data = tool_res.get("internal_tool", [])
@@ -2939,23 +2939,27 @@ class ChatbotAgent(DatabaseCollections):
 
                 def fetch_trace_data():
 
-                    trace_url = (
-                        f"{config_loader.LYZR_AGENT_URL.rstrip('/')}/v3/traces"
-                    )
-
+                    agent_api_base = getattr(
+                                        config_loader,
+                                        "LYZR_AGENT_URL",
+                                        "https://agent-prod.studio.lyzr.ai",
+                                    )
+                    trace_url = f"{agent_api_base}/v3/traces"
                     trace_headers = {
-                        "x-api-key": lyzr_api_key,
-                        "Content-Type": "application/json",
-                    }
-
+                                        "x-api-key": lyzr_api_key,
+                                        "Content-Type": "application/json",
+                                    }
                     trace_params = {
-                        "agent_id": lyzr_agent_id,
-                        "limit": 1,
-                        "sort": "desc",
-                    }
+                                        "agent_id": lyzr_agent_id,
+                                        "limit": 1,
+                                        "sort": "desc",
+                                    }
 
                     max_retries = 5
                     retry_delay = 1
+                    
+                    print(f"Traces URL :{trace_url} --- Headers :{trace_headers} --- Params :{trace_params}")
+                    
 
                     for retry in range(max_retries):
 
@@ -2971,6 +2975,8 @@ class ChatbotAgent(DatabaseCollections):
                             trace_response.raise_for_status()
 
                             traces = trace_response.json()
+                            
+                            print(f"Traces response from the loop : {traces}")
 
                             if traces and len(traces) > 0:
 
@@ -3036,25 +3042,11 @@ class ChatbotAgent(DatabaseCollections):
 
                                     for span in spans:
 
-                                        clean_attrs = (
-                                            span.get(
-                                                "SpanAttributes",
-                                                {}
-                                            ).copy()
-                                        )
+                                        clean_attrs = ( span.get( "SpanAttributes",{} ).copy() )
 
-                                        clean_attrs.pop(
-                                            "input",
-                                            None
-                                        )
-                                        clean_attrs.pop(
-                                            "output",
-                                            None
-                                        )
-                                        clean_attrs.pop(
-                                            "llm_output",
-                                            None
-                                        )
+                                        clean_attrs.pop( "input", None )
+                                        clean_attrs.pop( "output", None )
+                                        clean_attrs.pop( "llm_output", None )
 
                                         clean_events_attrs = []
 
@@ -3123,6 +3115,8 @@ class ChatbotAgent(DatabaseCollections):
                     return None
 
                 trace_result = fetch_trace_data()
+
+                print(f"Traces Result : {trace_result}")
 
                 if trace_result:
 
