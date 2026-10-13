@@ -996,140 +996,6 @@ class ChatbotAgent(DatabaseCollections):
                     stack.append(parsed_item)
 
         return None
-    
-
-    
-    # def run_lyzr(self, user_input: str, user_id: str, lyzr_api_key: str, lyzr_agent_id: str, step_callback=None) -> str:
-    #     """
-    #     Runs Lyzr Agent with support for multiple sequential tool calls (Pause & Resume pattern).
-    #     """
-    #     print("33")
-    #     context = self._get_agent_context(lyzr_agent_id)
-    #     raw_tools_docs = context.get("raw_tools_docs", [])
-
-    #     # Build tools description
-    #     tools_prompt = "\n\nYou have access to these tools. When you need to use a tool, respond with ONLY a valid JSON object with 'tool_name' and 'arguments'. Do not add any extra text. If multiple tool calls are required for a result do it in sequence.\n"
-    #     for doc in raw_tools_docs:
-    #         if not isinstance(doc, dict):
-    #             continue
-                
-    #         tool_key = doc.get("tool_key", {})
-    #         if not isinstance(tool_key, dict):
-    #             continue
-                
-    #         functions = tool_key.get("functions", [])
-    #         if isinstance(functions, list):
-    #             for func in functions:
-    #                 if not isinstance(func, dict):
-    #                     continue
-                        
-    #                 # Only include active functions
-    #                 if func.get("active", True):
-    #                     name = func.get("name", "Unknown_Tool")
-    #                     description = func.get("description", "No description provided.")
-    #                     parameters = func.get("parameters", {})
-    #                     properties_only = {}
-    #                     if isinstance(parameters, dict):
-    #                         properties_only = parameters.get("properties", parameters)
-                        
-    #                     tools_prompt += f"- {name}: {description}\n Parameters: {json.dumps(properties_only)}\n"
-
-    #     # client = LyzrAgentAPI(api_key=lyzr_api_key)
-    #     session_id = f"session-{user_id}-{int(time.time())}"
-
-    #     print("34 - Starting conversation")
-
-    #     current_message = user_input + tools_prompt
-    #     # print("35 - Initial message prepared:", current_message)
-
-    #     max_rounds = 10  # Safety limit for tool call rounds
-
-    #     for round_num in range(max_rounds):
-    #         if step_callback:
-    #             step_callback(f"Round {round_num + 1}: Sending message to Lyzr Agent")
-
-    #         # Call Lyzr
-    #         # 6a54be1f4b6c08a182b1c8d2
-    #         print("user_input - Sending to Lyzr:", current_message)
-    #         # response = client.inference.chat({
-    #         #     "user_id": user_id,
-    #         #     "agent_id": lyzr_agent_id,
-    #         #     "message": current_message,
-    #         #     "session_id": session_id
-    #         # })
-    #         headers = {"x-api-key": lyzr_api_key, "Content-Type": "application/json"}
-    #         agent_api_url = "https://agent-prod.studio.lyzr.ai"
-           
-    #         payload = {
-    #             "user_id": user_id,
-    #             "agent_id": lyzr_agent_id,
-    #             "session_id": session_id,
-    #             "message": current_message
-    #         }
-    #         response = requests.post(f"{agent_api_url}/v3/inference/chat/", headers=headers, json=payload)
-    #         response_json = response.json()
-    #         print("Lyzr API Response:", response_json)
-    #         # response = response_json.get("response", "")
-    #         print("--------------------------------")
-
-    #         print(f"agent_resposnse - Round {round_num + 1} Response:", response)
-
-    #         print("--------------------------------")
-
-    #         # Extract content
-    #         if isinstance(response_json, dict):
-    #             content = response_json.get("content") or response_json.get("response") or response_json.get("message") or str(response_json)
-    #         else:
-    #             content = str(response_json)
-
-    #         # Try to parse tool call
-    #         tool_call = None
-    #         try:
-    #             # Step 1: Strip markdown code block wrappers like ```json and ```
-    #             cleaned = re.sub(
-    #                 r"^```(?:json)?\s*", "", content.strip(), flags=re.IGNORECASE
-    #             )
-    #             cleaned = re.sub(r"\s*```$", "", cleaned).strip()
-
-    #             # Step 2: Try parsing directly if it starts and ends with {}
-    #             if cleaned.startswith("{") and cleaned.endswith("}"):
-    #                 tool_call = json.loads(cleaned)
-    #             else:
-    #                 # Step 3: Fallback - Extract the first JSON object using Regex
-    #                 json_match = re.search(r"\{.*\}", content, re.DOTALL)
-    #                 if json_match:
-    #                     tool_call = json.loads(json_match.group(0))
-    #         except Exception as e:
-    #             print(f"JSON parsing error: {e}")
-
-    #         # If it's a tool call
-    #         if tool_call and isinstance(tool_call, dict) and "tool_name" in tool_call:
-    #             tool_name = tool_call["tool_name"]
-    #             args = tool_call.get("arguments", {})
-    #             print("aaa")
-
-    #             if step_callback:
-    #                 step_callback(f"🔧 Executing: {tool_name}({args})")
-    #             print("user_id:", user_id)
-    #             # Execute tool locally
-    #             auth_service = ToolAuthService() 
-    #             tool_result = auth_service._execute_tool(tool_name, args, raw_tools_docs, user_id)
-
-    #             if step_callback:
-    #                 step_callback(f"Tool {tool_name} finished.")
-
-    #             # tool_result = self.optimize_tool_result(tool_name, tool_result)
-    #             masked_tool_result = self.mask_pii_sensitive_data(tool_result)
-
-    #             current_message = f"Tool '{tool_name}' executed successfully.\nResult: {masked_tool_result}\n\nContinue with the next step tool call if required or give final answer."
-
-    #         else:
-    #             # No more tool calls → Final Answer
-    #             if step_callback:
-    #                 step_callback("✅ Agent finished. Returning final answer.")
-    #             return buildResponse("Final Answer", content, 200)
-
-    #     return "Error: Too many tool call rounds."
         
     def run_lyzr(
     self,
@@ -3069,6 +2935,8 @@ class ChatbotAgent(DatabaseCollections):
                 trace_details = None
                 trace_id = None
 
+                time.sleep(2)
+
                 max_retries = 5
                 retry_delay = 1
 
@@ -3076,9 +2944,7 @@ class ChatbotAgent(DatabaseCollections):
 
                     try:
 
-                        trace_url = (
-                            f"{config_loader.LYZR_AGENT_URL.rstrip('/')}/v3/traces"
-                        )
+                        trace_url = (f"{config_loader.LYZR_AGENT_URL.rstrip('/')}/v3/traces")
 
                         trace_headers = {
                             "x-api-key": lyzr_api_key,
@@ -3095,7 +2961,7 @@ class ChatbotAgent(DatabaseCollections):
                             trace_url,
                             headers=trace_headers,
                             params=trace_params,
-                            timeout=30
+                            timeout=30,
                         )
 
                         trace_response.raise_for_status()
@@ -3103,13 +2969,11 @@ class ChatbotAgent(DatabaseCollections):
                         traces = trace_response.json()
 
                         if not traces:
-                            continue
+                            raise Exception("No traces found")
 
                         for latest_trace in traces:
 
-                            candidate_trace_id = latest_trace.get(
-                                "trace_id"
-                            )
+                            candidate_trace_id = latest_trace.get("trace_id")
 
                             if not candidate_trace_id:
                                 continue
@@ -3117,7 +2981,7 @@ class ChatbotAgent(DatabaseCollections):
                             detail_response = requests.get(
                                 f"{trace_url}/{candidate_trace_id}",
                                 headers=trace_headers,
-                                timeout=30
+                                timeout=30,
                             )
 
                             detail_response.raise_for_status()
@@ -3125,7 +2989,11 @@ class ChatbotAgent(DatabaseCollections):
                             detail = detail_response.json()
 
                             if isinstance(detail, list):
-                                detail = (detail[0] if detail else {})
+                                detail = (
+                                    detail[0]
+                                    if detail
+                                    else {}
+                                )
 
                             spans = detail.get("spans",[])
 
@@ -3151,10 +3019,60 @@ class ChatbotAgent(DatabaseCollections):
                                     our_session = True
                                     break
 
-                            if our_session:
-                                trace_details = detail
-                                trace_id = candidate_trace_id
-                                break
+                            if not our_session:
+                                continue
+
+                            formatted_spans = []
+
+                            for span in spans:
+
+                                clean_attrs = (span.get("SpanAttributes",{}).copy())
+
+                                clean_attrs.pop("input",None)
+                                
+                                clean_attrs.pop("output",None)
+                                clean_attrs.pop("llm_output",None)
+
+                                clean_events_attrs = []
+
+                                for attr in span.get("Events.Attributes",[]):
+
+                                    clean_attr = attr.copy()
+
+                                    clean_attr.pop("query",None)
+
+                                    clean_events_attrs.append(clean_attr)
+
+                                formatted_spans.append(
+                                    {
+                                        "SpanName": span.get(
+                                            "SpanName",
+                                            ""
+                                        ),
+                                        "SpanAttributes": clean_attrs,
+                                        "Events.Name": span.get(
+                                            "Events.Name",
+                                            []
+                                        ),
+                                        "Events.Attributes": (
+                                            clean_events_attrs
+                                        ),
+                                        "chat_messages": {
+                                            "input_message": user_input,
+                                            "output_message": content,
+                                        },
+                                    }
+                                )
+
+                            trace_id = candidate_trace_id
+
+                            trace_details = {
+                                "trace_id": trace_id,
+                                "spans": formatted_spans,
+                                "raw_spans": spans,
+                            }
+
+                            break
 
                         if trace_details:
                             break
@@ -3176,10 +3094,7 @@ class ChatbotAgent(DatabaseCollections):
                 #
                 # SERVICENOW DETECTION FROM TRACE
                 #
-                if (
-                    not servicenow_processed
-                    and trace_details
-                ):
+                if (not servicenow_processed and trace_details):
 
                     snow_action = None
 
@@ -3202,40 +3117,21 @@ class ChatbotAgent(DatabaseCollections):
 
                     if snow_action:
 
-                        print(
-                            f"ServiceNow action "
-                            f"detected : {snow_action}"
-                        )
+                        print(f"ServiceNow action detected : {snow_action}")
 
-                        backend_dir = os.path.abspath(
-                            snow_folder_path
-                        )
+                        backend_dir = os.path.abspath(snow_folder_path)
 
-                        folder_path = os.path.join(
-                            backend_dir,
-                            "ServiceNowstate"
-                        )
+                        folder_path = os.path.join(backend_dir,"ServiceNowstate")
 
-                        os.makedirs(
-                            folder_path,
-                            exist_ok=True
-                        )
+                        os.makedirs(folder_path,exist_ok=True)
 
-                        file_path = os.path.join(
-                            folder_path,
-                            "SNow_tool_output.json"
-                        )
+                        file_path = os.path.join(folder_path,"SNow_tool_output.json")
 
                         now = datetime.now()
 
-                        request_id = (
-                            f"REQ-{now.strftime('%Y-%m-%d')}-001"
-                        )
+                        request_id = (f"REQ-{now.strftime('%Y-%m-%d')}-001")
 
-                        client_ref = (
-                            f"{snow_action}-"
-                            f"{now.strftime('%Y%m%d%H%M%S')}"
-                        )
+                        client_ref = (f"{snow_action}-{now.strftime('%Y%m%d%H%M%S')}")
 
                         payload_data = {
                             "request_id": request_id,
@@ -3262,7 +3158,7 @@ class ChatbotAgent(DatabaseCollections):
 
                             json.dump(payload_data,f,indent=4,ensure_ascii=False)
 
-                        print(f"Created ServiceNow file: "f"{file_path}")
+                        print(f"Created ServiceNow file: {file_path}")
 
                         state_dir = (Path(snow_folder_path)/ "ServiceNowstate")
 
@@ -3354,7 +3250,6 @@ class ChatbotAgent(DatabaseCollections):
             compare_file.parent.mkdir(parents=True,exist_ok=True)
 
             with open(compare_file,"w",encoding="utf-8") as f:
-
                 json.dump(comparison,f,indent=4)
 
             return {
@@ -3374,54 +3269,6 @@ class ChatbotAgent(DatabaseCollections):
                 "type": "error",
                 "message": str(e)
             }
-
-    def _fetch_trace_detail_raw(self,trace_url,headers,trace_id):
-        
-        detail_resp = requests.get(f"{trace_url}/{trace_id}",headers=headers,timeout=30)
-        detail_resp.raise_for_status()
-        detail = detail_resp.json()
-
-        # Sometimes Lyzr returns list
-        if isinstance(detail, list):
-            detail = detail[0] if detail else {}
-
-        return detail
-
-    def _first_span_session_id(self, trace_detail):
-        """
-        Extract the first session_id found in trace spans.
-        Returns:str | None
-        """
-
-        if not trace_detail:
-            return None
-
-        spans = trace_detail.get("spans", [])
-
-        for span in spans:
-            # Check SpanAttributes
-            attrs = span.get("SpanAttributes", {})
-            session_id = attrs.get("session_id")
-
-            if session_id:
-                return session_id
-
-            # Some traces store it in lower-case keys
-            session_id = attrs.get("sessionId")
-
-            if session_id:
-                return session_id
-
-            # Check Events.Attributes
-            for event_attr in span.get("Events.Attributes",[]):
-
-                if isinstance(event_attr, dict):
-                    session_id = (event_attr.get("session_id")or event_attr.get("sessionId"))
-
-                    if session_id:
-                        return session_id
-
-        return None
 
     def call_agent_api_chat(self, user_query,api_key, session_id, user_id, agent_id):
         
