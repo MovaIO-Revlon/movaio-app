@@ -1473,9 +1473,22 @@ class ChatbotAgent(DatabaseCollections):
                         or ""
                     )
 
+                request_type = None
+
+                if isinstance(response_text, dict):
+                    request_type = response_text.get("request")
+
+                elif isinstance(response_text, str):
+                    try:
+                        parsed = json.loads(response_text)
+                        if isinstance(parsed, dict):
+                            request_type = parsed.get("request")
+                    except json.JSONDecodeError:
+                        pass
+
                 print(f"Response text from the first agent----: {response_text}")
 
-                if response_text.get("request") == "SERVICENOW__CREATE_INCIDENT":
+                if request_type == "SERVICENOW__CREATE_INCIDENT":
                     print("Found SNow state in response")
                                         
                     state_dir = Path(snow_folder_path) / "ServiceNowstate"
