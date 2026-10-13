@@ -1231,68 +1231,10 @@ class ChatbotAgent(DatabaseCollections):
                 
                 nonlocal is_snow_folder_created
                 nonlocal servicenow_request_detected
-                if ( not is_snow_folder_created
-                    and log_data.get("event_type") == "tool_output"
-                    and "STATEFUL" in log_data.get("tool_output", "").upper()
-                ):
-                    is_snow_folder_created = True
-                    
-                     # Use current application directory                    
-                    backend_dir = os.path.abspath(snow_folder_path)
-
-                    folder_path = os.path.join(
-                        backend_dir,
-                        "ServiceNowstate"
-                    )
-
-                    os.makedirs(folder_path, exist_ok=True)
-
-                    file_path = os.path.join(
-                        folder_path,
-                        "SNow_tool_output.json"
-                    )
-
-                    message_des = log_data.get("message", "")
-
-                    # Inputs
-                    short_description = user_input
-                    description = f"User is experiencing a {user_input}"
-                    caller_id = user_id or "mohamed.luthufullah@revlon.com"
-
-                    # Auto-generated values
-                    now = datetime.now()
-
-                    request_id = f"REQ-{now.strftime('%Y-%m-%d')}-001"
-                    client_ref = f"create-{now.strftime('%Y%m%d%H%M%S')}"
-
-                    inputdata = {
-                        "request_id": request_id,
-                        "tickets": [
-                            {
-                                "client_ref": client_ref,
-                                "action": "create",
-                                "ticket_type": "incident",
-                                "fields": {
-                                    "short_description": short_description,
-                                    "description": description,
-                                    "urgency": "3",
-                                    "impact": "3",
-                                    "caller_id": caller_id
-                                }
-                            }
-                        ]
-                    }
-
-                    with open(file_path, "w", encoding="utf-8") as f:
-                        json.dump(inputdata, f, indent=4, ensure_ascii=False)
-
-                    print("=" * 80)
-                    print(f"Current Working Directory : {backend_dir}")
-                    print(f"Created Folder           : {folder_path}")
-                    print(f"Created File             : {file_path}")
-                    print(f"Folder Exists            : {os.path.isdir(folder_path)}")
-                    print(f"File Exists              : {os.path.isfile(file_path)}")
-                    print("=" * 80)
+                # if ( not is_snow_folder_created
+                #     and log_data.get("event_type") == "tool_output"
+                #     and "STATEFUL" in log_data.get("tool_output", "").upper()
+                # ):
                 
                 if log_data.get("event_type") in ["tool_call_prepare", "tool_called"]:
 
@@ -1307,9 +1249,68 @@ class ChatbotAgent(DatabaseCollections):
                     parsed = safe_json_loads(msg)
 
                     if isinstance(parsed, dict):
-                        if parsed.get("request") == "SERVICENOW__CREATE_INCIDENT":
+                        if parsed.get("request") in ("SERVICENOW__CREATE_INCIDENT","SERVICENOW__UPDATE_INCIDENT"):
+                            
                             servicenow_request_detected = True
-                            print("✅ SERVICENOW__CREATE_INCIDENT detected")
+                            
+                            is_snow_folder_created = True
+                    
+                            # Use current application directory                    
+                            backend_dir = os.path.abspath(snow_folder_path)
+
+                            folder_path = os.path.join(
+                                backend_dir,
+                                "ServiceNowstate"
+                            )
+
+                            os.makedirs(folder_path, exist_ok=True)
+
+                            file_path = os.path.join(
+                                folder_path,
+                                "SNow_tool_output.json"
+                            )
+
+                            # Inputs
+                            short_description = user_input
+                            description = f"User is experiencing a {user_input}"
+                            caller_id = user_id or "mohamed.luthufullah@revlon.com"
+
+                            # Auto-generated values
+                            now = datetime.now()
+
+                            request_id = f"REQ-{now.strftime('%Y-%m-%d')}-001"
+                            client_ref = f"create-{now.strftime('%Y%m%d%H%M%S')}"
+
+                            inputdata = {
+                                "request_id": request_id,
+                                "tickets": [
+                                    {
+                                        "client_ref": client_ref,
+                                        "action": "create",
+                                        "ticket_type": "incident",
+                                        "fields": {
+                                            "short_description": short_description,
+                                            "description": description,
+                                            "urgency": "3",
+                                            "impact": "3",
+                                            "caller_id": caller_id
+                                        }
+                                    }
+                                ]
+                            }
+
+                            with open(file_path, "w", encoding="utf-8") as f:
+                                json.dump(inputdata, f, indent=4, ensure_ascii=False)
+
+                            print("=" * 80)
+                            print(f"Current Working Directory : {backend_dir}")
+                            print(f"Created Folder           : {folder_path}")
+                            print(f"Created File             : {file_path}")
+                            print(f"Folder Exists            : {os.path.isdir(folder_path)}")
+                            print(f"File Exists              : {os.path.isfile(file_path)}")
+                            print("=" * 80)
+                            
+                            print("✅ SERVICENOW__CREATE_OR_UPDATE_INCIDENT detected")
                 
             except Exception as e:
                 print(f"Error parsing WebSocket message: {e}")
@@ -1362,59 +1363,6 @@ class ChatbotAgent(DatabaseCollections):
 
         encrypted_user_data = process_sensitive_fields(user_data,"encrypt")
         print("Encrypted user data:", encrypted_user_data)
-
-        tools_prompt = f"""\n\nIMPORTANT INSTRUCTION: \nYou have access to these tools. When you need to use a tool, respond with ONLY a valid JSON object with 'tool_name' and 'arguments'. The tool call will happen from client side so respond only with given JSON format and not from the lyzr tool. Do not add any extra text. If multiple tool calls are required for a result do it in sequence. \n
-
-        !!!IMPORTANT: Do not execute any URL from your end. The tool call should happen from the client side. You are only responsible for providing the correct tool call in JSON format. Do not provide any additional text or explanations.
-        
-        Workflow:
-        1. Review the user query + the attached tool schemas
-        2. Select the most relevant tool(s) .
-        3. Output the tool call in the exact required format.
-        4. Wait for the backend to execute the tool and return the result.
-        5. Analyze the tool response.
-        6. Give the final clear answer to the user.
-
-        Rules:
-        - Think step-by-step before calling tools.
-        - Only use available tool schemas.
-        - Never hallucinate tool results.
-        - After receiving tool response, provide the final response to the user.
-        - Be professional, patient, and clear.
-        - Use numbered steps.
-        - Include warnings when needed.
-        - Ask clarifying questions if information is missing.
-
-        Use user data if required. User Data: \n{json.dumps(encrypted_user_data)}
-
-        """
-        for doc in raw_tools_docs:
-            if not isinstance(doc, dict):
-                continue
-
-            tool_key = doc.get("tool_key", {})
-            if not isinstance(tool_key, dict):
-                continue
-
-            functions = tool_key.get("functions", [])
-            if isinstance(functions, list):
-                for func in functions:
-                    if not isinstance(func, dict):
-                        continue
-
-                    if func.get("active", True):
-                        name = func.get("name", "Unknown_Tool")
-                        description = func.get(
-                            "description", "No description provided."
-                        )
-                        parameters = func.get("parameters", {})
-                        properties_only = {}
-                        if isinstance(parameters, dict):
-                            properties_only = parameters.get(
-                                "properties", parameters
-                            )
-
-                        tools_prompt += f"- {name}: {description}\n Parameters: {json.dumps(properties_only)}\n"
 
         current_message = user_input
         #current_message = tools_prompt + "\nUser Query:" + user_input
@@ -1470,43 +1418,6 @@ class ChatbotAgent(DatabaseCollections):
                 print("Agent response content:", content)
                 
                 print(f"Response from the first agent----: {response_json}")
-
-                def extract_request(data):
-                    """
-                    Find 'request' regardless of structure.
-                    """
-
-                    # Already a dict
-                    if isinstance(data, dict):
-                        request = data.get("request")
-                        if request:
-                            return request
-
-                        # Common nested location
-                        message = (
-                            data.get("data", {})
-                                .get("arguments", {})
-                                .get("message")
-                        )
-
-                        if message:
-                            parsed = safe_json_loads(message)
-
-                            if isinstance(parsed, dict):
-                                return parsed.get("request")
-
-                    # String that might contain JSON
-                    elif isinstance(data, str):
-                        parsed = safe_json_loads(data)
-
-                        if isinstance(parsed, dict):
-                            return parsed.get("request")
-
-                    return None
-                                
-                #request_type = extract_request(response_json)
-
-                print(f"Response text from the first agent----: {response_json}")
 
                 if servicenow_request_detected:
                     print("Found SNow state in response")
