@@ -3014,9 +3014,8 @@ class ChatbotAgent(DatabaseCollections):
                             for trace in traces:
 
                                 trace_session_id = trace.get("session_id")
-
-                                if trace_session_id == session_id:
-
+                                
+                                if (trace_session_id and session_id and trace_session_id.strip().lower() == session_id.strip().lower()):
                                     matched_trace = trace
                                     break
 
@@ -3029,7 +3028,9 @@ class ChatbotAgent(DatabaseCollections):
 
                                 time.sleep(retry_delay)
                                 continue
-
+                                
+                                
+                            print(f"matched_trace details : {matched_trace}")
                             candidate_trace_id = matched_trace.get("trace_id")
                             
                             if not candidate_trace_id:
@@ -3054,14 +3055,12 @@ class ChatbotAgent(DatabaseCollections):
                             detail_response.raise_for_status()
 
                             detail = detail_response.json()
+                            print(f"Get the Traces based on trace-Id : {detail}")
 
                             if isinstance(detail, list):
                                 detail = detail[0] if detail else {}
 
-                            spans = detail.get(
-                                "spans",
-                                []
-                            )
+                            spans = detail.get("spans", [] )
                             
                             if not spans:
                                 print(
