@@ -2804,44 +2804,6 @@ class ChatbotAgent(DatabaseCollections):
         else:
             print(f"♻️ Using session_id: {session_id}")
 
-        # Fetch agency_id from agent_agency_mapping_collection
-        # try:
-        #     if master_agent_id:
-        #         master_agent_doc = self.agent_collection.find_one(
-        #             {"agent_id": master_agent_id, "status": "active"}
-        #         )
-        #         if master_agent_doc:
-        #             mapping_doc = self.agent_agency_mapping_collection.find_one(
-        #                 {"agent_id": master_agent_id, "status": "active"}
-        #             )
-        #             if mapping_doc:
-        #                 agency_id = mapping_doc.get("agency_id", "")
-        # except Exception as e:
-        #     print(f"Error fetching agency_id: {str(e)}")
-
-        # Prepare the new event document to be inserted into chatbot_tracking
-        # new_event = {
-        #     "event_id": event_id,
-        #     "user_query": user_query,
-        #     "prompt_title": prompt_title,
-        #     "prompt_output": "",
-        #     "agent_id": agent_id,
-        #     "agency_id": agency_id,
-        #     "status": "inprogress",
-        #     "session_id": session_id,
-        #     "feedback_rating": data.get("feedback_rating"),
-        #     "feedback_comments": data.get("feedback_comments", ""),
-        #     "created_ts": self.utils.get_current_timestamp(),
-        #     "updated_ts": self.utils.get_current_timestamp(),
-        #     "user_id": user_id,
-        #     "map_id": map_id,
-        #     "master_agent_id": master_agent_id,
-        #     "isSavedToRepo" :isSavedToRepo
-        # }
-
-        # Insert into chatbot_tracking
-        # insert_event_op = {'type': 'insert_one', 'document': new_event}
-        # self._query_db('chatbot_tracking', insert_event_op)
 
         print(f"Teams-bot Chat input agent_id :{agent_id}")
 
@@ -2929,8 +2891,8 @@ class ChatbotAgent(DatabaseCollections):
                         properties_only = parameters.get("properties", parameters) if isinstance(parameters, dict) else {}
                         tools_prompt += f"- {name}: {description}\n Parameters: {json.dumps(properties_only)}\n"
 
-        current_message = tools_prompt + "\nUser Query:" + user_input
-        #current_message = user_input
+        #current_message = tools_prompt + "\nUser Query:" + user_input
+        current_message = user_input
         max_rounds = 10
         final_content = ""
         agent_api_base = "https://agent-prod.studio.lyzr.ai"
@@ -2953,6 +2915,8 @@ class ChatbotAgent(DatabaseCollections):
                 res = requests.post(f"{agent_api_base}/v3/inference/chat/", headers=headers, json=payload)
                 res.raise_for_status()
                 response_json = res.json()
+                
+                print("Agent Response JSON:", json.dumps(response_json, indent=2))
 
                 # Parse Response Content
                 content = (
@@ -2979,8 +2943,8 @@ class ChatbotAgent(DatabaseCollections):
                     print(f"ServiceNow Raw_Tool_Docs Args decrypted-1: {decrypted_args}")
                     print(f"ServiceNow Raw_Tool_Docs-1: {raw_tools_docs}")
                     
-                    tool_result = auth_service._execute_tool(tool_name, decrypted_args, raw_tools_docs, user_id)
-                    masked_tool_result = self.mask_pii_sensitive_data(tool_result)
+                    tool_result = ""#auth_service._execute_tool(tool_name, decrypted_args, raw_tools_docs, user_id)
+                    masked_tool_result = "" #self.mask_pii_sensitive_data(tool_result)
                     
                     current_message = f"Tool '{tool_name}' executed successfully.\nResult: {masked_tool_result}\n\nContinue with the next step tool call if required or give final answer."
                 else:
