@@ -1381,7 +1381,7 @@ class ChatbotAgent(DatabaseCollections):
         current_message = user_input
         #current_message = tools_prompt + "\nUser Query:" + user_input
         final_input_message = current_message
-        max_rounds = 2
+        max_rounds = 10
         final_content = ""
 
         try:
@@ -1475,8 +1475,8 @@ class ChatbotAgent(DatabaseCollections):
 
                 print(f"Response text from the first agent----: {response_text}")
 
-                if "ticket" in response_text.lower():
-                    print("Found ticket in response")
+                if response_text.get("request") == "SERVICENOW__CREATE_INCIDENT":
+                    print("Found SNow state in response")
                                         
                     state_dir = Path(snow_folder_path) / "ServiceNowstate"
 
