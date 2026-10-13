@@ -1414,17 +1414,6 @@ class ChatbotAgent(DatabaseCollections):
                                             "output", ""
                                         )
 
-                                        # if hasattr(
-                                        #     self,
-                                        #     "call_agent_api_input_output_replacement",
-                                        # ):
-                                        #     input_msg = self.call_agent_api_input_output_replacement(
-                                        #         input_msg, user_input
-                                        #     )
-                                        #     output_msg = self.call_agent_api_input_output_replacement(
-                                        #         output_msg, final_content
-                                        #     )
-
                                         formatted_span = {
                                             "SpanName": span.get("SpanName", ""),
                                             "SpanAttributes": clean_attrs,
@@ -2935,31 +2924,36 @@ class ChatbotAgent(DatabaseCollections):
                 trace_details = None
                 trace_id = None
 
-                time.sleep(2)
+                time.sleep(5)
 
                 def fetch_trace_data():
 
                     agent_api_base = getattr(
-                                        config_loader,
-                                        "LYZR_AGENT_URL",
-                                        "https://agent-prod.studio.lyzr.ai",
-                                    )
-                    trace_url = f"{agent_api_base}/v3/traces"
-                    trace_headers = {
-                                        "x-api-key": lyzr_api_key,
-                                        "Content-Type": "application/json",
-                                    }
-                    trace_params = {
-                                        "agent_id": lyzr_agent_id,
-                                        "limit": 20,
-                                        "sort": "desc",
-                                    }
+                        config_loader,
+                        "LYZR_AGENT_URL",
+                        "https://agent-prod.studio.lyzr.ai",
+                    )
 
-                    max_retries = 5
-                    retry_delay = 1
-                    
-                    print(f"Traces URL :{trace_url} --- Headers :{trace_headers} --- Params :{trace_params}")
-                    
+                    trace_url = f"{agent_api_base}/v3/traces"
+
+                    trace_headers = {
+                        "x-api-key": lyzr_api_key,
+                        "Content-Type": "application/json",
+                    }
+
+                    trace_params = {
+                        "agent_id": lyzr_agent_id,
+                        "limit": 20,
+                        "sort": "desc",
+                    }
+
+                    max_retries = 10
+                    retry_delay = 2
+
+                    print(
+                        f"Trace polling started. "
+                        f"Session: {session_id}"
+                    )
 
                     for retry in range(max_retries):
 
@@ -2975,142 +2969,132 @@ class ChatbotAgent(DatabaseCollections):
                             trace_response.raise_for_status()
 
                             traces = trace_response.json()
-                            
-                            print(f"Traces response from the loop : {traces}")
 
-                            if traces and len(traces) > 0:
+                            print(
+                                f"Retry {retry + 1} "
+                                f"returned {len(traces) if traces else 0} traces"
+                            )
 
-                                latest_trace = traces[0]
+                            if not traces:
 
-                                candidate_trace_id = latest_trace.get(
+                                time.sleep(
+                                    retry_delay * (retry + 1)
+                                )
+
+                                continue
+
+                            for trace in traces:
+
+                                candidate_trace_id = trace.get(
                                     "trace_id"
                                 )
 
                                 if not candidate_trace_id:
                                     continue
 
-                                detail_response = requests.get(
-                                    f"{trace_url}/{candidate_trace_id}",
-                                    headers=trace_headers,
-                                    timeout=30,
-                                )
+                                try:
 
-                                detail_response.raise_for_status()
-
-                                detail = detail_response.json()
-
-                                if isinstance(detail, list):
-                                    detail = (
-                                        detail[0]
-                                        if detail
-                                        else {}
+                                    detail_response = requests.get(
+                                        f"{trace_url}/{candidate_trace_id}",
+                                        headers=trace_headers,
+                                        timeout=30,
                                     )
 
-                                spans = detail.get(
-                                    "spans",
-                                    []
-                                )
+                                    detail_response.raise_for_status()
 
-                                our_session = False
+                                    detail = detail_response.json()
 
-                                for span in spans:
+                                    if isinstance(detail, list):
+                                        detail = (detail[0] if detail else {})
 
-                                    span_attrs = span.get(
-                                        "SpanAttributes",
-                                        {}
-                                    )
+                                    spans = detail.get("raw_spans",detail.get("spans",[]))
 
-                                    if (
-                                        span_attrs.get("session_id")
-                                        == session_id
-                                        or (
-                                            span_attrs.get("input")
-                                            and user_input in str(
-                                                span_attrs.get(
-                                                    "input",
-                                                    ""
-                                                )
-                                            )
-                                        )
-                                    ):
-                                        our_session = True
-                                        break
+                                    our_session = False
 
-                                if our_session:
+                                    for span in spans:
+
+                                        span_attrs = span.get("SpanAttributes",{} )
+                                        span_session_id = (span_attrs.get("session_id"))
+
+                                        if (span_session_id == session_id):
+                                            our_session = True
+                                            print(f"Matched trace {candidate_trace_id}")
+                                            break
+
+                                    if not our_session:
+                                        continue
 
                                     formatted_spans = []
 
                                     for span in spans:
-
-                                        clean_attrs = ( span.get( "SpanAttributes",{} ).copy() )
-
-                                        clean_attrs.pop( "input", None )
-                                        clean_attrs.pop( "output", None )
-                                        clean_attrs.pop( "llm_output", None )
-
+                                        clean_attrs = (span.get("SpanAttributes",{}).copy())
+                                        clean_attrs.pop("input",None)
+                                        clean_attrs.pop("output",None)
+                                        clean_attrs.pop("llm_output",None)
                                         clean_events_attrs = []
 
-                                        for attr in span.get(
-                                            "Events.Attributes",
-                                            []
-                                        ):
+                                        for attr in span.get("Events.Attributes",[]):
 
                                             clean_attr = attr.copy()
-
-                                            clean_attr.pop(
-                                                "query",
-                                                None
-                                            )
-
-                                            clean_events_attrs.append(
-                                                clean_attr
-                                            )
-
-                                        formatted_span = {
-                                            "SpanName": span.get(
-                                                "SpanName",
-                                                ""
-                                            ),
-                                            "SpanAttributes": clean_attrs,
-                                            "Events.Name": span.get(
-                                                "Events.Name",
-                                                []
-                                            ),
-                                            "Events.Attributes": (
-                                                clean_events_attrs
-                                            ),
-                                            "chat_messages": {
-                                                "input_message": (
-                                                    user_input
-                                                ),
-                                                "output_message": (
-                                                    content
-                                                ),
-                                            },
-                                        }
+                                            clean_attr.pop("query",None)
+                                            clean_events_attrs.append(clean_attr)
 
                                         formatted_spans.append(
-                                            formatted_span
+                                            {
+                                                "SpanName": span.get(
+                                                    "SpanName",
+                                                    ""
+                                                ),
+                                                "SpanAttributes": clean_attrs,
+                                                "Events.Name": span.get(
+                                                    "Events.Name",
+                                                    []
+                                                ),
+                                                "Events.Attributes": (
+                                                    clean_events_attrs
+                                                ),
+                                                "chat_messages": {
+                                                    "input_message":
+                                                        user_input,
+                                                    "output_message":
+                                                        content,
+                                                },
+                                            }
                                         )
 
                                     return {
-                                        "trace_id": candidate_trace_id,
-                                        "spans": formatted_spans,
-                                        "raw_spans": spans,
+                                        "trace_id":
+                                            candidate_trace_id,
+                                        "spans":
+                                            formatted_spans,
+                                        "raw_spans":
+                                            spans,
                                     }
+
+                                except Exception as inner_err:
+
+                                    print(
+                                        f"Trace detail "
+                                        f"{candidate_trace_id} "
+                                        f"failed : {inner_err}"
+                                    )
 
                         except Exception as trace_err:
 
                             print(
-                                f"Attempt "
-                                f"{retry + 1} "
-                                f"trace fetch error: "
+                                f"Trace fetch retry "
+                                f"{retry + 1} failed : "
                                 f"{trace_err}"
                             )
 
                         time.sleep(
                             retry_delay * (retry + 1)
                         )
+
+                    print(
+                        f"No matching trace found "
+                        f"for session {session_id}"
+                    )
 
                     return None
 
@@ -3120,20 +3104,11 @@ class ChatbotAgent(DatabaseCollections):
 
                 if trace_result:
 
-                    trace_id = trace_result.get(
-                        "trace_id"
-                    )
-
+                    trace_id = trace_result.get("trace_id")
                     trace_details = {
                         "trace_id": trace_id,
-                        "spans": trace_result.get(
-                            "spans",
-                            []
-                        ),
-                        "raw_spans": trace_result.get(
-                            "raw_spans",
-                            []
-                        ),
+                        "spans": trace_result.get("spans",[]),
+                        "raw_spans": trace_result.get("raw_spans",[]),
                     }
 
                 print(f"Matched Trace Id : {trace_id}")
@@ -3144,15 +3119,10 @@ class ChatbotAgent(DatabaseCollections):
 
                     snow_action = None
 
-                    spans = trace_details.get(
-                        "spans",
-                        []
-                    )
-
+                    spans = trace_details.get("spans",[])
                     print(f"Span details from traces :{spans}")
 
                     for span in spans:
-
                         span_text = json.dumps(span)
 
                         if "SERVICENOW__CREATE_INCIDENT" in span_text:
@@ -3168,17 +3138,11 @@ class ChatbotAgent(DatabaseCollections):
                         print(f"ServiceNow action detected : {snow_action}")
 
                         backend_dir = os.path.abspath(snow_folder_path)
-
                         folder_path = os.path.join(backend_dir,"ServiceNowstate")
-
                         os.makedirs(folder_path,exist_ok=True)
-
                         file_path = os.path.join(folder_path,"SNow_tool_output.json")
-
                         now = datetime.now()
-
                         request_id = (f"REQ-{now.strftime('%Y-%m-%d')}-001")
-
                         client_ref = (f"{snow_action}-{now.strftime('%Y%m%d%H%M%S')}")
 
                         payload_data = {
