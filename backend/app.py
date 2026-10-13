@@ -1234,8 +1234,8 @@ class ChatbotAgent(DatabaseCollections):
                     message_des = log_data.get("message", "")
 
                     # Inputs
-                    short_description = message_des
-                    description = f"User is experiencing a {message_des}"
+                    short_description = user_input
+                    description = f"User is experiencing a {user_input}"
                     caller_id = user_id or "mohamed.luthufullah@revlon.com"
 
                     # Auto-generated values
