@@ -2951,7 +2951,7 @@ class ChatbotAgent(DatabaseCollections):
                                     }
                     trace_params = {
                                         "agent_id": lyzr_agent_id,
-                                        "limit": 1,
+                                        "limit": 20,
                                         "sort": "desc",
                                     }
 
