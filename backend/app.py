@@ -2969,7 +2969,7 @@ class ChatbotAgent(DatabaseCollections):
             return {"type": "error", "message": str(e)}
 
 
-    def run_lyzr_chat_new(self, user_input: str, user_id: str, lyzr_api_key: str, lyzr_agent_id: str, session_id: str):
+    def run_lyzr_chat(self, user_input: str, user_id: str, lyzr_api_key: str, lyzr_agent_id: str, session_id: str):
 
         # 1. Prepare Tools and Prompt
         context = self._get_agent_context(lyzr_agent_id)
