@@ -66,7 +66,7 @@ logger = logging.getLogger("servicenow_poller")
 FUNCTIONS_FILE = Path("tool_config") / "ServiceNow" / "function.json"
 SERVICENOW_CONNECTION_ID = "poller-servicenow"  # any truthy value; creds are resolved in tool_auth
 POLLER_USER_ID = "mohamed.luthufullah@revlon.com"
-LYZR_AGENT_API_KEY = config_loader.API_KEY_LYZR
+LYZR_AGENT_API_KEY = config_loader.SNOW_ORCH_AGENT_ID
 
 # (ticket_type, action) -> tool name defined in tool_config/ServiceNow/function.json
 TOOL_MAP = {

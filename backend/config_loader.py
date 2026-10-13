@@ -100,6 +100,7 @@ class ConfigLoader:
         self.INSIGHT_AGENT_ID_LYZR = self.config.get("INSIGHT_AGENT_ID_LYZR", "")
         self.INSIGHT_LIMIT = self.config.get("INSIGHT_LIMIT", 5)
         self.SNOW_FOLDER_PATH = self.config.get("SNOW_FOLDER_PATH", "ServiceNowstate")
+        self.SNOW_ORCH_AGENT_ID = self.config.get("SNOW_ORCH_AGENT_ID", "")
 
         # Azure Communication Services credentials
         self.AZURE_TENANT_ID = self.config.get("AZURE_TENANT_ID", "")
