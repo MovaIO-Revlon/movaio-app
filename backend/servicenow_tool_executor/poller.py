@@ -52,7 +52,8 @@ from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from typing import Any, Optional
 from tool_auth import ToolAuthService # noqa: E402  (existing ServiceNow entry point)
-from app import _get_agent_context  # noqa: E402  (existing ServiceNow entry point)
+from app import ChatbotAgent  # noqa: E402  (existing ServiceNow entry point)
+from config_loader import config_loader
 
 # ToolAuthService reads "tool_config/..." relative to the CWD, so always run from this folder.
 BASE_DIR = Path(__file__).resolve().parent
@@ -65,7 +66,7 @@ logger = logging.getLogger("servicenow_poller")
 FUNCTIONS_FILE = Path("tool_config") / "ServiceNow" / "function.json"
 SERVICENOW_CONNECTION_ID = "poller-servicenow"  # any truthy value; creds are resolved in tool_auth
 POLLER_USER_ID = "mohamed.luthufullah@revlon.com"
-LYZR_AGENT_API_KEY = "sk-default-r5SQ08UR1fJtEtQQ4j1lwRUkyX5iXzCL"  # any truthy value; used to resolve raw_tools_docs
+LYZR_AGENT_API_KEY = config_loader.API_KEY_LYZR
 
 # (ticket_type, action) -> tool name defined in tool_config/ServiceNow/function.json
 TOOL_MAP = {
@@ -177,7 +178,7 @@ def acquire_single_instance_lock(lock_path: Path):
 # Calling ServiceNow (blocking; runs inside worker threads)
 # --------------------------------------------------------------------------- #
 def load_raw_tools_docs() -> list[dict]:
-    context = _get_agent_context(LYZR_AGENT_API_KEY)
+    context = ChatbotAgent()._get_agent_context(LYZR_AGENT_API_KEY)
     return context.get("raw_tools_docs", [])
 
 class Ctx:
