@@ -1153,6 +1153,7 @@ class ChatbotAgent(DatabaseCollections):
         ws_thread = None
         ws = None
         is_snow_folder_created = False
+        servicenow_request_detected = False
 
         # Helper generator to drain and yield ONLY WebSocket logs in real-time
         def flush_log_queue():
@@ -1209,7 +1210,7 @@ class ChatbotAgent(DatabaseCollections):
                 collected_logs.append(log_data)
                 
                 nonlocal is_snow_folder_created
-                
+                nonlocal servicenow_request_detected
                 if ( not is_snow_folder_created
                     and log_data.get("event_type") == "tool_output"
                     and "STATEFUL" in log_data.get("tool_output", "").upper()
@@ -1272,6 +1273,23 @@ class ChatbotAgent(DatabaseCollections):
                     print(f"Folder Exists            : {os.path.isdir(folder_path)}")
                     print(f"File Exists              : {os.path.isfile(file_path)}")
                     print("=" * 80)
+                
+                if log_data.get("event_type") in ["tool_call_prepare", "tool_called"]:
+
+                    msg = ""
+
+                    if "arguments" in log_data:
+                        msg = log_data.get("arguments", {}).get("message", "")
+
+                    elif "tool_input" in log_data:
+                        msg = log_data.get("tool_input", "")
+
+                    parsed = safe_json_loads(msg)
+
+                    if isinstance(parsed, dict):
+                        if parsed.get("request") == "SERVICENOW__CREATE_INCIDENT":
+                            servicenow_request_detected = True
+                            print("✅ SERVICENOW__CREATE_INCIDENT detected")
                 
             except Exception as e:
                 print(f"Error parsing WebSocket message: {e}")
@@ -1430,38 +1448,6 @@ class ChatbotAgent(DatabaseCollections):
                 else:
                     content = str(response_json)
                 print("Agent response content:", content)
-                # Parse tool call robustly from dict/string/fenced-json payloads.
-                # tool_call = self._extract_tool_call(response_json)
-
-                # # If tool call -> execute tool locally while streaming logs
-                # if (
-                #     tool_call
-                #     and isinstance(tool_call, dict)
-                #     and "tool_name" in tool_call
-                # ):
-                #     tool_name = tool_call["tool_name"]
-                #     args = tool_call.get("arguments", {})
-                #     decrypted_args = process_sensitive_fields(args, "decrypt")
-                #     print(f"Executing tool: {tool_name} with arguments: {decrypted_args}")
-
-                #     print(f"ServiceNow Tool_Name: {tool_name}")
-                #     print(f"ServiceNow Raw_Tool_Docs Args: {args}")
-                #     print(f"ServiceNow Raw_Tool_Docs Args decrypted: {decrypted_args}")
-                #     print(f"ServiceNow Raw_Tool_Docs: {raw_tools_docs}")
-
-                #     def run_tool_func():
-                #         auth_service = ToolAuthService()
-                #         return auth_service._execute_tool(
-                #             tool_name, decrypted_args, raw_tools_docs, user_id
-                #         )
-
-                #     tool_result = yield from execute_and_stream_logs(run_tool_func)
-                #     masked_tool_result = self.mask_pii_sensitive_data(tool_result)
-                #     current_message = f"Tool '{tool_name}' executed successfully.\nResult: {masked_tool_result}\n\nContinue with the next step tool call if required or give final answer."
-                # else:
-                #     # Final answer ready
-                #     final_content = content
-                #     break
                 
                 print(f"Response from the first agent----: {response_json}")
                                 
@@ -1519,13 +1505,13 @@ class ChatbotAgent(DatabaseCollections):
 
                     return None
                                 
-                request_type = extract_request(response_json)
+                #request_type = extract_request(response_json)
 
                 print(f"Response text from the first agent----: {response_json}")
 
-                if request_type == "SERVICENOW__CREATE_INCIDENT":
+                if servicenow_request_detected:
                     print("Found SNow state in response")
-                                        
+                    servicenow_request_detected = False
                     state_dir = Path(snow_folder_path) / "ServiceNowstate"
 
                     folders = [
