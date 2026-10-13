@@ -1154,6 +1154,26 @@ class ChatbotAgent(DatabaseCollections):
         ws = None
         is_snow_folder_created = False
         servicenow_request_detected = False
+        
+        def safe_json_loads(value):
+            """
+            Safely parse JSON.
+            Returns:
+                dict/list if valid JSON
+                original value otherwise
+            """
+            if not isinstance(value, str):
+                return value
+
+            value = value.strip()
+
+            if not value:
+                return {}
+
+            try:
+                return json.loads(value)
+            except Exception:
+                return value
 
         # Helper generator to drain and yield ONLY WebSocket logs in real-time
         def flush_log_queue():
@@ -1450,27 +1470,6 @@ class ChatbotAgent(DatabaseCollections):
                 print("Agent response content:", content)
                 
                 print(f"Response from the first agent----: {response_json}")
-                                
-                def safe_json_loads(value):
-                    """
-                    Safely parse JSON.
-                    Returns:
-                        dict/list if valid JSON
-                        original value otherwise
-                    """
-                    if not isinstance(value, str):
-                        return value
-
-                    value = value.strip()
-
-                    if not value:
-                        return {}
-
-                    try:
-                        return json.loads(value)
-                    except Exception:
-                        return value
-
 
                 def extract_request(data):
                     """
