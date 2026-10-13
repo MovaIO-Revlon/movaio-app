@@ -1215,6 +1215,9 @@ class ChatbotAgent(DatabaseCollections):
                     and "STATEFUL" in log_data.get("tool_output", "").upper()
                 ):
                     is_snow_folder_created = True
+                    
+                    context = self._get_agent_context(lyzr_agent_id)
+                    raw_tools_docs = context.get("raw_tools_docs", [])
 
                      # Use current application directory                    
                     backend_dir = os.path.abspath(snow_folder_path)
@@ -1258,7 +1261,7 @@ class ChatbotAgent(DatabaseCollections):
                                     "impact": "3",
                                     "caller_id": caller_id
                                 },
-                                raw_tools_docs: raw_tools_docs
+                                "raw_tools_docs": raw_tools_docs
                             }
                         ]
                     }
