@@ -2968,29 +2968,53 @@ class ChatbotAgent(DatabaseCollections):
             # Save failure to db and return error
             return {"type": "error", "message": str(e)}
 
+    def run_lyzr_chat(
+        self,
+        user_input: str,
+        user_id: str,
+        lyzr_api_key: str,
+        lyzr_agent_id: str,
+        session_id: str
+    ):
 
-    def run_lyzr_chat(self, user_input: str, user_id: str, lyzr_api_key: str, lyzr_agent_id: str, session_id: str):
-
-        # 1. Prepare Tools and Prompt
         context = self._get_agent_context(lyzr_agent_id)
         raw_tools_docs = context.get("raw_tools_docs", [])
+
         tools_called = []
-        user_data = self.user_collection.find_one({
-            "Email": re.compile(f"^{re.escape(user_id.lower())}$", re.IGNORECASE),
-            "IsActive": True,
-            "IsDelete": False
-        }, {"_id": 0, "Email": 1, "FirstName": 1, "LastName": 1})
+
+        user_data = self.user_collection.find_one(
+            {
+                "Email": re.compile(
+                    f"^{re.escape(user_id.lower())}$",
+                    re.IGNORECASE
+                ),
+                "IsActive": True,
+                "IsDelete": False
+            },
+            {
+                "_id": 0,
+                "Email": 1,
+                "FirstName": 1,
+                "LastName": 1
+            }
+        )
+
         if not user_data:
-            user_data = {"Email": user_id, "FirstName": "", "LastName": ""}
-
-        #encrypted_user_data = process_sensitive_fields(user_data, "encrypt")
-
+            user_data = {
+                "Email": user_id,
+                "FirstName": "",
+                "LastName": ""
+            }
 
         current_message = user_input
+
         max_rounds = 10
         final_content = ""
+
         agent_api_base = config_loader.LYZR_AGENT_URL.rstrip("/")
+
         servicenow_processed = False
+
         trace_details = None
         trace_id = None
 
@@ -3040,79 +3064,178 @@ class ChatbotAgent(DatabaseCollections):
                 print(f"Agent Content : {content}")
 
                 #
-                # FETCH TRACE FOR CURRENT SESSION
+                # FETCH TRACE
                 #
-                try:
+                trace_details = None
+                trace_id = None
 
-                    time.sleep(2)
+                max_retries = 5
+                retry_delay = 1
 
-                    trace_url = (f"{config_loader.LYZR_AGENT_URL.rstrip('/')}/v3/traces")
-                    trace_headers = {"x-api-key": lyzr_api_key,"Content-Type": "application/json"}
-                    trace_params = {"agent_id": lyzr_agent_id,"limit": 50,"sort": "desc" }
+                for retry in range(max_retries):
 
-                    list_resp = requests.get(trace_url, headers=trace_headers, params=trace_params, timeout=30)
+                    try:
 
-                    list_resp.raise_for_status()
+                        trace_url = (
+                            f"{config_loader.LYZR_AGENT_URL.rstrip('/')}/v3/traces"
+                        )
 
-                    traces = self._normalize_traces_list(list_resp.json())
+                        trace_headers = {
+                            "x-api-key": lyzr_api_key,
+                            "Content-Type": "application/json",
+                        }
 
-                    trace_details = None
-                    trace_id = None
+                        trace_params = {
+                            "agent_id": lyzr_agent_id,
+                            "limit": 20,
+                            "sort": "desc",
+                        }
 
-                    for trace in traces:
+                        trace_response = requests.get(
+                            trace_url,
+                            headers=trace_headers,
+                            params=trace_params,
+                            timeout=30
+                        )
 
-                        candidate_trace_id = trace.get("trace_id")
+                        trace_response.raise_for_status()
 
-                        if not candidate_trace_id:
+                        traces = trace_response.json()
+
+                        if not traces:
                             continue
 
-                        detail = self._fetch_trace_detail_raw(trace_url,trace_headers,candidate_trace_id)
+                        for latest_trace in traces:
 
-                        span_session_id = (self._first_span_session_id(detail))
+                            candidate_trace_id = latest_trace.get(
+                                "trace_id"
+                            )
 
-                        if str(span_session_id) == str(session_id):
-                            trace_details = detail
-                            trace_id = candidate_trace_id
+                            if not candidate_trace_id:
+                                continue
+
+                            detail_response = requests.get(
+                                f"{trace_url}/{candidate_trace_id}",
+                                headers=trace_headers,
+                                timeout=30
+                            )
+
+                            detail_response.raise_for_status()
+
+                            detail = detail_response.json()
+
+                            if isinstance(detail, list):
+                                detail = (detail[0] if detail else {})
+
+                            spans = detail.get("spans",[])
+
+                            our_session = False
+
+                            for span in spans:
+
+                                span_attrs = span.get("SpanAttributes",{})
+
+                                if (
+                                    span_attrs.get("session_id")
+                                    == session_id
+                                    or (
+                                        span_attrs.get("input")
+                                        and user_input in str(
+                                            span_attrs.get(
+                                                "input",
+                                                ""
+                                            )
+                                        )
+                                    )
+                                ):
+                                    our_session = True
+                                    break
+
+                            if our_session:
+                                trace_details = detail
+                                trace_id = candidate_trace_id
+                                break
+
+                        if trace_details:
                             break
 
-                    print(f"Matched Trace Id : {trace_id}")
+                    except Exception as trace_err:
 
-                except Exception as trace_err:
-                    print(f"Trace fetch failed : {trace_err}")
+                        print(
+                            f"Trace fetch retry "
+                            f"{retry + 1} failed : "
+                            f"{trace_err}"
+                        )
+
+                    time.sleep(
+                        retry_delay * (retry + 1)
+                    )
+
+                print(f"Matched Trace Id : {trace_id}")
 
                 #
                 # SERVICENOW DETECTION FROM TRACE
                 #
-                if (not servicenow_processed and trace_details ):
+                if (
+                    not servicenow_processed
+                    and trace_details
+                ):
 
                     snow_action = None
-                    spans = trace_details.get("spans",[])
+
+                    spans = trace_details.get(
+                        "spans",
+                        []
+                    )
 
                     for span in spans:
+
                         span_text = json.dumps(span)
 
-                        if ("SERVICENOW__CREATE_INCIDENT"in span_text):
+                        if "SERVICENOW__CREATE_INCIDENT" in span_text:
                             snow_action = "create"
                             break
 
-                        if ("SERVICENOW__UPDATE_INCIDENT" in span_text):
+                        if "SERVICENOW__UPDATE_INCIDENT" in span_text:
                             snow_action = "update"
                             break
 
                     if snow_action:
-                        print(f"ServiceNow action detected : {snow_action}" )
 
-                        servicenow_processed = True
-                        #
-                        # Create ServiceNow state file
-                        #
-                        backend_dir = os.path.abspath(snow_folder_path)
-                        folder_path = os.path.join(backend_dir,"ServiceNowstate")
-                        os.makedirs(folder_path,exist_ok=True)
-                        file_path = os.path.join(folder_path,"SNow_tool_output.json")
+                        print(
+                            f"ServiceNow action "
+                            f"detected : {snow_action}"
+                        )
+
+                        backend_dir = os.path.abspath(
+                            snow_folder_path
+                        )
+
+                        folder_path = os.path.join(
+                            backend_dir,
+                            "ServiceNowstate"
+                        )
+
+                        os.makedirs(
+                            folder_path,
+                            exist_ok=True
+                        )
+
+                        file_path = os.path.join(
+                            folder_path,
+                            "SNow_tool_output.json"
+                        )
+
                         now = datetime.now()
-                        request_id = (f"REQ-{now.strftime('%Y-%m-%d')}-001")
-                        client_ref = (f"{snow_action}-{now.strftime('%Y%m%d%H%M%S')}")
+
+                        request_id = (
+                            f"REQ-{now.strftime('%Y-%m-%d')}-001"
+                        )
+
+                        client_ref = (
+                            f"{snow_action}-"
+                            f"{now.strftime('%Y%m%d%H%M%S')}"
+                        )
 
                         payload_data = {
                             "request_id": request_id,
@@ -3123,8 +3246,10 @@ class ChatbotAgent(DatabaseCollections):
                                     "ticket_type": "incident",
                                     "fields": {
                                         "short_description": user_input,
-                                        "description":
-                                            f"User is experiencing a {user_input}",
+                                        "description": (
+                                            f"User is experiencing a "
+                                            f"{user_input}"
+                                        ),
                                         "urgency": "3",
                                         "impact": "3",
                                         "caller_id": user_id
@@ -3133,15 +3258,13 @@ class ChatbotAgent(DatabaseCollections):
                             ]
                         }
 
-                        with open(file_path, "w", encoding="utf-8" ) as f:
+                        with open(file_path,"w",encoding="utf-8") as f:
+
                             json.dump(payload_data,f,indent=4,ensure_ascii=False)
 
-                        print(f"Created ServiceNow file: {file_path}" )
+                        print(f"Created ServiceNow file: "f"{file_path}")
 
-                        time.sleep(5)  # Wait for ServiceNow tool to process the file
-
-                        # READ RESULT FILES
-                        state_dir = (Path(snow_folder_path) / "ServiceNowstate" )
+                        state_dir = (Path(snow_folder_path)/ "ServiceNowstate")
 
                         folders = [
                             state_dir / "_processing",
@@ -3149,30 +3272,58 @@ class ChatbotAgent(DatabaseCollections):
                             state_dir / "_failed"
                         ]
 
-                        result_files = []
+                        result_data = None
 
-                        for folder in folders:
+                        #
+                        # Wait up to 30 seconds
+                        #
+                        for _ in range(30):
 
-                            if folder.exists():
-                                result_files.extend(folder.glob( "*.result.json") )
+                            result_files = []
 
-                        if result_files:
-                            latest_file = max( result_files, key=lambda f: f.stat().st_mtime )
+                            for folder in folders:
 
-                            print(f"Latest Result File : {latest_file}" )
+                                if folder.exists():
+                                    result_files.extend(folder.glob("*.result.json"))
 
-                            with open(latest_file, "r", encoding="utf-8" ) as f:
-                                result_data = json.load(f)
+                            if result_files:
 
-                            current_message = ("ServiceNow Tool executed successfully.\n"f"Result: {json.dumps(result_data)}\n\n""Continue with next step tool call ""if required or give final answer.")
+                                latest_file = max(result_files,key=lambda f: f.stat().st_mtime)
+
+                                print(f"Latest Result File : {latest_file}")
+
+                                with open(latest_file,"r",encoding="utf-8") as f:
+                                    result_data = json.load(f)
+
+                                break
+
+                            time.sleep(1)
+
+                        #
+                        # Only continue if result found
+                        #
+                        if result_data:
+
+                            servicenow_processed = True
+
+                            current_message = (
+                                "ServiceNow Tool executed successfully.\n"
+                                f"Result: "
+                                f"{json.dumps(result_data)}\n\n"
+                                "Continue with next step tool call "
+                                "if required or give final answer."
+                            )
+
                             continue
 
+                #
                 # FINAL RESPONSE
+                #
                 final_content = content
                 break
 
             #
-            # TRACE COMPARISON FILE
+            # COMPARISON FILE
             #
             comparison = {
                 "session_id": session_id,
@@ -3182,26 +3333,28 @@ class ChatbotAgent(DatabaseCollections):
             }
 
             if trace_details:
+
                 spans = trace_details.get("spans",[])
 
                 for span in spans:
                     span_text = json.dumps(span)
 
-                    if ("SERVICENOW__CREATE_INCIDENT" in span_text):
+                    if "SERVICENOW__CREATE_INCIDENT" in span_text:
                         comparison["incident_found"] = True
                         comparison["incident_type"] = "create"
                         break
 
-                    if ("SERVICENOW__UPDATE_INCIDENT" in span_text ):
+                    if "SERVICENOW__UPDATE_INCIDENT" in span_text:
                         comparison["incident_found"] = True
                         comparison["incident_type"] = "update"
                         break
 
-            compare_file = (Path(snow_folder_path) / "ServiceNowstate" / "trace_comparison.json")
+            compare_file = (Path(snow_folder_path)/ "ServiceNowstate"/ "trace_comparison.json")
 
             compare_file.parent.mkdir(parents=True,exist_ok=True)
 
-            with open(compare_file, "w") as f:
+            with open(compare_file,"w",encoding="utf-8") as f:
+
                 json.dump(comparison,f,indent=4)
 
             return {
@@ -3209,7 +3362,7 @@ class ChatbotAgent(DatabaseCollections):
                 "data": {
                     "response": final_content,
                     "session_id": session_id,
-                    "tools_called": tools_called,
+                    "tools_called": tools_called
                 }
             }
 
