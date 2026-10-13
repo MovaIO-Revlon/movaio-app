@@ -52,6 +52,7 @@ from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from typing import Any, Optional
 from tool_auth import ToolAuthService # noqa: E402  (existing ServiceNow entry point)
+from app import _get_agent_context  # noqa: E402  (existing ServiceNow entry point)
 
 # ToolAuthService reads "tool_config/..." relative to the CWD, so always run from this folder.
 BASE_DIR = Path(__file__).resolve().parent
@@ -64,6 +65,7 @@ logger = logging.getLogger("servicenow_poller")
 FUNCTIONS_FILE = Path("tool_config") / "ServiceNow" / "function.json"
 SERVICENOW_CONNECTION_ID = "poller-servicenow"  # any truthy value; creds are resolved in tool_auth
 POLLER_USER_ID = "mohamed.luthufullah@revlon.com"
+LYZR_AGENT_API_KEY = "sk-default-r5SQ08UR1fJtEtQQ4j1lwRUkyX5iXzCL"  # any truthy value; used to resolve raw_tools_docs
 
 # (ticket_type, action) -> tool name defined in tool_config/ServiceNow/function.json
 TOOL_MAP = {
@@ -175,18 +177,8 @@ def acquire_single_instance_lock(lock_path: Path):
 # Calling ServiceNow (blocking; runs inside worker threads)
 # --------------------------------------------------------------------------- #
 def load_raw_tools_docs() -> list[dict]:
-    with open(FUNCTIONS_FILE, "r", encoding="utf-8") as f:
-        functions = json.load(f)["functions"]
-    return [
-        {
-            "connection_id": SERVICENOW_CONNECTION_ID,
-            "connector_type": "ServiceNow",
-            "tool_action_name": fn["name"],
-            "tool_key": {"security_schemes": {}, "functions": [fn]},
-        }
-        for fn in functions
-    ]
-
+    context = _get_agent_context(LYZR_AGENT_API_KEY)
+    return context.get("raw_tools_docs", [])
 
 class Ctx:
     """Shared, read-mostly state handed to worker threads."""
@@ -203,13 +195,13 @@ class Ctx:
             return self._key_locks[key]
 
 
-def _call_once(tool_name: str, args: dict, raw_tools_docs: list[dict], ctx: Ctx) -> tuple[bool, Any, Optional[str]]:
+def _call_once(tool_name: str, args: dict, ctx: Ctx) -> tuple[bool, Any, Optional[str]]:
     
     auth_service = ToolAuthService()
     
     print(f"Calling tool: {tool_name} with args: {args} and ctx: {ctx} and POLLER_USER_ID: {POLLER_USER_ID}")
     
-    raw = auth_service._execute_tool(tool_name, args, raw_tools_docs, POLLER_USER_ID)
+    raw = auth_service._execute_tool(tool_name, args, ctx.tools_docs, POLLER_USER_ID)
     if not isinstance(raw, str):
         return True, raw, None
     try:
@@ -221,11 +213,11 @@ def _call_once(tool_name: str, args: dict, raw_tools_docs: list[dict], ctx: Ctx)
     return True, parsed, None
 
 
-def call_tool(tool_name: str, args: dict, raw_tools_docs: list[dict], ctx: Ctx, is_create: bool) -> tuple[bool, Any, Optional[str]]:
+def call_tool(tool_name: str, args: dict, ctx: Ctx, is_create: bool) -> tuple[bool, Any, Optional[str]]:
     retry_re = NEVER_SENT_RE if is_create else TRANSIENT_RE
     attempt = 0
     while True:
-        ok, body, err = _call_once(tool_name, args, raw_tools_docs, ctx)
+        ok, body, err = _call_once(tool_name, args, ctx)
         if ok or attempt >= ctx.cfg.max_retries or not (err and retry_re.search(err)):
             return ok, body, err
         delay = ctx.cfg.retry_backoff * (2 ** attempt)
@@ -238,7 +230,6 @@ def resolve_sys_id(number: str, ctx: Ctx) -> tuple[Optional[str], Optional[str]]
     ok, body, err = call_tool(
         "SERVICENOW__LIST_INCIDENTS",
         {"query": {"sysparm_query": f"number={number}", "sysparm_fields": "sys_id,number", "sysparm_limit": 1}},
-        ctx.tools_docs,
         ctx,
         is_create=False,
     )
@@ -253,19 +244,18 @@ def resolve_sys_id(number: str, ctx: Ctx) -> tuple[Optional[str], Optional[str]]
 # --------------------------------------------------------------------------- #
 # Per-ticket processing
 # --------------------------------------------------------------------------- #
-def _validate_and_build(ticket: dict) -> tuple[Optional[str], Optional[dict], Optional[str], str, str, list[dict]]:
+def _validate_and_build(ticket: dict) -> tuple[Optional[str], Optional[dict], Optional[str], str, str]:
     """Returns (tool_name, base_args, error, ticket_type, action)."""
     ticket_type = str(ticket.get("ticket_type", "incident")).lower()
     action = str(ticket.get("action", "")).lower()
     tool_name = TOOL_MAP.get((ticket_type, action))
-    raw_tools_docs = list(ticket.get("raw_tools_docs", [])) if isinstance(ticket.get("raw_tools_docs"), list) else []
     
     if not tool_name:
         supported = ", ".join(f"{t}/{a}" for t, a in TOOL_MAP)
-        return None, None, f"Unsupported ticket_type/action. Supported: {supported}", ticket_type, action, raw_tools_docs
+        return None, None, f"Unsupported ticket_type/action. Supported: {supported}", ticket_type, action
     fields = ticket.get("fields")
     if not isinstance(fields, dict) or not fields:
-        return None, None, "'fields' must be a non-empty object", ticket_type, action, raw_tools_docs
+        return None, None, "'fields' must be a non-empty object", ticket_type, action
 
     if action == "create":
         fields = dict(fields)
@@ -279,25 +269,25 @@ def _validate_and_build(ticket: dict) -> tuple[Optional[str], Optional[dict], Op
             required = ("short_description",)
         missing = [k for k in required if not fields.get(k)]
         if missing:
-            return None, None, f"Missing required fields: {missing}", ticket_type, action, raw_tools_docs
-        return tool_name, {"body": fields}, None, ticket_type, action, raw_tools_docs
+            return None, None, f"Missing required fields: {missing}", ticket_type, action
+        return tool_name, {"body": fields}, None, ticket_type, action
 
     if not ticket.get("sys_id") and not ticket.get("number"):
-        return None, None, "Update needs 'number' (e.g. INC0440648) or 'sys_id'", ticket_type, action, raw_tools_docs
-    return tool_name, {"body": fields}, None, ticket_type, action, raw_tools_docs
+        return None, None, "Update needs 'number' (e.g. INC0440648) or 'sys_id'", ticket_type, action
+    return tool_name, {"body": fields}, None, ticket_type, action
 
 
 def process_ticket(ticket: Any, ctx: Ctx) -> dict:
     print(f"Processing ticket: {ticket}")
     if not isinstance(ticket, dict):
         return {"status": "failed", "error": "Ticket entry must be a JSON object"}
-    tool_name, args, error, ticket_type, action, raw_tools_docs = _validate_and_build(ticket)
+    tool_name, args, error, ticket_type, action = _validate_and_build(ticket)
     out = {"ticket_type": ticket_type, "action": action, "client_ref": ticket.get("client_ref")}
     if error:
         return {**out, "status": "failed", "error": error}
 
     if action == "create":
-        ok, body, err = call_tool(tool_name, args, raw_tools_docs,ctx, is_create=True)
+        ok, body, err = call_tool(tool_name, args, ctx, is_create=True)
         sys_id = None
     else:
         lock_key = f"{ticket_type}:{ticket.get('number') or ticket.get('sys_id')}"
@@ -308,7 +298,7 @@ def process_ticket(ticket: Any, ctx: Ctx) -> dict:
                 if not sys_id:
                     return {**out, "number": ticket.get("number"), "status": "failed", "error": err}
             args = {"sys_id": sys_id, **args}
-            ok, body, err = call_tool(tool_name, args, raw_tools_docs, ctx, is_create=False)
+            ok, body, err = call_tool(tool_name, args, ctx, is_create=False)
 
     if not ok:
         return {**out, "status": "failed", "error": err}
