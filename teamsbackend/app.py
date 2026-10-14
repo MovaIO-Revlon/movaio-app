@@ -536,6 +536,10 @@ async def handle_message(ctx: ActivityContext[MessageActivity]):
         print(type(processing_activity))
         print(processing_activity)
         print(
+        f"Processing activity ID = "
+        f"{processing_activity.id}")
+
+        print(
             getattr(
                 processing_activity,
                 "id",
