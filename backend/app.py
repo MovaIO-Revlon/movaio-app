@@ -17,6 +17,7 @@ import re
 import requests
 from json.decoder import JSONDecodeError
 from flask_socketio import SocketIO, emit
+from fastapi import HTTPException
 ##from werkzeug.middleware.proxy_fix import ProxyFix  # important behind reverse proxy
 import time
 from testcaseManage import TestCaseManager
@@ -97,6 +98,11 @@ class OnboardResponseMessage(BaseModel):
     Success: bool
     Message: str | None = None
 
+
+class SnowRequest(BaseModel):
+    snow_action: str
+    user_input: str
+    user_id: str
 
 def _is_sensitive_query(text: str) -> bool:
     """Return True when the query appears to include sensitive personal data."""
@@ -2687,7 +2693,6 @@ class ChatbotAgent(DatabaseCollections):
             # Call synchronous call_agent_api
             return self.call_agent_api_chat( user_query, api_key, session_id, user_id,agent_id)
 
-
     def run_lyzr_chat_old(self, user_input: str, user_id: str, lyzr_api_key: str, lyzr_agent_id: str, session_id: str):
         
         # 1. Prepare Tools and Prompt
@@ -4469,6 +4474,11 @@ class FlaskApp(DatabaseCollections):
         
         # External Application using API only
         self.app.add_url_rule('/GetAgentsForSubscriptionUser', 'get_agents_for_subscription_user', self.get_agents_for_subscription_user, methods=['GET', 'POST'])
+
+        # ServiceNow Integration Routes
+        self.app.add_url_rule('/executeservicenowaction', 'execute_servicenow_action', self.execute_servicenow_action, methods=['POST'])
+        
+        self.app.add_url_rule('/executeservicenowactiontest', 'execute_servicenow_action_test', self.execute_servicenow_action_test, methods=['POST'])
 
     # User Management Methods
     def do_login(self):
@@ -17105,7 +17115,188 @@ class FlaskApp(DatabaseCollections):
                 condition_func=select_database_by_user_type,
                 user_type='master'
             )
-        
+
+    def execute_servicenow_action(self):
+
+        try:
+
+            # Validate API Key
+            api_key = request.headers.get("x-api-key")
+
+            if api_key != config_loader.SNOW_API_CALL_KEY:
+                return jsonify({
+                    "success": False,
+                    "message": "Invalid API Key"
+                }), 401
+
+            data = request.get_json()
+
+            snow_action = data.get("snow_action")
+            user_input = data.get("user_input")
+            user_id = data.get("user_id")
+            snow_folder_path = data.get("snow_folder_path")
+
+            if not snow_action:
+                return jsonify({
+                    "success": False,
+                    "message": "snow_action is required"
+                }), 400
+
+            print(
+                f"ServiceNow action detected: {snow_action}"
+            )
+
+            backend_dir = os.path.abspath(snow_folder_path)
+            folder_path = os.path.join(backend_dir,"ServiceNowstate")
+            os.makedirs(folder_path,exist_ok=True)
+
+            file_path = os.path.join(folder_path,"SNow_tool_output.json")
+
+            now = datetime.now()
+            request_id = (f"REQ-{now.strftime('%Y-%m-%d')}-001")
+            client_ref = (f"{snow_action}-{now.strftime('%Y%m%d%H%M%S')}")
+
+            payload_data = {
+                "request_id": request_id,
+                "tickets": [
+                    {
+                        "client_ref": client_ref,
+                        "action": snow_action,
+                        "ticket_type": "incident",
+                        "fields": {
+                            "short_description": user_input,
+                            "description": (
+                                f"User is experiencing a {user_input}"
+                            ),
+                            "urgency": "3",
+                            "impact": "3",
+                            "caller_id": user_id
+                        }
+                    }
+                ]
+            }
+
+            with open(
+                file_path,
+                "w",
+                encoding="utf-8"
+            ) as f:
+                json.dump(
+                    payload_data,
+                    f,
+                    indent=4,
+                    ensure_ascii=False
+                )
+
+            print(
+                f"Created ServiceNow file: {file_path}"
+            )
+
+            state_dir = (
+                Path(snow_folder_path)
+                / "ServiceNowstate"
+            )
+
+            folders = [
+                state_dir / "_processing",
+                state_dir / "_processed",
+                state_dir / "_failed"
+            ]
+
+            result_data = None
+
+            for _ in range(30):
+
+                result_files = []
+
+                for folder in folders:
+
+                    if folder.exists():
+                        result_files.extend(
+                            folder.glob("*.result.json")
+                        )
+
+                if result_files:
+
+                    latest_file = max(
+                        result_files,
+                        key=lambda f: f.stat().st_mtime
+                    )
+
+                    with open(
+                        latest_file,
+                        "r",
+                        encoding="utf-8"
+                    ) as f:
+                        result_data = json.load(f)
+
+                    break
+
+                time.sleep(1)
+
+            if result_data:
+
+                return jsonify({
+                    "success": True,
+                    "request_id": request_id,
+                    "client_ref": client_ref,
+                    "message": (
+                        "ServiceNow Tool executed successfully."
+                    ),
+                    "result": result_data
+                })
+
+            return jsonify({
+                "success": False,
+                "request_id": request_id,
+                "client_ref": client_ref,
+                "message":
+                    "No result file found within 30 seconds."
+            })
+
+        except Exception as ex:
+
+            return jsonify({
+                "success": False,
+                "message": str(ex)
+            }), 500
+
+    def execute_servicenow_action_test(self):
+
+        try:
+
+            # Validate API Key
+            api_key = request.headers.get("x-api-key")
+
+            if api_key != config_loader.SNOW_API_CALL_KEY:
+                return jsonify({
+                    "success": False,
+                    "message": "Invalid API Key"
+                }), 401
+
+            data = request.get_json()
+
+            snow_action = data.get("snow_action")
+            user_input = data.get("user_input")
+            user_id = data.get("user_id")
+            snow_folder_path = data.get("snow_folder_path")
+
+            return jsonify({
+                "success": False,
+                "request_id": request_id,
+                "client_ref": client_ref,
+                "message":
+                    "No result file found within 30 seconds."
+            })
+
+        except Exception as ex:
+
+            return jsonify({
+                "success": False,
+                "message": str(ex)
+            }), 500
+
+
     # Swagger UI
     def serve_openapi_json(self):
         """Serves the raw OpenAPI JSON."""
