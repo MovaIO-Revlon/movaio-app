@@ -17281,6 +17281,10 @@ class FlaskApp(DatabaseCollections):
             user_id = data.get("user_id")
             snow_folder_path = data.get("snow_folder_path")
 
+            now = datetime.now()
+            request_id = (f"REQ-{now.strftime('%Y-%m-%d')}-001")
+            client_ref = (f"{snow_action}-{now.strftime('%Y%m%d%H%M%S')}")
+
             return jsonify({
                 "success": False,
                 "request_id": request_id,
