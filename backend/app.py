@@ -2835,30 +2835,58 @@ class ChatbotAgent(DatabaseCollections):
         def get_servicenow_action(spans):
 
             for span in spans:
-                for event in span.get("Events.Attributes",[]):
 
-                    tool_input = event.get("tool_input")
+                attrs = span.get(
+                    "SpanAttributes",
+                    {}
+                )
 
-                    if not tool_input:
+                #
+                # tool call arguments
+                #
+                args = attrs.get(
+                    "llm.tool_calls.0.function.arguments"
+                )
+
+                if args:
+
+                    if (
+                        "SERVICENOW__CREATE_INCIDENT"
+                        in args
+                    ):
+                        return "create"
+
+                    if (
+                        "SERVICENOW__UPDATE_INCIDENT"
+                        in args
+                    ):
+                        return "update"
+
+                #
+                # input/query fields
+                #
+                for field in [
+                    "input",
+                    "query",
+                    "output",
+                ]:
+
+                    value = attrs.get(field)
+
+                    if not value:
                         continue
 
-                    try:
-                        outer = json.loads(tool_input)
-                        message = outer.get("message")
+                    if (
+                        "SERVICENOW__CREATE_INCIDENT"
+                        in str(value)
+                    ):
+                        return "create"
 
-                        if isinstance(message,str):
-                            message = json.loads(message)
-
-                        request = message.get("request")
-
-                        if request == ("SERVICENOW__CREATE_INCIDENT"):
-                            return "create"
-
-                        if request == ("SERVICENOW__UPDATE_INCIDENT"):
-                            return "update"
-
-                    except Exception:
-                        pass
+                    if (
+                        "SERVICENOW__UPDATE_INCIDENT"
+                        in str(value)
+                    ):
+                        return "update"
 
             return None
 
