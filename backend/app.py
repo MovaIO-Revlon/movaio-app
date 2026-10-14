@@ -2958,137 +2958,178 @@ class ChatbotAgent(DatabaseCollections):
 
                 def fetch_trace_data():
 
-                    agent_api_base = getattr(
-                        config_loader,
-                        "LYZR_AGENT_URL",
-                        "https://agent-prod.studio.lyzr.ai",
+                    trace_url = (
+                        f"{config_loader.LYZR_AGENT_URL.rstrip('/')}/v3/traces"
                     )
-
-                    trace_url = f"{agent_api_base}/v3/traces"
 
                     trace_headers = {
                         "x-api-key": lyzr_api_key,
                         "Content-Type": "application/json",
                     }
 
-                    trace_params = {
-                        "agent_id": lyzr_agent_id,
-                        "limit": 20,
-                        "sort": "desc",
-                    }
-
-                    max_retries = 5
+                    max_retries = 15
                     retry_delay = 2
 
                     print(
-                        f"Trace polling started. "
-                        f"Session: {session_id}"
+                        f"Trace polling started "
+                        f"for session: {session_id}"
                     )
 
                     for retry in range(max_retries):
 
                         try:
 
+                            #
+                            # Always get latest traces
+                            #
                             trace_response = requests.get(
                                 trace_url,
                                 headers=trace_headers,
-                                params=trace_params,
+                                params={
+                                    "agent_id": lyzr_agent_id,
+                                    "limit": 100,
+                                    "sort": "desc",
+                                },
                                 timeout=30,
                             )
 
                             trace_response.raise_for_status()
 
-                            traces = trace_response.json()
+                            traces = trace_response.json() or []
 
                             print(
-                                f"Retry {retry + 1} "
-                                f"returned {len(traces) if traces else 0} traces"
+                                f"Retry {retry + 1}/{max_retries} "
+                                f"returned {len(traces)} traces"
                             )
 
-                            if not traces:
-                                time.sleep(retry_delay)
-                                continue
-
-                            matched_trace = None
+                            matching_traces = []
 
                             for trace in traces:
 
-                                trace_session_id = trace.get("session_id")
-                                
-                                if (trace_session_id and session_id and trace_session_id.strip().lower() == session_id.strip().lower()):
-                                    matched_trace = trace
-                                    break
+                                trace_session_id = (
+                                    str(
+                                        trace.get(
+                                            "session_id",
+                                            ""
+                                        )
+                                    )
+                                    .strip()
+                                    .lower()
+                                )
 
-                            if not matched_trace:
+                                expected_session = (
+                                    str(session_id)
+                                    .strip()
+                                    .lower()
+                                )
+
+                                if (
+                                    trace_session_id
+                                    == expected_session
+                                ):
+
+                                    matching_traces.append(
+                                        trace
+                                    )
+
+                            #
+                            # Session not indexed yet
+                            #
+                            if not matching_traces:
 
                                 print(
-                                    f"No matching trace for session "
+                                    f"Session not found yet: "
                                     f"{session_id}"
                                 )
 
-                                time.sleep(retry_delay)
+                                time.sleep(
+                                    retry_delay
+                                )
+
                                 continue
-                                
-                                
-                            print(f"matched_trace details : {matched_trace}")
-                            candidate_trace_id = matched_trace.get("trace_id")
-                            
-                            if not candidate_trace_id:
+
+                            #
+                            # Newest matching trace
+                            #
+                            matched_trace = matching_traces[0]
+
+                            trace_id = matched_trace.get(
+                                "trace_id"
+                            )
+
+                            if not trace_id:
+
+                                print(
+                                    "Matching trace found "
+                                    "but trace_id missing"
+                                )
+
+                                time.sleep(
+                                    retry_delay
+                                )
+
                                 continue
 
                             print(
-                                f"Matched session "
-                                f"{session_id}"
+                                f"Matched TraceId: "
+                                f"{trace_id}"
                             )
 
-                            print(
-                                f"Matched trace id "
-                                f"{candidate_trace_id}"
-                            )
-
+                            #
+                            # Fetch trace details
+                            #
                             detail_response = requests.get(
-                                f"{trace_url}/{candidate_trace_id}",
+                                f"{trace_url}/{trace_id}",
                                 headers=trace_headers,
                                 timeout=30,
                             )
 
                             detail_response.raise_for_status()
 
-                            print(
-                                f"Response chars: "
-                                f"{len(detail_response.text)}"
+                            detail = (
+                                detail_response.json()
                             )
 
-                            detail = detail_response.json()
+                            #
+                            # Handle list payload
+                            #
+                            if isinstance(
+                                detail,
+                                list
+                            ):
+                                detail = (
+                                    detail[0]
+                                    if detail
+                                    else {}
+                                )
 
-                            print(
-                                f"Response type: "
-                                f"{type(detail)}"
+                            spans = detail.get(
+                                "spans",
+                                []
                             )
 
-                            if isinstance(detail, dict):
+                            print(
+                                f"Span Count: "
+                                f"{len(spans)}"
+                            )
 
-                                print(
-                                    f"Span count: "
-                                    f"{len(detail.get('spans', []))}"
-                                )
-
-                            elif isinstance(detail, list):
-
-                                print(
-                                    f"List count: "
-                                    f"{len(detail)}"
-                                )
-
-                            spans = detail.get("spans", [] )
-                            
+                            #
+                            # Sometimes trace exists but
+                            # spans haven't been indexed yet
+                            #
                             if not spans:
+
                                 print(
-                                    f"No spans found for "
-                                    f"trace {candidate_trace_id}"
+                                    f"Trace {trace_id} "
+                                    f"has no spans yet"
                                 )
+
+                                time.sleep(
+                                    retry_delay
+                                )
+
                                 continue
-                            
+
                             formatted_spans = []
 
                             for span in spans:
@@ -3113,21 +3154,23 @@ class ChatbotAgent(DatabaseCollections):
                                     None
                                 )
 
-                                clean_events_attrs = []
+                                clean_events = []
 
                                 for attr in span.get(
                                     "Events.Attributes",
                                     []
                                 ):
 
-                                    clean_attr = attr.copy()
+                                    clean_attr = (
+                                        attr.copy()
+                                    )
 
                                     clean_attr.pop(
                                         "query",
                                         None
                                     )
 
-                                    clean_events_attrs.append(
+                                    clean_events.append(
                                         clean_attr
                                     )
 
@@ -3137,39 +3180,45 @@ class ChatbotAgent(DatabaseCollections):
                                             "SpanName",
                                             ""
                                         ),
-                                        "SpanAttributes": clean_attrs,
+                                        "SpanAttributes": (
+                                            clean_attrs
+                                        ),
                                         "Events.Name": span.get(
                                             "Events.Name",
                                             []
                                         ),
-                                        "Events.Attributes": clean_events_attrs,
+                                        "Events.Attributes": (
+                                            clean_events
+                                        ),
                                         "chat_messages": {
-                                            "input_message": user_input,
-                                            "output_message": content,
+                                            "input_message":
+                                                user_input,
+                                            "output_message":
+                                                content,
                                         },
                                     }
                                 )
 
                             return {
-                                "trace_id": candidate_trace_id,
+                                "trace_id": trace_id,
                                 "spans": formatted_spans,
                                 "raw_spans": spans,
                             }
-                            
 
-                        except Exception as trace_err:
+                        except Exception as ex:
 
                             print(
-                                f"Trace fetch retry "
-                                f"{retry + 1} failed : "
-                                f"{trace_err}"
+                                f"Trace polling retry "
+                                f"{retry + 1} failed: {ex}"
                             )
 
-                        time.sleep(retry_delay)
-                        
+                        time.sleep(
+                            retry_delay
+                        )
 
                     print(
-                        f"No matching trace found "
+                        f"No trace found after "
+                        f"{max_retries} retries "
                         f"for session {session_id}"
                     )
 
