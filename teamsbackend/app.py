@@ -420,7 +420,7 @@ async def handle_message(ctx: ActivityContext[MessageActivity]):
     """Handle message activities using the new generated handler system."""
 
     #send typing indicator to user while processing the message
-    await ctx.reply(TypingActivityInput())
+    #await ctx.reply(TypingActivityInput())
 
     # Retrieve the user's AAD object ID from the activity context which is unique to each user in Microsoft Teams and can be used to identify the user across different conversations and sessions.
     aad_object_id = ctx.activity.from_.aad_object_id
@@ -509,6 +509,51 @@ async def handle_message(ctx: ActivityContext[MessageActivity]):
 
     text = (ctx.activity.text or "").strip()
     
+    # Persistent typing indicator
+
+    stop_typing_event = asyncio.Event()
+
+    typing_task = asyncio.create_task(
+        typing_loop(
+            ctx,
+            stop_typing_event
+        )
+    )
+
+    processing_activity = None
+
+    try:
+
+        processing_activity = await ctx.reply(
+            MessageActivityInput(
+                attachments=[
+                    get_processing_card()
+                ]
+            )
+        )
+        
+        print("====== PROCESSING ACTIVITY ======")
+        print(type(processing_activity))
+        print(processing_activity)
+        print(
+            getattr(
+                processing_activity,
+                "id",
+                None
+            )
+        )
+        print("=================================")
+
+        logger.info(
+            f"Processing card sent: {processing_activity}"
+        )
+        
+
+    except Exception as ex:
+
+        logger.warning(f"Processing card failed: {ex}")
+        print(f"Processing card failed: {ex}")
+    
     if session_expired:
         await send_message_activity(
                 ctx,
@@ -588,11 +633,36 @@ async def handle_message(ctx: ActivityContext[MessageActivity]):
                 return
 
     except Exception as exc:
-        # Catch-all
+
         data = str(exc)
-        logger.exception("Unexpected error calling external API: %s", exc)
-        await send_message_activity(ctx, text="An unexpected error occurred while processing your request.")
+
+        logger.exception(
+            "Unexpected error calling external API: %s",
+            exc
+        )
+
+        await cleanup_processing_ui(ctx,processing_activity,stop_typing_event,typing_task)
+
+        await send_message_activity(
+            ctx,
+            text=(
+                "An unexpected error occurred "
+                "while processing your request."
+            )
+        )
+
         return
+    
+    finally:
+
+        stop_typing_event.set()
+
+        try:
+            typing_task.cancel()
+        except Exception as e:
+            logger.error("Error occurred while canceling typing task: %s", e)
+            print("Error occurred while canceling typing task: %s", e)
+            pass
 
     # Handle response content safely
     logger.info("Received response from external API for user %s", aad_object_id)
@@ -669,6 +739,9 @@ async def handle_message(ctx: ActivityContext[MessageActivity]):
                     "count":5
                 }
             }
+            
+            await cleanup_processing_ui(ctx,processing_activity,stop_typing_event,typing_task )
+            
             await my_tickets2(ctx, value)
             return
         approve_ticket_keywords=configuration.get('approve_ticket_keywords', ["approve to create the ticket", "**approve** to create the ticket", "Please reply \"approve\" to confirm", "please reply \"approve\" to confirm", "please reply approve to confirm", "please reply **approve** to confirm", "\"approve\" to confirm", "**approve** to confirm", "approve to confirm"])
@@ -735,8 +808,13 @@ async def handle_message(ctx: ActivityContext[MessageActivity]):
             )
         ]
 
-        await send_message_activity(ctx, attachments=output_data_card_attachment, suggested_actions=suggested_actions_for_selected_agent)
+        # -----------------------------------------------------
+        # DELETE PROCESSING CARD
+        # -----------------------------------------------------
 
+        await cleanup_processing_ui(ctx,processing_activity,stop_typing_event,typing_task)
+
+        await send_message_activity(ctx, attachments=output_data_card_attachment, suggested_actions=suggested_actions_for_selected_agent)
 
     else:
         await send_message_activity(ctx, text="The service returned an empty response.")
@@ -1624,6 +1702,75 @@ async def handle_incident_resolution_card_update(ctx, value, user_data):
         logger.exception("Error handling incident resolution: %s", e)
         return
 
+async def typing_loop(ctx, stop_event):
+    while not stop_event.is_set():
+        try:
+            await ctx.reply(TypingActivityInput())
+
+            try:
+                await asyncio.wait_for(
+                    stop_event.wait(),
+                    timeout=4
+                )
+            except asyncio.TimeoutError:
+                pass
+
+        except Exception as ex:
+            logger.error(f"Typing indicator error: {ex}")
+            break
+
+
+def get_processing_card():
+
+    return Attachment(
+        content_type="application/vnd.microsoft.card.adaptive",
+        content={
+            "type": "AdaptiveCard",
+            "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+            "version": "1.4",
+            "body": [
+                {
+                    "type": "TextBlock",
+                    "text": "⏳ Working on your request...",
+                    "weight": "Bolder",
+                    "size": "Medium",
+                    "wrap": True
+                },
+                {
+                    "type": "TextBlock",
+                    "text": (
+                        "I'm checking the knowledge base, "
+                        "retrieving relevant information and "
+                        "generating a response."
+                    ),
+                    "wrap": True
+                }
+            ]
+        }
+    )
+
+async def cleanup_processing_ui(
+    ctx,
+    processing_activity,
+    stop_typing_event,
+    typing_task
+):
+    stop_typing_event.set()
+
+    try:
+        typing_task.cancel()
+    except Exception:
+        pass
+
+    try:
+
+        if (processing_activity and hasattr(ctx, "delete_activity")):
+            await ctx.delete_activity(processing_activity.id)
+
+    except Exception as ex:
+
+        logger.warning(f"Unable to delete card: {ex}")
+        print(f"Unable to delete card: {ex}")
 
 async def health(request: Request):
     return JSONResponse({"status": "ok"})
