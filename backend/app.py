@@ -3054,11 +3054,31 @@ class ChatbotAgent(DatabaseCollections):
 
                             detail_response.raise_for_status()
 
-                            detail = detail_response.json()
-                            print(f"Get the Traces based on trace-Id : {detail}")
+                            print(
+                                f"Response chars: "
+                                f"{len(detail_response.text)}"
+                            )
 
-                            if isinstance(detail, list):
-                                detail = detail[0] if detail else {}
+                            detail = detail_response.json()
+
+                            print(
+                                f"Response type: "
+                                f"{type(detail)}"
+                            )
+
+                            if isinstance(detail, dict):
+
+                                print(
+                                    f"Span count: "
+                                    f"{len(detail.get('spans', []))}"
+                                )
+
+                            elif isinstance(detail, list):
+
+                                print(
+                                    f"List count: "
+                                    f"{len(detail)}"
+                                )
 
                             spans = detail.get("spans", [] )
                             
