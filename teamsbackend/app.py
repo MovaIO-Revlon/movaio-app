@@ -522,42 +522,41 @@ async def handle_message(ctx: ActivityContext[MessageActivity]):
 
     processing_activity = None
 
-    try:
+    # try:
 
-        processing_activity = await ctx.reply(
-            MessageActivityInput(
-                attachments=[
-                    get_processing_card()
-                ]
-            )
-        )
+    #     processing_activity = await ctx.reply(
+    #         MessageActivityInput(
+    #             attachments=[
+    #                 get_processing_card()
+    #             ]
+    #         )
+    #     )
         
-        print("====== PROCESSING ACTIVITY ======")
-        print(processing_activity.__dict__)
-        print(type(processing_activity))
-        print(processing_activity)
-        print(
-        f"Processing activity ID = "
-        f"{processing_activity.id}")
+    #     print("====== PROCESSING ACTIVITY ======")
+    #     print(processing_activity.__dict__)
+    #     print(type(processing_activity))
+    #     print(processing_activity)
+    #     print(
+    #     f"Processing activity ID = "
+    #     f"{processing_activity.id}")
 
-        print(
-            getattr(
-                processing_activity,
-                "id",
-                None
-            )
-        )
-        print("=================================")
+    #     print(
+    #         getattr(
+    #             processing_activity,
+    #             "id",
+    #             None
+    #         )
+    #     )
+    #     print("=================================")
 
-        logger.info(
-            f"Processing card sent: {processing_activity}"
-        )
+    #     logger.info(
+    #         f"Processing card sent: {processing_activity}"
+    #     )
         
+    # except Exception as ex:
 
-    except Exception as ex:
-
-        logger.warning(f"Processing card failed: {ex}")
-        print(f"Processing card failed: {ex}")
+    #     logger.warning(f"Processing card failed: {ex}")
+    #     print(f"Processing card failed: {ex}")
     
     if session_expired:
         await send_message_activity(
