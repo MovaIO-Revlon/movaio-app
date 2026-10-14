@@ -533,6 +533,7 @@ async def handle_message(ctx: ActivityContext[MessageActivity]):
         )
         
         print("====== PROCESSING ACTIVITY ======")
+        print(processing_activity.__dict__)
         print(type(processing_activity))
         print(processing_activity)
         print(
