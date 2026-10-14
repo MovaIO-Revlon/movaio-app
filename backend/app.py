@@ -17262,9 +17262,7 @@ class FlaskApp(DatabaseCollections):
             }), 500
 
     def execute_servicenow_action_test(self):
-
         try:
-
             # Validate API Key
             api_key = request.headers.get("x-api-key")
 
@@ -17274,32 +17272,37 @@ class FlaskApp(DatabaseCollections):
                     "message": "Invalid API Key"
                 }), 401
 
-            data = request.get_json()
+            # Get JSON payload
+            data = request.get_json(silent=True) or {}
 
-            snow_action = data.get("snow_action")
-            user_input = data.get("user_input")
-            user_id = data.get("user_id")
-            snow_folder_path = data.get("snow_folder_path")
+            snow_action = data.get("snow_action", "")
+            user_input = data.get("user_input", "")
+            user_id = data.get("user_id", "")
+            snow_folder_path = data.get("snow_folder_path", "")
 
+            # Generate request identifiers
             now = datetime.now()
-            request_id = (f"REQ-{now.strftime('%Y-%m-%d')}-001")
-            client_ref = (f"{snow_action}-{now.strftime('%Y%m%d%H%M%S')}")
+
+            request_id = f"REQ-{now.strftime('%Y-%m-%d')}-001"
+            client_ref = f"{snow_action}-{now.strftime('%Y%m%d%H%M%S')}"
 
             return jsonify({
-                "success": False,
+                "success": True,
                 "request_id": request_id,
                 "client_ref": client_ref,
-                "message":
-                    "No result file found within 30 seconds."
-            })
+                "snow_action": snow_action,
+                "user_id": user_id,
+                "message": "No result file found within 30 seconds."
+            }), 200
 
         except Exception as ex:
+            import traceback
+            traceback.print_exc()
 
             return jsonify({
                 "success": False,
                 "message": str(ex)
             }), 500
-
 
     # Swagger UI
     def serve_openapi_json(self):
