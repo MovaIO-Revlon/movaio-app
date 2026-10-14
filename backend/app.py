@@ -2985,7 +2985,7 @@ class ChatbotAgent(DatabaseCollections):
                             trace_response = requests.get(
                                 trace_url,
                                 headers=trace_headers,
-                                params={
+                                json={
                                     "agent_id": lyzr_agent_id,
                                     "limit": 100,
                                     "sort": "desc",
