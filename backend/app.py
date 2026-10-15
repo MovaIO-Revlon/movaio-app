@@ -17132,7 +17132,7 @@ class FlaskApp(DatabaseCollections):
             ]
         }
 
-    def extract_incident_details(response):
+    def extract_incident_details(self, response):
 
         result = response.get("result", {})
 
