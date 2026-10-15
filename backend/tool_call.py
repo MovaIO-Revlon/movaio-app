@@ -173,31 +173,25 @@ class DynamicToolExecutor:
                     req_kwargs["json"] = body_data if body_data else None
 
             # Direct requests call replacing self.session.request
-            # res = requests.request(**req_kwargs)
-            # print("Response tool:", res.status_code, res.json())  # Debugging output
+            res = requests.request(**req_kwargs)
+            print("Response tool:", res.status_code, res.json())  # Debugging output
 
             # # 6. Process Response
-            # res.raise_for_status() # Raises HTTPError for bad responses (4xx, 5xx)
+            res.raise_for_status() # Raises HTTPError for bad responses (4xx, 5xx)
 
-            # response_text = res.text
-            # if not response_text:
-            #     return json.dumps({
-            #         "status": "success",
-            #         "message": "Request completed successfully but returned no response body.",
-            #         "status_code": res.status_code
-            #     })
+            response_text = res.text
+            if not response_text:
+                return json.dumps({
+                    "status": "success",
+                    "message": "Request completed successfully but returned no response body.",
+                    "status_code": res.status_code
+                })
 
-            # try:
-            #     parsed_body = res.json()
-            #     return json.dumps(parsed_body)
-            # except ValueError:
-            #     return response_text
-            
-            return json.dumps({
-                "status": "success",
-                "message": "Request executed successfully.",
-                "request_details": req_kwargs
-            })
+            try:
+                parsed_body = res.json()
+                return json.dumps(parsed_body)
+            except ValueError:
+                return response_text
 
         except Exception as e:
             return json.dumps({"error": "Internal Error", "message": str(e)}) 
