@@ -17011,6 +17011,10 @@ class FlaskApp(DatabaseCollections):
 
             result = auth_service._execute_tool(tool_name,payload_data,raw_tools_docs,user_id)
             
+            if snow_action == "create":
+                incident_details = self.extract_incident_details(result)
+                result= incident_details
+            
             return jsonify({
                 "success": True,
                 "request_id": request_id,
@@ -17127,6 +17131,18 @@ class FlaskApp(DatabaseCollections):
                 }
             ]
         }
+
+    def extract_incident_details(response):
+
+        result = response.get("result", {})
+
+        return {
+            "number": result.get("number", ""),
+            "sys_id": result.get("sys_id", ""),
+            "category": result.get("category", ""),
+            "priority": result.get("priority", "")
+        }
+
 
     # Swagger UI
     def serve_openapi_json(self):
