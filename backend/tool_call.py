@@ -91,6 +91,7 @@ class DynamicToolExecutor:
             query_params = {}
             body_data = {}
             raw_data = None 
+            sys_id = None  # Initialize sys_id to None
 
             for key, value in arguments.items():
 
@@ -161,6 +162,8 @@ class DynamicToolExecutor:
 
                         fields = ticket.get("fields", {})
 
+                        sys_id = fields.get("sys_id")
+
                         body_data = {
                             k: v
                             for k, v in fields.items()
@@ -193,6 +196,10 @@ class DynamicToolExecutor:
             print(f"Final body_data: {body_data}")
 
             url = f"{base_url}/{path}"
+
+            # Replace placeholder only if it exists
+            if "{sys_id}" in path:
+                path = path.replace("{sys_id}", sys_id)
 
             print(f"Concate base URL with Path : {url}")
             

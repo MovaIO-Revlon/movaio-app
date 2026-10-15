@@ -16990,8 +16990,9 @@ class FlaskApp(DatabaseCollections):
                     user_id=user_id,
                     ticket_id=ticket_id,
                     sys_id=sys_id,
-                    short_description=short_description,
-                    description=description
+                    state=7,
+                    close_code="Solved by caller",
+                    close_notes="Issue verified and closed."
                 )
 
                 tool_name = "SERVICENOW__UPDATE_INCIDENT"
