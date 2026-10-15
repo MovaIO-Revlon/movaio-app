@@ -17068,15 +17068,46 @@ class FlaskApp(DatabaseCollections):
                 "message": str(ex)
             }), 500
 
-    def get_sys_id_by_ticket_number(self, snow_response, ticket_number):
-        """
-        Get sys_id from ServiceNow response using incident number.
-        """
+    def get_sys_id_by_ticket_number(snow_response, ticket_number):
+        print(f"snow_response type: {type(snow_response)}")
 
-        for ticket in snow_response.get("result", []):
+        # If response is a string, parse it
+        if isinstance(snow_response, str):
+            print("snow_response is a string. Attempting JSON parse...")
+            try:
+                snow_response = json.loads(snow_response)
+                print("JSON parsed successfully.")
+            except Exception as e:
+                print(f"JSON parsing failed: {e}")
+                return None
+
+        # Validate top-level object
+        if not isinstance(snow_response, dict):
+            print(f"Expected dict, got {type(snow_response)}")
+            return None
+
+        results = snow_response.get("result", [])
+
+        print(f"result type: {type(results)}")
+        print(f"number of records: {len(results)}")
+
+        if not isinstance(results, list):
+            print("result is not a list")
+            return None
+
+        for idx, ticket in enumerate(results):
+            print(f"Record {idx} type: {type(ticket)}")
+
+            if not isinstance(ticket, dict):
+                print(f"Skipping invalid record: {ticket}")
+                continue
+
             if ticket.get("number") == ticket_number:
+                print(f"Match found: {ticket_number}")
+                print(f"sys_id: {ticket.get('sys_id')}")
                 return ticket.get("sys_id")
 
+        print(f"No ticket found for {ticket_number}")
         return None
 
     def _build_request(self, request_id, client_ref, action,
