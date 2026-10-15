@@ -1024,28 +1024,6 @@ class ChatbotAgent(DatabaseCollections):
         collected_logs = []
         ws_thread = None
         ws = None
-        is_snow_folder_created = False
-        servicenow_request_detected = False
-        
-        def safe_json_loads(value):
-            """
-            Safely parse JSON.
-            Returns:
-                dict/list if valid JSON
-                original value otherwise
-            """
-            if not isinstance(value, str):
-                return value
-
-            value = value.strip()
-
-            if not value:
-                return {}
-
-            try:
-                return json.loads(value)
-            except Exception:
-                return value
 
         # Helper generator to drain and yield ONLY WebSocket logs in real-time
         def flush_log_queue():
@@ -1100,90 +1078,7 @@ class ChatbotAgent(DatabaseCollections):
                 }
                 log_queue.put(log_entry)
                 collected_logs.append(log_data)
-                
-                nonlocal is_snow_folder_created
-                nonlocal servicenow_request_detected
-                # if ( not is_snow_folder_created
-                #     and log_data.get("event_type") == "tool_output"
-                #     and "STATEFUL" in log_data.get("tool_output", "").upper()
-                # ):
-                
-                if log_data.get("event_type") in ["tool_call_prepare", "tool_called"]:
-
-                    msg = ""
-
-                    if "arguments" in log_data:
-                        msg = log_data.get("arguments", {}).get("message", "")
-
-                    elif "tool_input" in log_data:
-                        msg = log_data.get("tool_input", "")
-
-                    parsed = safe_json_loads(msg)
-
-                    if isinstance(parsed, dict):
-                        if parsed.get("request") in ("SERVICENOW__CREATE_INCIDENT","SERVICENOW__UPDATE_INCIDENT"):
-                            
-                            servicenow_request_detected = True
-                            
-                            is_snow_folder_created = True
-                    
-                            # Use current application directory                    
-                            backend_dir = os.path.abspath(snow_folder_path)
-
-                            folder_path = os.path.join(
-                                backend_dir,
-                                "ServiceNowstate"
-                            )
-
-                            os.makedirs(folder_path, exist_ok=True)
-
-                            file_path = os.path.join(
-                                folder_path,
-                                "SNow_tool_output.json"
-                            )
-
-                            # Inputs
-                            short_description = user_input
-                            description = f"User is experiencing a {user_input}"
-                            caller_id = user_id or "mohamed.luthufullah@revlon.com"
-
-                            # Auto-generated values
-                            now = datetime.now()
-
-                            request_id = f"REQ-{now.strftime('%Y-%m-%d')}-001"
-                            client_ref = f"create-{now.strftime('%Y%m%d%H%M%S')}"
-
-                            inputdata = {
-                                "request_id": request_id,
-                                "tickets": [
-                                    {
-                                        "client_ref": client_ref,
-                                        "action": "create",
-                                        "ticket_type": "incident",
-                                        "fields": {
-                                            "short_description": short_description,
-                                            "description": description,
-                                            "urgency": "3",
-                                            "impact": "3",
-                                            "caller_id": caller_id
-                                        }
-                                    }
-                                ]
-                            }
-
-                            with open(file_path, "w", encoding="utf-8") as f:
-                                json.dump(inputdata, f, indent=4, ensure_ascii=False)
-
-                            print("=" * 80)
-                            print(f"Current Working Directory : {backend_dir}")
-                            print(f"Created Folder           : {folder_path}")
-                            print(f"Created File             : {file_path}")
-                            print(f"Folder Exists            : {os.path.isdir(folder_path)}")
-                            print(f"File Exists              : {os.path.isfile(file_path)}")
-                            print("=" * 80)
-                            
-                            print("✅ SERVICENOW__CREATE_OR_UPDATE_INCIDENT detected")
-                
+                                
             except Exception as e:
                 print(f"Error parsing WebSocket message: {e}")
 
@@ -1291,43 +1186,8 @@ class ChatbotAgent(DatabaseCollections):
                 
                 print(f"Response from the first agent----: {response_json}")
 
-                if servicenow_request_detected:
-                    print("Found SNow state in response")
-                    servicenow_request_detected = False
-                    state_dir = Path(snow_folder_path) / "ServiceNowstate"
-
-                    folders = [
-                            state_dir / "_processing",
-                            state_dir / "_processed",
-                            state_dir / "_failed"
-                    ]
-
-                    result_files = []
-
-                    for folder in folders:
-                        if folder.exists():
-                            result_files.extend(folder.glob("*.result.json"))
-
-                    if not result_files:
-                        print("No result files found")
-                    else:
-                        latest_file = max(
-                            result_files,
-                            key=lambda f: f.stat().st_mtime
-                        )
-
-                        print("Latest result file:", latest_file)
-
-                        with open(latest_file, "r", encoding="utf-8") as f:
-                            data = json.load(f)
-
-                        print(f"Data from latest ServiceNow file: {data}")
-                        current_message = f"ServiceNow Tool executed successfully.\nResult: {data}\n\nContinue with the next step tool call if required or give final answer."
-
-                else:
-                    # Final answer ready
-                    final_content = content
-                    break
+                final_content = content
+                break
 
             # ------------------------------------------------------------------
             # 4. FETCH TRACE DETAILS (WHILE YIELDING RUNTIME LOGS)
@@ -3271,101 +3131,6 @@ class ChatbotAgent(DatabaseCollections):
                     }
 
                 print(f"Matched Trace Id : {trace_id}")
-                #
-                # SERVICENOW DETECTION FROM TRACE
-                #
-                if (not servicenow_processed and trace_details):
-
-                    spans = trace_details.get("raw_spans",trace_details.get("spans",[]))
-
-                    snow_action = get_servicenow_action(spans)
-
-                    if snow_action:
-
-                        print(f"ServiceNow action detected : {snow_action}")
-
-                        backend_dir = os.path.abspath(snow_folder_path)
-                        folder_path = os.path.join(backend_dir,"ServiceNowstate")
-                        os.makedirs(folder_path,exist_ok=True)
-                        file_path = os.path.join(folder_path,"SNow_tool_output.json")
-                        now = datetime.now()
-                        request_id = (f"REQ-{now.strftime('%Y-%m-%d')}-001")
-                        client_ref = (f"{snow_action}-{now.strftime('%Y%m%d%H%M%S')}")
-
-                        payload_data = {
-                            "request_id": request_id,
-                            "tickets": [
-                                {
-                                    "client_ref": client_ref,
-                                    "action": snow_action,
-                                    "ticket_type": "incident",
-                                    "fields": {
-                                        "short_description": user_input,
-                                        "description": (
-                                            f"User is experiencing a "
-                                            f"{user_input}"
-                                        ),
-                                        "urgency": "3",
-                                        "impact": "3",
-                                        "caller_id": user_id
-                                    }
-                                }
-                            ]
-                        }
-
-                        with open(file_path,"w",encoding="utf-8") as f:
-
-                            json.dump(payload_data,f,indent=4,ensure_ascii=False)
-
-                        print(f"Created ServiceNow file: {file_path}")
-
-                        state_dir = (Path(snow_folder_path)/ "ServiceNowstate")
-
-                        folders = [
-                            state_dir / "_processing",
-                            state_dir / "_processed",
-                            state_dir / "_failed"
-                        ]
-
-                        result_data = None
-
-                        #
-                        # Wait up to 30 seconds
-                        #
-                        for _ in range(30):
-
-                            result_files = []
-
-                            for folder in folders:
-
-                                if folder.exists():
-                                    result_files.extend(folder.glob("*.result.json"))
-
-                            if result_files:
-
-                                latest_file = max(result_files,key=lambda f: f.stat().st_mtime)
-
-                                print(f"Latest Result File : {latest_file}")
-
-                                with open(latest_file,"r",encoding="utf-8") as f:
-                                    result_data = json.load(f)
-
-                                break
-
-                            time.sleep(1)
-
-                        #
-                        # Only continue if result found
-                        #
-                        if result_data:
-                            servicenow_processed = True
-                            current_message = (
-                                    "ServiceNow Tool executed successfully.\n"
-                                    f"Result: {json.dumps(result_data)}\n\n"
-                                    "Continue with next step tool call "
-                                    "if required or give final answer."
-                                )
-                            continue
 
                 #
                 # FINAL RESPONSE
@@ -3373,15 +3138,6 @@ class ChatbotAgent(DatabaseCollections):
                 final_content = content
                 break
 
-            #
-            # COMPARISON FILE
-            #
-            comparison = {
-                "session_id": session_id,
-                "trace_id": trace_id,
-                "incident_found": False,
-                "incident_type": None
-            }
 
             if trace_details:
 
@@ -3393,17 +3149,10 @@ class ChatbotAgent(DatabaseCollections):
 
                     tools_called.append("SERVICENOW__CREATE_INCIDENT")
 
-                    comparison["incident_found"] = True
-                    comparison["incident_type"] = "create"
-
                 elif action == "update":
 
-                    tools_called.append(
-                        "SERVICENOW__UPDATE_INCIDENT"
-                    )
+                    tools_called.append("SERVICENOW__UPDATE_INCIDENT")
 
-                    comparison["incident_found"] = True
-                    comparison["incident_type"] = "update"
 
             return {
                 "type": "final_response",
@@ -17116,7 +16865,7 @@ class FlaskApp(DatabaseCollections):
                 user_type='master'
             )
 
-    def execute_servicenow_action(self):
+    def execute_servicenow_action_new(self):
 
         try:
 
@@ -17135,6 +16884,11 @@ class FlaskApp(DatabaseCollections):
             user_input = data.get("user_input")
             user_id = data.get("user_id")
             snow_folder_path = data.get("snow_folder_path")
+            ticket_id = data.get("ticket_id")
+            urgency = data.get("urgency")
+            impact = data.get("impact")
+            short_description = data.get("short_description")
+            description = data.get("description")
 
             if not snow_action:
                 return jsonify({
@@ -17146,6 +16900,11 @@ class FlaskApp(DatabaseCollections):
                 f"ServiceNow action detected: {snow_action}"
             )
 
+            auth_service = ToolAuthService()
+            
+            context = self._get_agent_context(config_loader.SNOW_ORCH_AGENT_ID)
+            raw_tools_docs = context.get("raw_tools_docs", [])
+
             backend_dir = os.path.abspath(snow_folder_path)
             folder_path = os.path.join(backend_dir,"ServiceNowstate")
             os.makedirs(folder_path,exist_ok=True)
@@ -17156,46 +16915,495 @@ class FlaskApp(DatabaseCollections):
             request_id = (f"REQ-{now.strftime('%Y-%m-%d')}-001")
             client_ref = (f"{snow_action}-{now.strftime('%Y%m%d%H%M%S')}")
 
-            payload_data = {
-                "request_id": request_id,
-                "tickets": [
-                    {
-                        "client_ref": client_ref,
-                        "action": snow_action,
-                        "ticket_type": "incident",
-                        "fields": {
-                            "short_description": user_input,
-                            "description": (
-                                f"User is experiencing a {user_input}"
-                            ),
-                            "urgency": "3",
-                            "impact": "3",
-                            "caller_id": user_id
-                        }
-                    }
-                ]
-            }
+            payload_data ={}
+            tool_name = None
 
-            with open(
-                file_path,
-                "w",
-                encoding="utf-8"
-            ) as f:
-                json.dump(
-                    payload_data,
-                    f,
-                    indent=4,
-                    ensure_ascii=False
+            if snow_action == "create":
+
+                tool_name = "SERVICENOW__CREATE_INCIDENT"
+                
+                payload_data = {
+                    "request_id": request_id,
+                    "tickets": [
+                        {
+                            "client_ref": client_ref,
+                            "action": snow_action,
+                            "ticket_type": "incident",
+                            "fields": {
+                                "short_description": short_description,
+                                "description": description,
+                                "urgency": urgency,
+                                "impact": impact,
+                                "caller_id": user_id
+                            }
+                        }
+                    ]
+                }
+                
+            elif snow_action == "update":
+                
+                if not ticket_id:
+                    
+                    payload_data = {
+                                        "request_id": request_id,
+                                        "tickets": [
+                                            {
+                                                "client_ref": client_ref,
+                                                "action": "list",
+                                                "ticket_type": "incident",
+                                                "ticket_id": ticket_id,
+                                                "fields": {    
+                                                    "caller_id": user_id,
+                                                    "active": True
+                                                }
+                                            }
+                                        ]
+                                    }
+                    
+                    tool_name = "SERVICENOW__LIST_INCIDENTS"
+                    
+                    snow_response = auth_service._execute_tool(tool_name, payload_data, raw_tools_docs, user_id)
+
+                    return jsonify({
+                                        "success": True,
+                                        "request_id": request_id,
+                                        "client_ref": client_ref,
+                                        "message": (
+                                            "ServiceNow Tool executed successfully."
+                                        ),
+                                        "result": snow_response
+                                    })
+
+                else:
+                    
+                    payload_data = {
+                                        "request_id": request_id,
+                                        "tickets": [
+                                            {
+                                                "client_ref": client_ref,
+                                                "action": "list",
+                                                "ticket_type": "incident",
+                                                "ticket_id": ticket_id,
+                                                "fields": {    
+                                                    "caller_id": user_id,
+                                                    "active": True
+                                                }
+                                            }
+                                        ]
+                                    }
+                    
+                    tool_name = "SERVICENOW__LIST_INCIDENTS"                    
+
+                    snow_response = auth_service._execute_tool(tool_name, payload_data, raw_tools_docs, user_id)
+
+                    sys_id = self.get_sys_id_by_ticket_number(snow_response, ticket_id)
+
+                    payload_data = {
+                        "request_id": request_id,
+                        "tickets": [
+                            {
+                                "client_ref": client_ref,
+                                "action": snow_action,
+                                "ticket_type": "incident",
+                                "ticket_id": ticket_id,
+                                "fields": {
+                                    "short_description": short_description,
+                                    "description": description,
+                                    "sys_id": sys_id,
+                                    "caller_id": user_id
+                                }
+                            }
+                        ]
+                    }
+                    
+                    tool_name="SERVICENOW__UPDATE_INCIDENT"
+               
+            elif snow_action == "list":
+              
+                payload_data = {
+                    "request_id": request_id,
+                    "tickets": [
+                        {
+                            "client_ref": client_ref,
+                            "action": snow_action,
+                            "ticket_type": "incident",
+                            "ticket_id": ticket_id,
+                            "fields": {    
+                                "caller_id": user_id,
+                                "active": True
+                            }
+                        }
+                    ]
+                }
+                  
+                  
+                tool_name = "SERVICENOW__LIST_INCIDENTS"
+                                     
+                snow_response = auth_service._execute_tool(tool_name, payload_data, raw_tools_docs, user_id)
+                 
+                return jsonify({
+                        "success": True,
+                        "request_id": request_id,
+                        "client_ref": client_ref,
+                        "message": ("ServiceNow Tool executed successfully."),
+                        "result": snow_response
+                         })
+               
+                
+            result_data = auth_service._execute_tool(tool_name, payload_data, raw_tools_docs, user_id)
+
+            if result_data:
+
+                return jsonify({
+                    "success": True,
+                    "request_id": request_id,
+                    "client_ref": client_ref,
+                    "message": (
+                        "ServiceNow Tool executed successfully."
+                    ),
+                    "result": result_data
+                })
+
+            return jsonify({
+                "success": False,
+                "request_id": request_id,
+                "client_ref": client_ref,
+                "message":
+                    "No result file found within 30 seconds."
+            })
+
+        except Exception as ex:
+
+            return jsonify({
+                "success": False,
+                "message": str(ex)
+            }), 500
+
+    def execute_servicenow_action(self):
+        try:
+
+            if request.headers.get("x-api-key") != config_loader.SNOW_API_CALL_KEY:
+                return jsonify({
+                    "success": False,
+                    "message": "Invalid API Key"
+                }), 401
+
+            data = request.get_json() or {}
+
+            snow_action = data.get("snow_action")
+            user_id = data.get("user_id")
+            ticket_id = data.get("ticket_id")
+            urgency = data.get("urgency")
+            impact = data.get("impact")
+            short_description = data.get("short_description")
+            description = data.get("description")
+
+            if not snow_action:
+                return jsonify({
+                    "success": False,
+                    "message": "snow_action is required"
+                }), 400
+
+            auth_service = ToolAuthService()
+
+            context = self._get_agent_context(config_loader.SNOW_ORCH_AGENT_ID)
+
+            raw_tools_docs = context.get("raw_tools_docs",[])
+
+            now = datetime.now()
+
+            request_id = f"REQ-{now.strftime('%Y-%m-%d')}-001"
+            client_ref = f"{snow_action}-{now.strftime('%Y%m%d%H%M%S')}"
+
+            # CREATE
+            if snow_action == "create":
+
+                payload_data = self._build_request(
+                    request_id=request_id,
+                    client_ref=client_ref,
+                    action="create",
+                    user_id=user_id,
+                    short_description=short_description,
+                    description=description,
+                    urgency=urgency,
+                    impact=impact
                 )
 
+                tool_name = "SERVICENOW__CREATE_INCIDENT"
+
+            # LIST
+            elif snow_action == "list":
+
+                payload_data = self._build_request(
+                    request_id=request_id,
+                    client_ref=client_ref,
+                    action="list",
+                    user_id=user_id,
+                    ticket_id=ticket_id,
+                    active=True
+                )
+
+                tool_name = "SERVICENOW__LIST_INCIDENTS"
+
+            # UPDATE
+            elif snow_action == "update":
+
+                # Ticket not provided, show available incidents
+                if not ticket_id:
+
+                    payload_data = {
+                        "request_id": request_id,
+                        "tickets": [
+                            {
+                                "client_ref": client_ref,
+                                "action": "list",
+                                "ticket_type": "incident",
+                                "fields": {
+                                    "caller_id": user_id,
+                                    "active": True
+                                }
+                            }
+                        ]
+                    }
+
+                    snow_response = auth_service._execute_tool("SERVICENOW__LIST_INCIDENTS",payload_data,raw_tools_docs,user_id)
+
+                    return jsonify({
+                        "success": True,
+                        "request_id": request_id,
+                        "client_ref": client_ref,
+                        "message": (
+                            "Please select a ticket to update. "
+                            "Here are your active incidents."
+                        ),
+                        "result": snow_response
+                    })
+
+                list_payload = self._build_request(
+                    request_id=request_id,
+                    client_ref=client_ref,
+                    action="list",
+                    user_id=user_id,
+                    ticket_id=ticket_id,
+                    active=True
+                )
+
+                snow_response = auth_service._execute_tool("SERVICENOW__LIST_INCIDENTS",list_payload,raw_tools_docs,user_id)
+
+                sys_id = self.get_sys_id_by_ticket_number(
+                    snow_response,
+                    ticket_id
+                )
+
+                if not sys_id:
+                    return jsonify({
+                        "success": False,
+                        "message": f"Ticket {ticket_id} not found"
+                    }), 404
+
+                payload_data = self._build_request(
+                    request_id=request_id,
+                    client_ref=client_ref,
+                    action="update",
+                    user_id=user_id,
+                    ticket_id=ticket_id,
+                    sys_id=sys_id,
+                    short_description=short_description,
+                    description=description
+                )
+
+                tool_name = "SERVICENOW__UPDATE_INCIDENT"
+
+            else:
+                return jsonify({
+                    "success": False,
+                    "message": f"Unsupported action: {snow_action}"
+                }), 400
+
+            result = auth_service._execute_tool(tool_name,payload_data,raw_tools_docs,user_id)
+
+            return jsonify({
+                "success": True,
+                "request_id": request_id,
+                "client_ref": client_ref,
+                "message": "ServiceNow Tool executed successfully.",
+                "result": result
+            })
+
+        except Exception as ex:
+            return jsonify({
+                "success": False,
+                "message": str(ex)
+            }), 500
+
+    def execute_servicenow_action_old(self):
+
+        try:
+
+            # Validate API Key
+            api_key = request.headers.get("x-api-key")
+
+            if api_key != config_loader.SNOW_API_CALL_KEY:
+                return jsonify({
+                    "success": False,
+                    "message": "Invalid API Key"
+                }), 401
+
+            data = request.get_json()
+
+            snow_action = data.get("snow_action")
+            user_input = data.get("user_input")
+            user_id = data.get("user_id")
+            snow_folder_path = data.get("snow_folder_path")
+            ticket_id = data.get("ticket_id")
+            urgency = data.get("urgency")
+            impact = data.get("impact")
+            short_description = data.get("short_description")
+            description = data.get("description")
+
+            if not snow_action:
+                return jsonify({
+                    "success": False,
+                    "message": "snow_action is required"
+                }), 400
+
             print(
-                f"Created ServiceNow file: {file_path}"
+                f"ServiceNow action detected: {snow_action}"
             )
 
-            state_dir = (
-                Path(snow_folder_path)
-                / "ServiceNowstate"
-            )
+            auth_service = ToolAuthService()
+            
+            context = self._get_agent_context(config_loader.SNOW_ORCH_AGENT_ID)
+            raw_tools_docs = context.get("raw_tools_docs", [])
+
+            backend_dir = os.path.abspath(snow_folder_path)
+            folder_path = os.path.join(backend_dir,"ServiceNowstate")
+            os.makedirs(folder_path,exist_ok=True)
+
+            file_path = os.path.join(folder_path,"SNow_tool_output.json")
+
+            now = datetime.now()
+            request_id = (f"REQ-{now.strftime('%Y-%m-%d')}-001")
+            client_ref = (f"{snow_action}-{now.strftime('%Y%m%d%H%M%S')}")
+
+            payload_data ={}
+
+            if snow_action == "create":
+
+                payload_data = {
+                    "request_id": request_id,
+                    "tickets": [
+                        {
+                            "client_ref": client_ref,
+                            "action": snow_action,
+                            "ticket_type": "incident",
+                            "fields": {
+                                "short_description": short_description,
+                                "description": description,
+                                "urgency": urgency,
+                                "impact": impact,
+                                "caller_id": user_id
+                            }
+                        }
+                    ]
+                }
+                
+            elif snow_action == "update":
+                
+                if not ticket_id:
+                    
+                    payload_data = {
+                                        "request_id": request_id,
+                                        "tickets": [
+                                            {
+                                                "client_ref": client_ref,
+                                                "action": "list",
+                                                "ticket_type": "incident",
+                                                "ticket_id": ticket_id,
+                                                "fields": {    
+                                                    "caller_id": user_id,
+                                                    "active": True
+                                                }
+                                            }
+                                        ]
+                                    }
+                    
+                    tool_name = "SERVICENOW__LIST_INCIDENTS"
+                    
+                    snow_response = auth_service._execute_tool(tool_name, payload_data, raw_tools_docs, user_id)
+
+                    return jsonify({
+                                        "success": True,
+                                        "request_id": request_id,
+                                        "client_ref": client_ref,
+                                        "message": (
+                                            "ServiceNow Tool executed successfully."
+                                        ),
+                                        "result": snow_response
+                                    })
+
+                else:
+
+                    snow_response = auth_service._execute_tool(tool_name, payload_data, raw_tools_docs, user_id)
+
+                    sys_id = self.get_sys_id_by_ticket_number(snow_response, ticket_id)
+
+                    payload_data = {
+                        "request_id": request_id,
+                        "tickets": [
+                            {
+                                "client_ref": client_ref,
+                                "action": snow_action,
+                                "ticket_type": "incident",
+                                "ticket_id": ticket_id,
+                                "fields": {
+                                    "short_description": short_description,
+                                    "description": description,
+                                    "sys_id": sys_id,
+                                    "caller_id": user_id
+                                }
+                            }
+                        ]
+                    }
+               
+            elif snow_action == "list":
+              
+                payload_data = {
+                    "request_id": request_id,
+                    "tickets": [
+                        {
+                            "client_ref": client_ref,
+                            "action": snow_action,
+                            "ticket_type": "incident",
+                            "ticket_id": ticket_id,
+                            "fields": {    
+                                "caller_id": user_id,
+                                "active": True
+                            }
+                        }
+                    ]
+                }
+                  
+                  
+                tool_name = "SERVICENOW__LIST_INCIDENTS"
+                                     
+                snow_response = auth_service._execute_tool(tool_name, payload_data, raw_tools_docs, user_id)
+                 
+                return jsonify({
+                        "success": True,
+                        "request_id": request_id,
+                        "client_ref": client_ref,
+                        "message": ("ServiceNow Tool executed successfully."),
+                        "result": snow_response
+                         })
+               
+                
+            with open(file_path,"w",encoding="utf-8") as f:
+                json.dump(payload_data,f,indent=4,ensure_ascii=False)
+
+            print(f"Created ServiceNow file: {file_path}")
+
+            state_dir = (Path(snow_folder_path)/ "ServiceNowstate")
 
             folders = [
                 state_dir / "_processing",
@@ -17212,22 +17420,13 @@ class FlaskApp(DatabaseCollections):
                 for folder in folders:
 
                     if folder.exists():
-                        result_files.extend(
-                            folder.glob("*.result.json")
-                        )
+                        result_files.extend(folder.glob("*.result.json"))
 
                 if result_files:
 
-                    latest_file = max(
-                        result_files,
-                        key=lambda f: f.stat().st_mtime
-                    )
+                    latest_file = max(result_files,key=lambda f: f.stat().st_mtime)
 
-                    with open(
-                        latest_file,
-                        "r",
-                        encoding="utf-8"
-                    ) as f:
+                    with open(latest_file,"r",encoding="utf-8" ) as f:
                         result_data = json.load(f)
 
                     break
@@ -17303,6 +17502,35 @@ class FlaskApp(DatabaseCollections):
                 "success": False,
                 "message": str(ex)
             }), 500
+
+    def get_sys_id_by_ticket_number(self, snow_response, ticket_number):
+        """
+        Get sys_id from ServiceNow response using incident number.
+        """
+
+        for ticket in snow_response.get("result", []):
+            if ticket.get("number") == ticket_number:
+                return ticket.get("sys_id")
+
+        return None
+
+    def _build_request(self, request_id, client_ref, action,
+                    user_id, ticket_id=None, **fields):
+        return {
+            "request_id": request_id,
+            "tickets": [
+                {
+                    "client_ref": client_ref,
+                    "action": action,
+                    "ticket_type": "incident",
+                    "ticket_id": ticket_id,
+                    "fields": {
+                        "caller_id": user_id,
+                        **fields
+                    }
+                }
+            ]
+        }
 
     # Swagger UI
     def serve_openapi_json(self):
