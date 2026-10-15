@@ -17068,7 +17068,7 @@ class FlaskApp(DatabaseCollections):
                 "message": str(ex)
             }), 500
 
-    def get_sys_id_by_ticket_number(snow_response, ticket_number):
+    def get_sys_id_by_ticket_number(self,snow_response, ticket_number):
         print(f"snow_response type: {type(snow_response)}")
 
         # If response is a string, parse it
