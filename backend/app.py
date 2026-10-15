@@ -17106,7 +17106,7 @@ class FlaskApp(DatabaseCollections):
 
             auth_service = ToolAuthService()
 
-            context = self._get_agent_context(config_loader.SNOW_ORCH_AGENT_ID)
+            context = self.chatbot_agent._get_agent_context(config_loader.SNOW_ORCH_AGENT_ID)
 
             raw_tools_docs = context.get("raw_tools_docs",[])
 
