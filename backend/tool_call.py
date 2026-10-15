@@ -195,13 +195,13 @@ class DynamicToolExecutor:
             print(f"Final query_params: {query_params}")
             print(f"Final body_data: {body_data}")
 
-            url = f"{base_url}/{path}"
-
             # Replace placeholder only if it exists
             if "{sys_id}" in path:
                 path = path.replace("{sys_id}", sys_id)
 
             print(f"Concate base URL with Path : {url}")
+
+            url = f"{base_url}/{path}"
             
             # 5. Execute Request directly via requests module
             logger.debug(f"Making {method} request to {url}")
