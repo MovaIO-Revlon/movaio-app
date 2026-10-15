@@ -17002,9 +17002,14 @@ class FlaskApp(DatabaseCollections):
                     "message": f"Unsupported action: {snow_action}"
                 }), 400
 
-            result = auth_service._execute_tool(tool_name,payload_data,raw_tools_docs,user_id)
-            
 
+            print(f"Executing ServiceNow action: {snow_action}")
+            
+            print(f"Executing ServiceNow payload: {payload_data}")
+            
+            print(f"ServiceNow Calling UserId: {user_id}")
+
+            result = auth_service._execute_tool(tool_name,payload_data,raw_tools_docs,user_id)
             
             return jsonify({
                 "success": True,

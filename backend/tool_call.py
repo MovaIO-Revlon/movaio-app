@@ -138,12 +138,14 @@ class DynamicToolExecutor:
                     # CREATE TICKET (POST)
                     elif method == "POST" and action == "create":
 
+                        fields = ticket.get("fields", {})
+
                         body_data = {
-                            "short_description": ticket.get("short_description"),
-                            "description": ticket.get("description"),
-                            "urgency": ticket.get("urgency"),
-                            "impact": ticket.get("impact"),
-                            "caller_id": ticket.get("user_id"),
+                            "caller_id": fields.get("caller_id"),
+                            "short_description": fields.get("short_description"),
+                            "description": fields.get("description"),
+                            "urgency": fields.get("urgency"),
+                            "impact": fields.get("impact")
                         }
 
                         # Remove empty values
@@ -157,9 +159,11 @@ class DynamicToolExecutor:
                     # UPDATE TICKET (PUT/PATCH)
                     elif method in ["PUT", "PATCH"]:
 
+                        fields = ticket.get("fields", {})
+
                         body_data = {
                             k: v
-                            for k, v in ticket.items()
+                            for k, v in fields.items()
                             if k not in ["action", "client_ref"]
                             and v is not None
                         }
