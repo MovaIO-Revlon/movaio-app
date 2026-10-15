@@ -17593,7 +17593,7 @@ if __name__ == '__main__':
     if isinstance(port, tuple):
         port = port[0]  # extract first item
     
-    threading.Thread(target=poller.main,daemon=True).start()
+    #threading.Thread(target=poller.main,daemon=True).start()
     
     flask_app = FlaskApp()        
     flask_app.socketio.run(app=flask_app.app,host='0.0.0.0',port=int(port),debug=True,log_output=True, use_reloader=False,allow_unsafe_werkzeug=True)

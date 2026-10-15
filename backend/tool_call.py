@@ -119,7 +119,7 @@ class DynamicToolExecutor:
 
                         if action == "list" and fields:
 
-                            query_params["sysparm_query"] = build_sysparm_query(fields)
+                            query_params["sysparm_query"] = self.build_sysparm_query(fields)
 
                             # Optional ServiceNow parameters
                             query_params["sysparm_display_value"] = "true"
