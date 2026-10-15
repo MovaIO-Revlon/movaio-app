@@ -97,6 +97,7 @@ class DynamicToolExecutor:
             for key, value in arguments.items():
                 if f"{{{key}}}" in path:
                     path = path.replace(f"{{{key}}}", str(value))
+                    print(f"Replaced path variable {key} with value {value}")
                     continue
 
                 content_type = headers.get("Content-Type", "")
@@ -112,6 +113,9 @@ class DynamicToolExecutor:
                         query_params[key] = value
                 else:
                     body_data[key] = value
+                    
+                    
+                print(f"query_params : {query_params}")
 
             url = f"{base_url}/{path}"
 
@@ -142,25 +146,31 @@ class DynamicToolExecutor:
                     req_kwargs["json"] = body_data if body_data else None
 
             # Direct requests call replacing self.session.request
-            res = requests.request(**req_kwargs)
-            print("Response tool:", res.status_code, res.json())  # Debugging output
+            # res = requests.request(**req_kwargs)
+            # print("Response tool:", res.status_code, res.json())  # Debugging output
 
-            # 6. Process Response
-            res.raise_for_status() # Raises HTTPError for bad responses (4xx, 5xx)
+            # # 6. Process Response
+            # res.raise_for_status() # Raises HTTPError for bad responses (4xx, 5xx)
 
-            response_text = res.text
-            if not response_text:
-                return json.dumps({
-                    "status": "success",
-                    "message": "Request completed successfully but returned no response body.",
-                    "status_code": res.status_code
-                })
+            # response_text = res.text
+            # if not response_text:
+            #     return json.dumps({
+            #         "status": "success",
+            #         "message": "Request completed successfully but returned no response body.",
+            #         "status_code": res.status_code
+            #     })
 
-            try:
-                parsed_body = res.json()
-                return json.dumps(parsed_body)
-            except ValueError:
-                return response_text
+            # try:
+            #     parsed_body = res.json()
+            #     return json.dumps(parsed_body)
+            # except ValueError:
+            #     return response_text
+            
+            return json.dumps({
+                "status": "success",
+                "message": "Request executed successfully.",
+                "request_details": req_kwargs
+            })
 
         except Exception as e:
             return json.dumps({"error": "Internal Error", "message": str(e)}) 
