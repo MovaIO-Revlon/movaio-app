@@ -41,8 +41,7 @@ class DynamicToolExecutor:
         return headers
 
     def execute(self, function_name: str, arguments: Dict[str, Any]) -> str:
-        
-        
+          
         try:
             
             if "mock" in str(self.secrets.get("client_id", "")).lower():
@@ -64,7 +63,6 @@ class DynamicToolExecutor:
             
             # Resolve URL components safely
             
-            # base_url = self._resolve_variables(protocol_data.get("server_url", "")).rstrip("/")
             server_url = self.secrets.get("server_url")
 
             print(f"Get the Server_URL from Secret : {server_url}")
@@ -95,6 +93,8 @@ class DynamicToolExecutor:
             raw_data = None 
 
             for key, value in arguments.items():
+
+                # Replace path parameters
                 if f"{{{key}}}" in path:
                     path = path.replace(f"{{{key}}}", str(value))
                     print(f"Replaced path variable {key} with value {value}")
@@ -102,47 +102,91 @@ class DynamicToolExecutor:
 
                 content_type = headers.get("Content-Type", "")
 
-                if content_type in ["text/plain", "application/octet-stream"] and key in ["content", "data", "file"]:
+                # Raw content handling
+                if (
+                    content_type in ["text/plain", "application/octet-stream"]
+                    and key in ["content", "data", "file"]
+                ):
                     raw_data = value.encode("utf-8") if isinstance(value, str) else value
                     continue
 
-                        # GET / DELETE requests
-                if method in ["GET", "DELETE"]:
+                # ServiceNow ticket handling
+                if key == "tickets" and isinstance(value, list) and value:
 
-                    # ServiceNow Ticket List Handling
-                    if key == "tickets" and isinstance(value, list) and value:
+                    ticket = value[0]
+                    action = ticket.get("action")
+                    print(f"Processing ticket action: {action}")
 
-                        ticket = value[0]
+                    # LIST TICKETS (GET)
+                    if method == "GET" and action == "list":
 
-                        action = ticket.get("action")
                         fields = ticket.get("fields", {})
 
-                        if action == "list" and fields:
-
-                            query_params["sysparm_query"] = self.build_sysparm_query(fields)
-
-                            # Optional ServiceNow parameters
-                            query_params["sysparm_display_value"] = "true"
-                            query_params["sysparm_exclude_reference_link"] = "true"
-
-                            print(
-                                f"Generated sysparm_query: "
-                                f"{query_params['sysparm_query']}"
+                        if fields:
+                            query_params["sysparm_query"] = self.build_sysparm_query(
+                                fields
                             )
 
-                        # Don't pass tickets as a query parameter
-                        continue
+                        query_params["sysparm_display_value"] = "true"
+                        query_params["sysparm_exclude_reference_link"] = "true"
+
+                        print(
+                            f"Generated sysparm_query: "
+                            f"{query_params.get('sysparm_query', '')}"
+                        )
+
+                    # CREATE TICKET (POST)
+                    elif method == "POST" and action == "create":
+
+                        body_data = {
+                            "short_description": ticket.get("short_description"),
+                            "description": ticket.get("description"),
+                            "urgency": ticket.get("urgency"),
+                            "impact": ticket.get("impact"),
+                            "caller_id": ticket.get("user_id"),
+                        }
+
+                        # Remove empty values
+                        body_data = {
+                            k: v for k, v in body_data.items()
+                            if v is not None
+                        }
+
+                        print(f"Generated create payload: {body_data}")
+
+                    # UPDATE TICKET (PUT/PATCH)
+                    elif method in ["PUT", "PATCH"]:
+
+                        body_data = {
+                            k: v
+                            for k, v in ticket.items()
+                            if k not in ["action", "client_ref"]
+                            and v is not None
+                        }
+
+                        print(f"Generated update payload: {body_data}")
+
+                    # Don't pass tickets further
+                    continue
+
+                # GET/DELETE parameters
+                if method in ["GET", "DELETE"]:
 
                     if isinstance(value, dict):
                         query_params.update(value)
                     else:
                         query_params[key] = value
 
+                # POST/PUT/PATCH body
                 else:
-                    body_data[key] = value
-                    
-                    
-                print(f"query_params : {query_params}")
+
+                    if isinstance(value, dict):
+                        body_data.update(value)
+                    else:
+                        body_data[key] = value
+
+            print(f"Final query_params: {query_params}")
+            print(f"Final body_data: {body_data}")
 
             url = f"{base_url}/{path}"
 
