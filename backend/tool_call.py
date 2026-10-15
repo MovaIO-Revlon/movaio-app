@@ -199,9 +199,9 @@ class DynamicToolExecutor:
             if "{sys_id}" in path:
                 path = path.replace("{sys_id}", sys_id)
 
-            print(f"Concate base URL with Path : {url}")
-
             url = f"{base_url}/{path}"
+            
+            print(f"Concate base URL with Path : {url}")
             
             # 5. Execute Request directly via requests module
             logger.debug(f"Making {method} request to {url}")
