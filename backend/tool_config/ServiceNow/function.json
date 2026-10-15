@@ -147,7 +147,7 @@
       "active": true,
       "protocol": "rest",
       "protocol_data": {
-        "method": "PUT",
+        "method": "PATCH",
         "path": "/api/now/table/incident/{sys_id}",
         "server_url": "https://revlon.service-now.com"
       },

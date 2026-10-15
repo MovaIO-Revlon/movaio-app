@@ -17132,9 +17132,20 @@ class FlaskApp(DatabaseCollections):
             ]
         }
 
-    def extract_incident_details(self, response):
+    def extract_incident_details(self,response):
+
+        if isinstance(response, str):
+            response = json.loads(response)
 
         result = response.get("result", {})
+
+        if not isinstance(result, dict):
+            return {
+                "number": "",
+                "sys_id": "",
+                "category": "",
+                "priority": ""
+            }
 
         return {
             "number": result.get("number", ""),
@@ -17142,7 +17153,6 @@ class FlaskApp(DatabaseCollections):
             "category": result.get("category", ""),
             "priority": result.get("priority", "")
         }
-
 
     # Swagger UI
     def serve_openapi_json(self):
