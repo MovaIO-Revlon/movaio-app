@@ -17318,8 +17318,7 @@ class FlaskApp(DatabaseCollections):
                                             {
                                                 "client_ref": client_ref,
                                                 "action": "list",
-                                                "ticket_type": "incident",
-                                                "ticket_id": ticket_id,
+                                                "ticket_type": "incident",                                                
                                                 "fields": {    
                                                     "caller_id": user_id,
                                                     "active": True

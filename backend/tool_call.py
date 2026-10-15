@@ -106,11 +106,38 @@ class DynamicToolExecutor:
                     raw_data = value.encode("utf-8") if isinstance(value, str) else value
                     continue
 
+                        # GET / DELETE requests
                 if method in ["GET", "DELETE"]:
+
+                    # ServiceNow Ticket List Handling
+                    if key == "tickets" and isinstance(value, list) and value:
+
+                        ticket = value[0]
+
+                        action = ticket.get("action")
+                        fields = ticket.get("fields", {})
+
+                        if action == "list" and fields:
+
+                            query_params["sysparm_query"] = build_sysparm_query(fields)
+
+                            # Optional ServiceNow parameters
+                            query_params["sysparm_display_value"] = "true"
+                            query_params["sysparm_exclude_reference_link"] = "true"
+
+                            print(
+                                f"Generated sysparm_query: "
+                                f"{query_params['sysparm_query']}"
+                            )
+
+                        # Don't pass tickets as a query parameter
+                        continue
+
                     if isinstance(value, dict):
                         query_params.update(value)
                     else:
                         query_params[key] = value
+
                 else:
                     body_data[key] = value
                     
@@ -174,6 +201,26 @@ class DynamicToolExecutor:
 
         except Exception as e:
             return json.dumps({"error": "Internal Error", "message": str(e)}) 
-
-
   
+    def build_sysparm_query(self,fields: dict) -> str:
+        
+        REFERENCE_FIELD_MAPPINGS = {"caller_id": "caller_id.email","assigned_to": "assigned_to.email","opened_by": "opened_by.email",}
+        
+        query_parts = []
+
+        for field_name, field_value in fields.items():
+
+            if field_value is None:
+                continue
+
+            if isinstance(field_value, bool):
+                field_value = str(field_value).lower()
+
+            query_field = REFERENCE_FIELD_MAPPINGS.get(
+                field_name,
+                field_name
+            )
+
+            query_parts.append(f"{query_field}={field_value}")
+
+        return "^".join(query_parts)
