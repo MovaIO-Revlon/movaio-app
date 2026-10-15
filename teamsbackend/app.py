@@ -7,7 +7,7 @@ import uuid
 import requests
 import pypandoc
 import httpx
-from microsoft_teams.api import AdaptiveCardActionCardResponse, AdaptiveCardActionMessageResponse, AdaptiveCardInvokeAction, AdaptiveCardInvokeActivity, AdaptiveCardInvokeResponse, MessageActivity, TypingActivityInput, MessageActivityInput , Attachment , SuggestedActions , CardAction
+from microsoft_teams.api import Activity, AdaptiveCardActionCardResponse, AdaptiveCardActionMessageResponse, AdaptiveCardInvokeAction, AdaptiveCardInvokeActivity, AdaptiveCardInvokeResponse, MessageActivity, TypingActivityInput, MessageActivityInput , Attachment , SuggestedActions , CardAction
 from microsoft_teams.apps import ActivityContext, App
 import os
 from pymongo import MongoClient
@@ -522,41 +522,23 @@ async def handle_message(ctx: ActivityContext[MessageActivity]):
 
     processing_activity = None
 
-    # try:
+    try:
+        processing_activity = await ctx.send_activity(
+            Activity(
+                type="message",
+                text="🤖 Please wait while I process your request..."
+            )
+        )
 
-    #     processing_activity = await ctx.reply(
-    #         MessageActivityInput(
-    #             attachments=[
-    #                 get_processing_card()
-    #             ]
-    #         )
-    #     )
-        
-    #     print("====== PROCESSING ACTIVITY ======")
-    #     print(processing_activity.__dict__)
-    #     print(type(processing_activity))
-    #     print(processing_activity)
-    #     print(
-    #     f"Processing activity ID = "
-    #     f"{processing_activity.id}")
+        logger.info(
+            f"Processing activity created. "
+            f"Activity ID: {processing_activity.id}"
+        )
 
-    #     print(
-    #         getattr(
-    #             processing_activity,
-    #             "id",
-    #             None
-    #         )
-    #     )
-    #     print("=================================")
-
-    #     logger.info(
-    #         f"Processing card sent: {processing_activity}"
-    #     )
-        
-    # except Exception as ex:
-
-    #     logger.warning(f"Processing card failed: {ex}")
-    #     print(f"Processing card failed: {ex}")
+    except Exception as ex:
+        logger.warning(
+            f"Failed to send processing message: {ex}"
+        )
     
     if session_expired:
         await send_message_activity(
@@ -646,6 +628,8 @@ async def handle_message(ctx: ActivityContext[MessageActivity]):
         )
 
         await cleanup_processing_ui(ctx,processing_activity,stop_typing_event,typing_task)
+
+        await delete_processing_message(ctx,processing_activity)
 
         await send_message_activity(
             ctx,
@@ -817,6 +801,8 @@ async def handle_message(ctx: ActivityContext[MessageActivity]):
         # -----------------------------------------------------
 
         await cleanup_processing_ui(ctx,processing_activity,stop_typing_event,typing_task)
+
+        await delete_processing_message(ctx,processing_activity)
 
         await send_message_activity(ctx, attachments=output_data_card_attachment, suggested_actions=suggested_actions_for_selected_agent)
 
@@ -1775,6 +1761,45 @@ async def cleanup_processing_ui(
 
         logger.warning(f"Unable to delete card: {ex}")
         print(f"Unable to delete card: {ex}")
+
+async def delete_processing_message(
+    ctx,
+    processing_activity
+):
+    """
+    Safely delete intermediate processing message.
+    """
+
+    if not processing_activity:
+        return
+
+    try:
+        activity_id = getattr(
+            processing_activity,
+            "id",
+            None
+        )
+
+        if not activity_id:
+            logger.warning(
+                "No activity id found."
+            )
+            return
+
+        logger.info(
+            f"Deleting activity: {activity_id}"
+        )
+
+        await ctx.delete_activity(activity_id)
+
+        logger.info(
+            f"Deleted activity: {activity_id}"
+        )
+
+    except Exception as ex:
+        logger.exception(
+            f"Failed deleting activity: {ex}"
+        )
 
 async def health(request: Request):
     return JSONResponse({"status": "ok"})
