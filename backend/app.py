@@ -17012,10 +17012,9 @@ class FlaskApp(DatabaseCollections):
 
             result = auth_service._execute_tool(tool_name,payload_data,raw_tools_docs,user_id)
             
-            if snow_action == "create":
-                incident_details = self.extract_incident_details(result)
-                result= incident_details
-            
+            incident_details = self.extract_incident_details(result,snow_action)
+            result= incident_details
+                 
             return jsonify({
                 "success": True,
                 "request_id": request_id,
@@ -17133,27 +17132,51 @@ class FlaskApp(DatabaseCollections):
             ]
         }
 
-    def extract_incident_details(self,response):
+    def extract_incident_details(self,response,action):
 
         if isinstance(response, str):
             response = json.loads(response)
 
         result = response.get("result", {})
 
-        if not isinstance(result, dict):
-            return {
-                "number": "",
-                "sys_id": "",
-                "category": "",
-                "priority": ""
-            }
+        if action == "create":
 
-        return {
-            "number": result.get("number", ""),
-            "sys_id": result.get("sys_id", ""),
-            "category": result.get("category", ""),
-            "priority": result.get("priority", "")
-        }
+            if not isinstance(result, dict):
+                return {
+                    "number": "",
+                    "sys_id": "",
+                    "category": "",
+                    "priority": ""
+                }
+
+            return {
+                "number": result.get("number", ""),
+                "sys_id": result.get("sys_id", ""),
+                "category": result.get("category", ""),
+                "priority": result.get("priority", "")
+            }
+            
+        elif action == "list":
+
+            if isinstance(result, dict):
+                result = [result]
+
+            if not isinstance(result, list):
+                return []
+
+            return [
+                {
+                    "number": incident.get("number", ""),
+                    "short_description": incident.get("short_description", ""),
+                    "description": incident.get("description", ""),
+                    "state": incident.get("state", ""),
+                    "priority": incident.get("priority", "")
+                }
+                for incident in result
+            ]        
+            
+        else:
+            return response
 
     # Swagger UI
     def serve_openapi_json(self):
