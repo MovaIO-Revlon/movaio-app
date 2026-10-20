@@ -16990,9 +16990,10 @@ class FlaskApp(DatabaseCollections):
                     user_id=user_id,
                     ticket_id=ticket_id,
                     sys_id=sys_id,
-                    state=7,
-                    close_code="Solved by caller",
-                    close_notes="Issue verified and closed."
+                    state= "7",
+                    close_code= "Solved (Permanently)",
+                    close_notes= "Issue resolved via API patch. Network connectivity restored.",
+                    comments= "This incident has been officially marked as Closed."
                 )
 
                 tool_name = "SERVICENOW__UPDATE_INCIDENT"
@@ -17005,16 +17006,14 @@ class FlaskApp(DatabaseCollections):
 
 
             print(f"Executing ServiceNow action: {snow_action}")
-            
-            print(f"Executing ServiceNow payload: {payload_data}")
-            
-            print(f"ServiceNow Calling UserId: {user_id}")
+            # print(f"Executing ServiceNow payload: {payload_data}")            
+            # print(f"ServiceNow Calling UserId: {user_id}")
 
             result = auth_service._execute_tool(tool_name,payload_data,raw_tools_docs,user_id)
             
             incident_details = self.extract_incident_details(result,snow_action)
             result= incident_details
-                 
+                                  
             return jsonify({
                 "success": True,
                 "request_id": request_id,
