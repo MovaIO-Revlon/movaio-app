@@ -11,3 +11,6 @@ uvicorn
 dotenv>=0.9.9
 cryptography
 PyJWT
+msgraph-sdk==1.47.0
+azure-identity==1.23.0
+aiohttp==3.12.15

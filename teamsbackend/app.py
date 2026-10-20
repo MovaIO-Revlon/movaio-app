@@ -9,6 +9,9 @@ import pypandoc
 import httpx
 from microsoft_teams.api import Activity, AdaptiveCardActionCardResponse, AdaptiveCardActionMessageResponse, AdaptiveCardInvokeAction, AdaptiveCardInvokeActivity, AdaptiveCardInvokeResponse, MessageActivity, TypingActivityInput, MessageActivityInput , Attachment , SuggestedActions , CardAction
 from microsoft_teams.apps import ActivityContext, App
+from msgraph.generated.models.chat_message import ChatMessage
+from msgraph.generated.models.item_body import ItemBody
+from msgraph import GraphServiceClient
 import os
 from pymongo import MongoClient
 from bson.objectid import ObjectId 
@@ -24,6 +27,7 @@ from utility.database_manager import mydb
 from datetime import datetime, timedelta, timezone
 import time
 import jwt
+from azure.identity.aio import ClientSecretCredential
 
 from contextlib import asynccontextmanager
 from starlette.requests import Request
@@ -66,6 +70,17 @@ SELECTED_AGENT_ID=os.getenv("SELECTED_AGENT_ID", None)
 
 MS_APP_ID = os.getenv("MICROSOFT_APP_ID", "")
 MS_APP_PWD = os.getenv("MICROSOFT_APP_PWD", "")
+
+credential = ClientSecretCredential(
+    tenant_id=TENANT_ID,
+    client_id=CLIENT_ID,
+    client_secret=CLIENT_SECRET,
+)
+
+graph_client = GraphServiceClient(
+    credentials=credential,
+    scopes=["https://graph.microsoft.com/.default"]
+)
 
 app = App(client_id=MS_APP_ID, client_secret=MS_APP_PWD)
 
@@ -520,24 +535,20 @@ async def handle_message(ctx: ActivityContext[MessageActivity]):
         )
     )
 
-    processing_activity = None
+    processing_message_id = None
 
     try:
-        processing_activity = await ctx.send_activity(
-            Activity(
-                type="message",
-                text="🤖 Please wait while I process your request..."
+        processing_message_id = (
+            await send_processing_message(
+                graph_client,
+                ctx.activity.conversation.id,
+                "🤖 Please wait while I process your request..."
             )
         )
 
-        logger.info(
-            f"Processing activity created. "
-            f"Activity ID: {processing_activity.id}"
-        )
-
     except Exception as ex:
-        logger.warning(
-            f"Failed to send processing message: {ex}"
+        logger.error(
+            f"Failed to create processing message: {ex}"
         )
     
     if session_expired:
@@ -627,9 +638,6 @@ async def handle_message(ctx: ActivityContext[MessageActivity]):
             exc
         )
 
-        await cleanup_processing_ui(ctx,processing_activity,stop_typing_event,typing_task)
-
-        await delete_processing_message(ctx,processing_activity)
 
         await send_message_activity(
             ctx,
@@ -727,9 +735,7 @@ async def handle_message(ctx: ActivityContext[MessageActivity]):
                     "count":5
                 }
             }
-            
-            await cleanup_processing_ui(ctx,processing_activity,stop_typing_event,typing_task )
-            
+                        
             await my_tickets2(ctx, value)
             return
         approve_ticket_keywords=configuration.get('approve_ticket_keywords', ["approve to create the ticket", "**approve** to create the ticket", "Please reply \"approve\" to confirm", "please reply \"approve\" to confirm", "please reply approve to confirm", "please reply **approve** to confirm", "\"approve\" to confirm", "**approve** to confirm", "approve to confirm"])
@@ -800,9 +806,8 @@ async def handle_message(ctx: ActivityContext[MessageActivity]):
         # DELETE PROCESSING CARD
         # -----------------------------------------------------
 
-        await cleanup_processing_ui(ctx,processing_activity,stop_typing_event,typing_task)
-
-        await delete_processing_message(ctx,processing_activity)
+        if processing_message_id:
+            await delete_processing_message(graph_client,ctx.activity.conversation.id,processing_message_id)
 
         await send_message_activity(ctx, attachments=output_data_card_attachment, suggested_actions=suggested_actions_for_selected_agent)
 
@@ -1709,6 +1714,26 @@ async def typing_loop(ctx, stop_event):
             logger.error(f"Typing indicator error: {ex}")
             break
 
+async def send_processing_message(
+    graph_client,
+    chat_id: str,
+    text: str
+):
+    request_body = ChatMessage(
+        body=ItemBody(
+            content=text
+        )
+    )
+
+    result = await (
+        graph_client
+        .chats
+        .by_chat_id(chat_id)
+        .messages
+        .post(request_body)
+    )
+
+    return result.id
 
 def get_processing_card():
 
@@ -1739,67 +1764,27 @@ def get_processing_card():
         }
     )
 
-async def cleanup_processing_ui(
-    ctx,
-    processing_activity,
-    stop_typing_event,
-    typing_task
-):
-    stop_typing_event.set()
-
+async def delete_processing_message(graph_client,chat_id: str,message_id: str):
     try:
-        typing_task.cancel()
-    except Exception:
-        pass
-
-    try:
-
-        if (processing_activity and hasattr(ctx, "delete_activity")):
-            await ctx.delete_activity(processing_activity.id)
-
-    except Exception as ex:
-
-        logger.warning(f"Unable to delete card: {ex}")
-        print(f"Unable to delete card: {ex}")
-
-async def delete_processing_message(
-    ctx,
-    processing_activity
-):
-    """
-    Safely delete intermediate processing message.
-    """
-
-    if not processing_activity:
-        return
-
-    try:
-        activity_id = getattr(
-            processing_activity,
-            "id",
-            None
+        await (
+            graph_client
+            .chats
+            .by_chat_id(chat_id)
+            .messages
+            .by_chat_message_id(message_id)
+            .soft_delete
+            .post()
         )
 
-        if not activity_id:
-            logger.warning(
-                "No activity id found."
-            )
-            return
-
         logger.info(
-            f"Deleting activity: {activity_id}"
-        )
-
-        await ctx.delete_activity(activity_id)
-
-        logger.info(
-            f"Deleted activity: {activity_id}"
+            f"Deleted message: {message_id}"
         )
 
     except Exception as ex:
-        logger.exception(
-            f"Failed deleting activity: {ex}"
+        logger.error(
+            f"Delete failed: {ex}"
         )
+
 
 async def health(request: Request):
     return JSONResponse({"status": "ok"})
