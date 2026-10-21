@@ -37,4 +37,3 @@ cryptography
 mlflow==3.13.0
 mlflow-skinny==3.13.0
 mlflow-tracing==3.13.0
-apscheduler==3.11.0
