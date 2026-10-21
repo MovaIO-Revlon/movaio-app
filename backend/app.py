@@ -2550,7 +2550,7 @@ class ChatbotAgent(DatabaseCollections):
             # Call synchronous call_agent_api
             return self.call_agent_api_chat( user_query, api_key, session_id, user_id,agent_id)
 
-    def run_lyzr_chat(self, user_input: str, user_id: str, lyzr_api_key: str, lyzr_agent_id: str, session_id: str):
+    def run_lyzr_chat_old(self, user_input: str, user_id: str, lyzr_api_key: str, lyzr_agent_id: str, session_id: str):
         
         # 1. Prepare Tools and Prompt
         context = self._get_agent_context(lyzr_agent_id)
@@ -2685,14 +2685,7 @@ class ChatbotAgent(DatabaseCollections):
             # Save failure to db and return error
             return {"type": "error", "message": str(e)}
 
-    def run_lyzr_chat_new(
-        self,
-        user_input: str,
-        user_id: str,
-        lyzr_api_key: str,
-        lyzr_agent_id: str,
-        session_id: str
-    ):
+    def run_lyzr_chat(self,user_input: str,user_id: str,lyzr_api_key: str,lyzr_agent_id: str,session_id: str):
 
         def get_servicenow_action(spans):
 
@@ -2797,9 +2790,9 @@ class ChatbotAgent(DatabaseCollections):
 
             for round_num in range(max_rounds):
 
-                print("=" * 100)
-                print(f"ROUND : {round_num + 1}")
-                print("=" * 100)
+                # print("=" * 100)
+                # print(f"ROUND : {round_num + 1}")
+                # print("=" * 100)
 
                 headers = {
                     "x-api-key": lyzr_api_key,
@@ -2812,6 +2805,12 @@ class ChatbotAgent(DatabaseCollections):
                     "session_id": session_id,
                     "message": current_message,
                 }
+                
+                AGENT_CALLING_URL = f"{agent_api_base}/v3/inference/chat/"
+                
+                print(f"Agent payload ===  {payload}")
+                print(f"Agent headers ===  {headers}")
+                print(f"Agent URI==== {AGENT_CALLING_URL}")
 
                 response = requests.post(
                     f"{agent_api_base}/v3/inference/chat/",
