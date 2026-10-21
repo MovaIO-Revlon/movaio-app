@@ -17552,16 +17552,16 @@ class FlaskApp(DatabaseCollections):
 if __name__ == '__main__':
     
     port = config_loader.FLASK_PORT
-    intervalTime = int(config_loader.SCHEDULER_INTERVAL_MINUTES)
+    intervalTime = int(config_loader.SCHEDULER_INTERVAL_MINUTES)# 5 min's
     
     if isinstance(port, tuple):
         port = port[0]  # extract first item
-    
-    #threading.Thread(target=poller.main,daemon=True).start()
-    scheduler = BackgroundScheduler()
-    # Runs every 5 minutes
-    scheduler.add_job(func=schedulemanager.process_tickets,trigger='interval',minutes=intervalTime,id='ticket_scheduler',replace_existing=True)
-    scheduler.start()
-    
+
     flask_app = FlaskApp()        
     flask_app.socketio.run(app=flask_app.app,host='0.0.0.0',port=int(port),debug=True,log_output=True, use_reloader=False,allow_unsafe_werkzeug=True)
+    
+    #threading.Thread(target=poller.main,daemon=True).start()
+    scheduler_manager = schedulemanager()
+    scheduler = BackgroundScheduler()
+    scheduler.add_job(func=scheduler_manager.process_tickets,trigger='interval',minutes=intervalTime,id='ticket_scheduler',replace_existing=True)
+    scheduler.start()
