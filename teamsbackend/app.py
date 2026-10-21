@@ -7,6 +7,7 @@ import uuid
 import requests
 import pypandoc
 import httpx
+import inspect
 from microsoft_teams.api import Activity, AdaptiveCardActionCardResponse, AdaptiveCardActionMessageResponse, AdaptiveCardInvokeAction, AdaptiveCardInvokeActivity, AdaptiveCardInvokeResponse, MessageActivity, TypingActivityInput, MessageActivityInput , Attachment , SuggestedActions , CardAction
 from microsoft_teams.apps import ActivityContext, App
 from msgraph.generated.models.chat_message import ChatMessage
@@ -807,6 +808,18 @@ async def handle_message(ctx: ActivityContext[MessageActivity]):
             #await delete_processing_message(graph_client,ctx.activity.conversation.id,processing_message_id)
             print(f"ctx.api --Type :{type(ctx.api)}")
             print(f"ctx.api --Directory :{dir(ctx.api)}")
+            
+            print(f"ctx.api --Type : {type(ctx.api.conversations)}")
+            print(f"ctx.api --Directory : {dir(ctx.api.conversations)}")
+
+            for name in dir(ctx.api.conversations):
+                if "delete" in name.lower():
+                    print(f"Delete Name : {name}")
+
+            for name in dir(ctx.api.conversations):
+                if "activity" in name.lower():
+                    print(f"Activity Name : {name}")
+            
             await delete_processing_message(ctx,processing_message_id)
 
         await send_message_activity(ctx, attachments=output_data_card_attachment, suggested_actions=suggested_actions_for_selected_agent)
