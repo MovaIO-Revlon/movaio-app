@@ -545,6 +545,12 @@ async def handle_message(ctx: ActivityContext[MessageActivity]):
                 "🤖 Please wait while I process your request..."
             )
         )
+        
+        processing_activity = await ctx.send_activity(MessageActivity(text="🤖 Please wait while I process your request..."))
+
+        processing_message_id = processing_activity.id
+
+        print(f"Processing Activity : {processing_message_id}")
 
     except Exception as ex:
         logger.error(
@@ -566,9 +572,9 @@ async def handle_message(ctx: ActivityContext[MessageActivity]):
     #logic for calling the agent API
     try:
         
-        deviceInfo = get_device_info_by_aaid(aad_object_id)
+        device_info = get_device_info_by_aaid(aad_object_id)
         
-        print(f"Retriving deviceInfo using Intune API : {deviceInfo}")
+        print(f"Retriving deviceInfo using Intune API : {device_info}")
         
         print(f"User_Data : {user_data}")
         auth_token = generate_auth_token(user_data.get('email','test@revlon.com'))

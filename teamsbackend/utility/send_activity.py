@@ -25,9 +25,6 @@ async def send_message_activity(ctx: ActivityContext[MessageActivity], text="" ,
                 # value=suggested_card.get("value", "")
             # ) for suggested_card in suggested_cards]
         # )
-    await ctx.send(MessageActivityInput(
-        text=text, 
-        attachments=attachments 
-        #suggested_actions=suggested_actions_for_selected_agent
-    ))
-    return 
+    response = await ctx.send(MessageActivityInput(text=text, attachments=attachments ))
+    
+    return response
