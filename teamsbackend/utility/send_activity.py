@@ -31,12 +31,11 @@ async def send_message_activity(ctx: ActivityContext[MessageActivity], text="" ,
 
 
 
-async def delete_processing_message(ctx: ActivityContext[MessageActivity],message_id: str):
+async def delete_processing_message(ctx,message_id: int):
     try:
-        await ctx.api.delete_activity(
-            ctx.activity.conversation.id,
-            message_id
-        )
+        message = await ctx.channel.fetch_message(message_id)
+        await message.delete()
+        await ctx.send("Message deleted.")
 
         print(f"Deleted message: {message_id}")
 
