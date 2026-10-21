@@ -546,7 +546,8 @@ async def handle_message(ctx: ActivityContext[MessageActivity]):
         #     )
         # )
         
-        processing_activity = await ctx.send_activity(MessageActivity(text="🤖 Please wait while I process your request..."))
+        processing_activity = await send_message_activity(ctx, text="🤖 Please wait while I process your request...")
+
 
         processing_message_id = processing_activity.id
 
