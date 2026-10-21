@@ -461,16 +461,12 @@ async def handle_message(ctx: ActivityContext[MessageActivity]):
         await handle_value_for_action_cards(ctx, value, user_data)
         return
 
-    session_data = mydb['UserSessions'].find_one(
-         {'aad_object_id': aad_object_id}
-      )
+    session_data = mydb['UserSessions'].find_one({'aad_object_id': aad_object_id})
         
     session_expired = False
         
     if session_data:
-        selected_agent_id = session_data.get(
-                'selected_agent_id'
-        )
+        selected_agent_id = session_data.get('selected_agent_id')
         
     if is_session_expired(session_data):
         
@@ -508,7 +504,7 @@ async def handle_message(ctx: ActivityContext[MessageActivity]):
             return
         
         selected_agent_id = default_agent['agent_id']
-        session_id = uuid.uuid4().hex
+        session_id = session_data.get('session_id')
         
         mydb['UserSessions'].update_one(
             {'aad_object_id': aad_object_id},
