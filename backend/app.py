@@ -3496,8 +3496,8 @@ class ChatbotAgent(DatabaseCollections):
 
 class schedulemanager(DatabaseCollections):
     def __init__(self):
-        self.ticket_resolve = config_loader.TICKET_RESOLVE_HOURS
-        self.ticket_reopen = config_loader.TICKET_REOPEN_HOURS
+        self.ticket_resolve = int(config_loader.TICKET_RESOLVE_HOURS)
+        self.ticket_reopen = int(config_loader.TICKET_REOPEN_HOURS)
         self.auth_service = ToolAuthService() 
         self.flask_main = FlaskApp()
         self.chatbot_agent = ChatbotAgent() 
@@ -17552,7 +17552,7 @@ class FlaskApp(DatabaseCollections):
 if __name__ == '__main__':
     
     port = config_loader.FLASK_PORT
-    intervalTime = config_loader.SCHEDULER_INTERVAL_MINUTES
+    intervalTime = int(config_loader.SCHEDULER_INTERVAL_MINUTES)
     
     if isinstance(port, tuple):
         port = port[0]  # extract first item
