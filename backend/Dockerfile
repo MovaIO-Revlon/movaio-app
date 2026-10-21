@@ -20,10 +20,16 @@ RUN apt-get update && rm -rf /var/lib/apt/lists/*
  
 COPY requirements.txt .
 
-RUN pip install --no-cache-dir -r requirements.txt && \
+RUN python -m pip install --upgrade pip setuptools wheel
 
-    pip install --no-cache-dir azure-communication-email==1.1.0 azure-identity==1.25.1 pypandoc==1.16.2 python-docx==1.2.0
- 
+RUN pip install --no-cache-dir \
+    azure-communication-email==1.1.0 \
+    azure-identity==1.25.1 \
+    pypandoc==1.16.2 \
+    python-docx==1.2.0
+
+RUN pip install --no-cache-dir -r requirements.txt
+
 COPY . .
 
 RUN mkdir -p logs temp_dir

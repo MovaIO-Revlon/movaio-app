@@ -35,5 +35,5 @@ altair==5.2.0
 concurrent-log-handler==0.9.29
 cryptography
 mlflow==3.13.0
-mlflow-skinny==3.13.0
-mlflow-tracing==3.13.0
+apscheduler==3.11.0
+uvicorn==0.35.0
