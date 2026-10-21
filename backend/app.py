@@ -3498,6 +3498,9 @@ class schedulemanager(DatabaseCollections):
     def __init__(self):
         self.ticket_resolve = config_loader.TICKET_RESOLVE_HOURS
         self.ticket_reopen = config_loader.TICKET_REOPEN_HOURS
+        self.auth_service = ToolAuthService() 
+        self.flask_main = FlaskApp()
+        self.chatbot_agent = ChatbotAgent() 
         
     def process_tickets(self):
             try:
@@ -3513,36 +3516,269 @@ class schedulemanager(DatabaseCollections):
                 print(f"Scheduler Error: {str(ex)}")
                 
     def resolve_inactive_tickets(self):
-        cutoff_time = datetime.utcnow() - timedelta(hours=self.ticket_resolve)
-
-        self.ticket_collection.update_many(
-            {
-                "status": "OPEN",
-                "created_at": {"$lte": cutoff_time}
-            },
-            {
-                "$set": {
-                    "status": "RESOLVED",
-                    "resolved_at": datetime.utcnow()
-                }
-            }
+        cutoff_time = datetime.utcnow() - timedelta(
+            hours=self.ticket_resolve
         )
+
+        inactive_tickets = list(
+            self.ticket_collection.find(
+                {
+                    "status": "OPEN",
+                    "created_at": {"$lte": cutoff_time}
+                }
+            )
+        )
+
+        context = self.chatbot_agent._get_agent_context(config_loader.SNOW_ORCH_AGENT_ID)
+        raw_tools_docs = context.get("raw_tools_docs", [])
+
+        for ticket in inactive_tickets:
+            try:
+                ticket_id = ticket.get("ticket_id")
+                user_id = ticket.get("user_id")
+
+                now = datetime.utcnow()
+
+                request_id = (f"REQ-{now.strftime('%Y%m%d%H%M%S')}")
+                client_ref = (f"resolve-{now.strftime('%Y%m%d%H%M%S')}")
+
+                incident_details = self.get_incident_details(
+                    ticket_id=ticket_id,
+                    user_id=user_id,
+                    request_id=request_id,
+                    client_ref=client_ref,
+                    raw_tools_docs=raw_tools_docs
+                )
+
+                if not incident_details:
+                    logger.warning(
+                        f"Incident not found for {ticket_id}"
+                    )
+                    continue
+
+                current_state = incident_details["state"]
+
+                # Only resolve active incidents
+                if current_state not in [
+                    "New",
+                    "In Progress",
+                    "On Hold"
+                ]:
+                    continue
+
+                update_response = self.update_incident_state(
+                    ticket_id=ticket_id,
+                    sys_id=incident_details["sys_id"],
+                    state="6",  # Resolved
+                    comments=(
+                        "This incident has been officially "
+                        "marked as resolved."
+                    ),
+                    close_code="Solved (Permanently)",
+                    close_notes=(
+                        "Issue resolved via automated process."
+                    ),
+                    user_id=user_id,
+                    request_id=request_id,
+                    client_ref=client_ref,
+                    raw_tools_docs=raw_tools_docs
+                )
+
+                if update_response:
+                    self.ticket_collection.update_one(
+                        {"_id": ticket["_id"]},
+                        {
+                            "$set": {
+                                "status": "RESOLVED",
+                                "resolved_at": datetime.utcnow()
+                            }
+                        }
+                    )
+
+                    logger.info(
+                        f"Successfully resolved ticket {ticket_id}"
+                    )
+
+            except Exception as ex:
+                logger.exception(
+                    f"Failed to auto-resolve "
+                    f"{ticket.get('ticket_id')}: {str(ex)}"
+                )
 
     def reopen_resolved_tickets(self):
-        cutoff_time = datetime.utcnow() - timedelta(hours=self.ticket_reopen)
-
-        self.ticket_collection.update_many(
-            {
-                "status": "RESOLVED",
-                "resolved_at": {"$lte": cutoff_time}
-            },
-            {
-                "$set": {
-                    "status": "OPEN",
-                    "reopened_at": datetime.utcnow()
-                }
-            }
+        cutoff_time = datetime.utcnow() - timedelta(
+            hours=self.ticket_reopen
         )
+
+        resolved_tickets = list(
+            self.ticket_collection.find(
+                {
+                    "status": "RESOLVED",
+                    "resolved_at": {"$lte": cutoff_time}
+                }
+            )
+        )
+
+        context = self.chatbot_agent._get_agent_context(
+            config_loader.SNOW_ORCH_AGENT_ID
+        )
+        raw_tools_docs = context.get("raw_tools_docs", [])
+
+        for ticket in resolved_tickets:
+            try:
+                ticket_id = ticket.get("ticket_id")
+                user_id = ticket.get("user_id")
+
+                now = datetime.utcnow()
+
+                request_id = (
+                    f"REQ-{now.strftime('%Y%m%d%H%M%S')}"
+                )
+                client_ref = (
+                    f"reopen-{now.strftime('%Y%m%d%H%M%S')}"
+                )
+
+                incident_details = self.get_incident_details(
+                    ticket_id=ticket_id,
+                    user_id=user_id,
+                    request_id=request_id,
+                    client_ref=client_ref,
+                    raw_tools_docs=raw_tools_docs
+                )
+
+                if not incident_details:
+                    logger.warning(
+                        f"Incident not found for {ticket_id}"
+                    )
+                    continue
+
+                current_state = incident_details["state"]
+
+                # Only reopen resolved incidents
+                if current_state != "Resolved":
+                    continue
+
+                update_response = self.update_incident_state(
+                    ticket_id=ticket_id,
+                    sys_id=incident_details["sys_id"],
+                    state="2",  # In Progress/Open
+                    comments=(
+                        "Incident automatically reopened "
+                        "after configured threshold."
+                    ),
+                    user_id=user_id,
+                    request_id=request_id,
+                    client_ref=client_ref,
+                    raw_tools_docs=raw_tools_docs
+                )
+
+                if update_response:
+                    self.ticket_collection.update_one(
+                        {"_id": ticket["_id"]},
+                        {
+                            "$set": {
+                                "status": "OPEN",
+                                "reopened_at": datetime.utcnow()
+                            },
+                            "$unset": {
+                                "resolved_at": ""
+                            }
+                        }
+                    )
+
+                    logger.info(
+                        f"Successfully reopened ticket {ticket_id}"
+                    )
+
+            except Exception as ex:
+                logger.exception(
+                    f"Failed to auto-reopen "
+                    f"{ticket.get('ticket_id')}: {str(ex)}"
+                )     
+        
+    def get_incident_details(self,ticket_id,user_id,request_id,client_ref,raw_tools_docs):
+        """
+        Fetch incident details from ServiceNow.
+        Returns:
+            {
+                "sys_id": "...",
+                "state": "...",
+                "incident": {...}
+            }
+        """
+
+        list_payload = self.flask_main._build_request(
+            request_id=request_id,
+            client_ref=client_ref,
+            action="list",
+            user_id=user_id,
+            ticket_id=ticket_id,
+            active=True
+        )
+
+        snow_response = self.auth_service._execute_tool(
+            "SERVICENOW__LIST_INCIDENTS",
+            list_payload,
+            raw_tools_docs,
+            user_id
+        )
+
+        for incident in snow_response.get("result", []):
+            if incident.get("number") == ticket_id:
+                return {
+                    "sys_id": incident.get("sys_id"),
+                    "state": incident.get("state"),
+                    "incident": incident
+                }
+
+        return None
+
+    def update_incident_state(self,ticket_id,sys_id,
+        state,comments,user_id,request_id,client_ref,raw_tools_docs,close_code=None,close_notes=None):
+        """
+        Common ServiceNow update helper.
+        """
+
+        payload = {
+            "request_id": request_id,
+            "client_ref": client_ref,
+            "action": "update",
+            "user_id": user_id,
+            "ticket_id": ticket_id,
+            "sys_id": sys_id,
+            "state": state,
+            "comments": comments
+        }
+
+        if close_code:
+            payload["close_code"] = close_code
+
+        if close_notes:
+            payload["close_notes"] = close_notes
+
+        update_payload = self.flask_main._build_request(**payload)
+
+        return self.auth_service._execute_tool(
+            "SERVICENOW__UPDATE_INCIDENTS",
+            update_payload,
+            raw_tools_docs,
+            user_id
+        )    
+    
+    def get_incident_by_sys_id(self, snow_response, sys_id):
+        """
+        Find incident record by sys_id from ServiceNow LIST response.
+        """
+        if not snow_response:
+            return None
+
+        incidents = snow_response.get("result", [])
+
+        for incident in incidents:
+            if incident.get("sys_id") == sys_id:
+                return incident
+
+        return None        
 
 class FlaskApp(DatabaseCollections):
     def __init__(self):
@@ -17055,12 +17291,10 @@ class FlaskApp(DatabaseCollections):
 
 
             print(f"Executing ServiceNow action: {snow_action}")
-            # print(f"Executing ServiceNow payload: {payload_data}")            
-            # print(f"ServiceNow Calling UserId: {user_id}")
 
             result = auth_service._execute_tool(tool_name,payload_data,raw_tools_docs,user_id)
             
-            incident_details = self.extract_incident_details(result,snow_action)
+            incident_details = self.extract_incident_details(result,snow_action,user_id)
             result= incident_details
                                   
             return jsonify({
@@ -17180,7 +17414,7 @@ class FlaskApp(DatabaseCollections):
             ]
         }
 
-    def extract_incident_details(self,response,action):
+    def extract_incident_details(self,response,action,user_id):
 
         if isinstance(response, str):
             response = json.loads(response)
@@ -17324,10 +17558,10 @@ if __name__ == '__main__':
         port = port[0]  # extract first item
     
     #threading.Thread(target=poller.main,daemon=True).start()
-    # scheduler = BackgroundScheduler()
-    # # Runs every 5 minutes
-    # scheduler.add_job(func=schedulemanager.process_tickets,trigger='interval',minutes=intervalTime,id='ticket_scheduler',replace_existing=True)
-    # scheduler.start()
+    scheduler = BackgroundScheduler()
+    # Runs every 5 minutes
+    scheduler.add_job(func=schedulemanager.process_tickets,trigger='interval',minutes=intervalTime,id='ticket_scheduler',replace_existing=True)
+    scheduler.start()
     
     flask_app = FlaskApp()        
     flask_app.socketio.run(app=flask_app.app,host='0.0.0.0',port=int(port),debug=True,log_output=True, use_reloader=False,allow_unsafe_werkzeug=True)
