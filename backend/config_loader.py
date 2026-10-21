@@ -103,6 +103,9 @@ class ConfigLoader:
         self.SNOW_ORCH_AGENT_ID = self.config.get("SNOW_ORCH_AGENT_ID", "")
         self.SNOW_API_CALL_KEY = self.config.get("SNOW_API_CALL_KEY", "")
         self.SNOW_API_CALLER_ID = self.config.get("SNOW_API_CALLER_ID", "")
+        self.TICKET_RESOLVE_HOURS = self.config.get("TICKET_RESOLVE_HOURS", "1")
+        self.TICKET_REOPEN_HOURS = self.config.get("TICKET_REOPEN_HOURS", "24")
+        self.SCHEDULER_INTERVAL_MINUTES = self.config.get("SCHEDULER_INTERVAL_MINUTES", "5")
 
         # Azure Communication Services credentials
         self.AZURE_TENANT_ID = self.config.get("AZURE_TENANT_ID", "")

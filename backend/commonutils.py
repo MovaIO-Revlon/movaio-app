@@ -54,6 +54,7 @@ class DatabaseCollections:
         self.user_notification_collection = self.configloader.MONGO_COLLECTIONS["user_notification_collection"]
         self.agent_approval_request_collection = self.configloader.MONGO_COLLECTIONS["agent_approval_request_collection"]
         self.external_applications_collection = self.configloader.MONGO_COLLECTIONS["external_applications_collection"]
+        self.ticket_collection = self.configloader.MONGO_COLLECTIONS["snow_tickets"]
     
 
 class CommonUtils:

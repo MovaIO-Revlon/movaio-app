@@ -76,6 +76,7 @@ import jwt
 from external_app import ExternalApp
 from ticket_functions import TicketFunctions
 from api_key_auth import require_session_or_api_key, require_token_or_api_key
+from apscheduler.schedulers.background import BackgroundScheduler
 
 #from servicenow_tool_executor import poller
 
@@ -2549,7 +2550,7 @@ class ChatbotAgent(DatabaseCollections):
             # Call synchronous call_agent_api
             return self.call_agent_api_chat( user_query, api_key, session_id, user_id,agent_id)
 
-    def run_lyzr_chat_old(self, user_input: str, user_id: str, lyzr_api_key: str, lyzr_agent_id: str, session_id: str):
+    def run_lyzr_chat(self, user_input: str, user_id: str, lyzr_api_key: str, lyzr_agent_id: str, session_id: str):
         
         # 1. Prepare Tools and Prompt
         context = self._get_agent_context(lyzr_agent_id)
@@ -2684,7 +2685,7 @@ class ChatbotAgent(DatabaseCollections):
             # Save failure to db and return error
             return {"type": "error", "message": str(e)}
 
-    def run_lyzr_chat(
+    def run_lyzr_chat_new(
         self,
         user_input: str,
         user_id: str,
@@ -2859,10 +2860,10 @@ class ChatbotAgent(DatabaseCollections):
                     max_retries = 15
                     retry_delay = 2
 
-                    print(
-                        f"Trace polling started "
-                        f"for session: {session_id}"
-                    )
+                    # print(
+                    #     f"Trace polling started "
+                    #     f"for session: {session_id}"
+                    # )
 
                     for retry in range(max_retries):
 
@@ -3115,7 +3116,7 @@ class ChatbotAgent(DatabaseCollections):
 
                 trace_result = fetch_trace_data()
 
-                print(f"Traces Result : {trace_result}")
+                #print(f"Traces Result : {trace_result}")
 
                 if trace_result:
 
@@ -3126,7 +3127,7 @@ class ChatbotAgent(DatabaseCollections):
                         "raw_spans": trace_result.get("raw_spans",[]),
                     }
 
-                print(f"Matched Trace Id : {trace_id}")
+                #print(f"Matched Trace Id : {trace_id}")
 
                 #
                 # FINAL RESPONSE
@@ -3494,6 +3495,55 @@ class ChatbotAgent(DatabaseCollections):
             results.append(r)
         return results
 
+class schedulemanager(DatabaseCollections):
+    def __init__(self):
+        self.ticket_resolve = config_loader.TICKET_RESOLVE_HOURS
+        self.ticket_reopen = config_loader.TICKET_REOPEN_HOURS
+        
+    def process_tickets(self):
+            try:
+                # Resolve tickets older than 1 hour
+                self.resolve_inactive_tickets()
+
+                # Reopen tickets after 24 hours if required
+                self.reopen_resolved_tickets()
+
+                print("Ticket scheduler executed successfully")
+
+            except Exception as ex:
+                print(f"Scheduler Error: {str(ex)}")
+                
+    def resolve_inactive_tickets(self):
+        cutoff_time = datetime.utcnow() - timedelta(hours=self.ticket_resolve)
+
+        self.ticket_collection.update_many(
+            {
+                "status": "OPEN",
+                "created_at": {"$lte": cutoff_time}
+            },
+            {
+                "$set": {
+                    "status": "RESOLVED",
+                    "resolved_at": datetime.utcnow()
+                }
+            }
+        )
+
+    def reopen_resolved_tickets(self):
+        cutoff_time = datetime.utcnow() - timedelta(hours=self.ticket_reopen)
+
+        self.ticket_collection.update_many(
+            {
+                "status": "RESOLVED",
+                "resolved_at": {"$lte": cutoff_time}
+            },
+            {
+                "$set": {
+                    "status": "OPEN",
+                    "reopened_at": datetime.utcnow()
+                }
+            }
+        )
 
 class FlaskApp(DatabaseCollections):
     def __init__(self):
@@ -17147,6 +17197,16 @@ class FlaskApp(DatabaseCollections):
                     "category": "",
                     "priority": ""
                 }
+                
+            # Store newly created ticket
+            ticket_id = (result.get("number"))
+
+            if ticket_id:
+                self.insert_ticket(
+                    self.ticket_collection,
+                    ticket_id,
+                    user_id
+                )            
 
             return {
                 "number": result.get("number", ""),
@@ -17176,6 +17236,29 @@ class FlaskApp(DatabaseCollections):
             
         else:
             return response
+
+    def insert_ticket(self,ticket_collection, ticket_id, user_id):
+        now = datetime.utcnow()
+
+        document = {
+            "ticket_id": ticket_id,
+            "user_id": user_id,
+            "status": "OPEN",
+            "created_at": now,
+            "auto_close_at": now + timedelta(hours=1),
+            "reopen_window_until": now + timedelta(hours=24),
+            "updated_at": now
+        }
+
+        return ticket_collection.insert_one(document)
+
+    def update_ticket(self,ticket_collection, ticket_id, update_fields):
+        update_fields["updated_at"] = datetime.utcnow()
+
+        return ticket_collection.update_one(
+            {"ticket_id": ticket_id},
+            {"$set": update_fields}
+        )
 
     # Swagger UI
     def serve_openapi_json(self):
@@ -17236,10 +17319,16 @@ class FlaskApp(DatabaseCollections):
 if __name__ == '__main__':
     
     port = config_loader.FLASK_PORT
+    intervalTime = config_loader.SCHEDULER_INTERVAL_MINUTES
+    
     if isinstance(port, tuple):
         port = port[0]  # extract first item
     
     #threading.Thread(target=poller.main,daemon=True).start()
+    # scheduler = BackgroundScheduler()
+    # # Runs every 5 minutes
+    # scheduler.add_job(func=schedulemanager.process_tickets,trigger='interval',minutes=intervalTime,id='ticket_scheduler',replace_existing=True)
+    # scheduler.start()
     
     flask_app = FlaskApp()        
     flask_app.socketio.run(app=flask_app.app,host='0.0.0.0',port=int(port),debug=True,log_output=True, use_reloader=False,allow_unsafe_werkzeug=True)
