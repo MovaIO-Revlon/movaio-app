@@ -1773,6 +1773,11 @@ def get_processing_card():
 
 async def delete_processing_message(graph_client,chat_id: str,message_id: str):
     try:
+
+        print(f"graph_client={graph_client}")
+        print(f"chat_id={chat_id}")
+        print(f"message_id={message_id}")
+
         await (
             graph_client
             .chats
@@ -1783,16 +1788,15 @@ async def delete_processing_message(graph_client,chat_id: str,message_id: str):
             .post()
         )
 
-        logger.info(
-            f"Deleted message: {message_id}"
-        )
+        print("Message deleted successfully")
 
     except Exception as ex:
-        logger.error(
-            f"Delete failed: {ex}"
-        )
+        import traceback
 
-
+        print(f"Delete failed: {type(ex).__name__}")
+        print(f"Delete failed: {str(ex)}")
+        traceback.print_exc()
+        
 async def health(request: Request):
     return JSONResponse({"status": "ok"})
 
