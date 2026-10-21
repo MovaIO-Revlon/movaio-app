@@ -28,3 +28,19 @@ async def send_message_activity(ctx: ActivityContext[MessageActivity], text="" ,
     response = await ctx.send(MessageActivityInput(text=text, attachments=attachments ))
     
     return response
+
+
+
+async def delete_processing_message(ctx: ActivityContext[MessageActivity],message_id: str):
+    try:
+        await ctx.api.delete_activity(
+            ctx.activity.conversation.id,
+            message_id
+        )
+
+        print(f"Deleted message: {message_id}")
+
+    except Exception as ex:
+        import traceback
+        print(f"Delete failed: {ex}")
+        traceback.print_exc()

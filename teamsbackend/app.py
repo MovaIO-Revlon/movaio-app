@@ -22,7 +22,7 @@ from utility.it_ops import create_incident2, handle_custom_agent_selection, crea
 from utility.graph_api import fetch_teams_user_profile_by_aad_object_id, fetch_teams_user_profile_by_aad_object_id_cross_tenant,get_device_info_by_aaid
 from utility.fetch_teams_profile_by_aadId import fetch_teams_user_profile_by_user_name
 from utility.movaio_token_generation import generate_jwt_token
-from utility.send_activity import send_message_activity
+from utility.send_activity import send_message_activity,delete_processing_message
 from utility.database_manager import mydb
 from datetime import datetime, timedelta, timezone
 import time
@@ -808,7 +808,10 @@ async def handle_message(ctx: ActivityContext[MessageActivity]):
         # -----------------------------------------------------
 
         if processing_message_id:
-            await delete_processing_message(graph_client,ctx.activity.conversation.id,processing_message_id)
+            #await delete_processing_message(graph_client,ctx.activity.conversation.id,processing_message_id)
+            print(f"ctx.api --Type :{type(ctx.api)}")
+            print(f"ctx.api --Directory :{dir(ctx.api)}")
+            await delete_processing_message(ctx,processing_message_id)
 
         await send_message_activity(ctx, attachments=output_data_card_attachment, suggested_actions=suggested_actions_for_selected_agent)
 
@@ -1765,7 +1768,7 @@ def get_processing_card():
         }
     )
 
-async def delete_processing_message(graph_client,chat_id: str,message_id: str):
+async def delete_processing_message_old(graph_client,chat_id: str,message_id: str):
     try:
 
         print(f"graph_client={graph_client}")
