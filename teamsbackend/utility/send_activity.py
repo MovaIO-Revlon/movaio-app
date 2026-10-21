@@ -31,16 +31,16 @@ async def send_message_activity(ctx: ActivityContext[MessageActivity], text="" ,
     return response
 
 
+async def delete_processing_message(ctx: ActivityContext[MessageActivity],message_ids: list[str]):
+    for message_id in message_ids:
+        try:
+            await ctx.api.conversations.delete_activity(
+                ctx.activity.conversation.id,
+                message_id
+            )
 
-async def delete_processing_message(ctx: ActivityContext[MessageActivity],message_id: str):
-    try:
-        await ctx.api.conversations.delete_activity(
-            ctx.activity.conversation.id,
-            message_id
-        )
+            print(f"Deleted message: {message_id}")
 
-        print(f"Deleted message: {message_id}")
-
-    except Exception as ex:
-        print(f"Delete failed: {ex}")
-        traceback.print_exc()
+        except Exception as ex:
+            print(f"Delete failed for {message_id}: {ex}")
+            traceback.print_exc()

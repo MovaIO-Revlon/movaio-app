@@ -532,7 +532,7 @@ async def handle_message(ctx: ActivityContext[MessageActivity]):
         )
     )
 
-    processing_message_id = None
+    processing_message_ids = None
     
     if session_expired:
         await send_message_activity(
@@ -544,25 +544,13 @@ async def handle_message(ctx: ActivityContext[MessageActivity]):
                 )
         )
 
-    try:        
-        processing_activity = await send_message_activity(ctx, text="🤖 Please wait while I process your request...")
-    
-        processing_message_id = processing_activity.id
-  
-        print(f"Processing Activity : {processing_message_id}")
-        print(type(processing_activity))
-        print(dir(processing_activity))
-        print(vars(processing_activity))
-        print(dir(ctx))
-  
-    except Exception as ex:
-          #logger.error(f"Failed to create processing message: {ex}")  
-          print(f"Failed to create processing message: {ex}")
 
     agent_data={}
 
     #logic for calling the agent API
     try:
+        
+        progress_task = asyncio.create_task(send_progress_updates(ctx))
         
         device_info = get_device_info_by_aaid(aad_object_id)
         
@@ -606,6 +594,9 @@ async def handle_message(ctx: ActivityContext[MessageActivity]):
             # Raise for non-2xx to unify error handling
             response.raise_for_status()
 
+            # Stop waiting for progress updates
+            processing_message_ids = await progress_task
+
             # Safely parse JSON
             try:
                 data = response.json()
@@ -624,6 +615,8 @@ async def handle_message(ctx: ActivityContext[MessageActivity]):
                 raw_text = response.text
                 data= raw_text
                 logger.error("Invalid JSON from agent (status=%s): %s", response.status_code, raw_text[:1000])
+                if processing_message_ids:
+                    await delete_processing_message(ctx,processing_message_ids)
                 await send_message_activity(ctx, text="Received an unexpected response from the service.")
                 return
 
@@ -636,6 +629,8 @@ async def handle_message(ctx: ActivityContext[MessageActivity]):
             exc
         )
 
+        if processing_message_ids:
+            await delete_processing_message(ctx,processing_message_ids)
 
         await send_message_activity(
             ctx,
@@ -653,6 +648,7 @@ async def handle_message(ctx: ActivityContext[MessageActivity]):
 
         try:
             typing_task.cancel()
+            
         except Exception as e:
             logger.error("Error occurred while canceling typing task: %s", e)
             print("Error occurred while canceling typing task: %s", e)
@@ -804,27 +800,15 @@ async def handle_message(ctx: ActivityContext[MessageActivity]):
         # DELETE PROCESSING CARD
         # -----------------------------------------------------
 
-        if processing_message_id:
-            #await delete_processing_message(graph_client,ctx.activity.conversation.id,processing_message_id)
-            print(f"ctx.api --Type :{type(ctx.api)}")
-            print(f"ctx.api --Directory :{dir(ctx.api)}")
-            
-            print(f"ctx.api --Type : {type(ctx.api.conversations)}")
-            print(f"ctx.api --Directory : {dir(ctx.api.conversations)}")
-
-            for name in dir(ctx.api.conversations):
-                if "delete" in name.lower():
-                    print(f"Delete Name : {name}")
-
-            for name in dir(ctx.api.conversations):
-                if "activity" in name.lower():
-                    print(f"Activity Name : {name}")
-            
-            await delete_processing_message(ctx,processing_message_id)
+        if processing_message_ids:
+           await delete_processing_message(ctx,processing_message_ids)
 
         await send_message_activity(ctx, attachments=output_data_card_attachment, suggested_actions=suggested_actions_for_selected_agent)
 
     else:
+        if processing_message_ids:
+                   await delete_processing_message(ctx,processing_message_ids)
+                   
         await send_message_activity(ctx, text="The service returned an empty response.")
 
     return
@@ -1748,60 +1732,30 @@ async def send_processing_message(
 
     return result.id
 
-def get_processing_card():
+async def send_progress_updates(ctx):
+    activity_ids = []
 
-    return Attachment(
-        content_type="application/vnd.microsoft.card.adaptive",
-        content={
-            "type": "AdaptiveCard",
-            "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
-            "version": "1.4",
-            "body": [
-                {
-                    "type": "TextBlock",
-                    "text": "⏳ Working on your request...",
-                    "weight": "Bolder",
-                    "size": "Medium",
-                    "wrap": True
-                },
-                {
-                    "type": "TextBlock",
-                    "text": (
-                        "I'm checking the knowledge base, "
-                        "retrieving relevant information and "
-                        "generating a response."
-                    ),
-                    "wrap": True
-                }
-            ]
-        }
-    )
+    messages = [
+         "🤖 Please wait while I process your request...",
+        "🔍 Analyzing your query...",
+        "📚 Reviewing knowledge sources...",
+        "🧠 Thinking...",
+        "⚙️ Preparing response..."
+    ]
 
-async def delete_processing_message_old(graph_client,chat_id: str,message_id: str):
-    try:
+    for msg in messages:
+        try:
+            activity = await send_message_activity(ctx, text=msg)
+            activity_ids.append(activity.id)
 
-        print(f"graph_client={graph_client}")
-        print(f"chat_id={chat_id}")
-        print(f"message_id={message_id}")
+            # Wait 2-3 seconds before next update
+            await asyncio.sleep(2)
 
-        await (
-            graph_client
-            .chats
-            .by_chat_id(chat_id)
-            .messages
-            .by_chat_message_id(message_id)
-            .soft_delete
-            .post()
-        )
+        except Exception as ex:
+            print(f"Failed to send progress message: {ex}")
 
-        print("Message deleted successfully")
+    return activity_ids
 
-    except Exception as ex:
-        import traceback
-
-        print(f"Delete failed: {type(ex).__name__}")
-        print(f"Delete failed: {str(ex)}")
-        traceback.print_exc()
         
 async def health(request: Request):
     return JSONResponse({"status": "ok"})
