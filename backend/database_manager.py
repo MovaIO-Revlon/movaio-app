@@ -110,8 +110,8 @@ class DatabaseManager:
             "active_tool_collection": database[self.config["ACTIVE_TOOL_COLLECTION"]],
             "user_notification_collection": database[self.config["USER_NOTIFICATION_COLLECTION"]],
             "agent_approval_request_collection": database[self.config["AGENT_APPROVAL_REQUEST_COLLECTION"]],
-            "external_applications_collection": database[self.config["EXTERNAL_APPLICATIONS_COLLECTION"]]
-            
+            "external_applications_collection": database[self.config["EXTERNAL_APPLICATIONS_COLLECTION"]],
+            "snow_tickets":database[self.config["MONGODB_SNOW_TICKET_COLLECTION"]]
             
         }
     

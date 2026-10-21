@@ -62,7 +62,7 @@
   "USER_NOTIFICATION_COLLECTION":"UserNotification",
   "AGENT_APPROVAL_REQUEST_COLLECTION":"AgentApprovalRequests",
   "EXTERNAL_APPLICATIONS_COLLECTION":"ExternalApplications",
-  "MONGODB_SNOW_TICKET_COLLECTION":"snow_tickets",
+  "MONGODB_SNOW_TICKET_COLLECTION":"servicenow_log_collection",
   "OTPURL": "",
   "ValidateOTP": "",
   "ClientName": "",
@@ -173,7 +173,6 @@
     "agent_id": "",
     "session_id": ""
   },
-  "EXTERNAL_APPLICATIONS_COLLECTION":"ExternalApplications",
   "SESSION_TOKEN_SECRET": "kg1iGunG8MDUoO5w",
   "JWT_SECRET_KEY": "MovateAIInfusedQEKey",
   "SN_INSTANCE": "https://trianzdemo1.service-now.com/",
