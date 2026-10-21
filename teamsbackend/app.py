@@ -536,27 +536,6 @@ async def handle_message(ctx: ActivityContext[MessageActivity]):
     )
 
     processing_message_id = None
-
-    try:
-        # processing_message_id = (
-        #     await send_processing_message(
-        #         graph_client,
-        #         ctx.activity.conversation.id,
-        #         "🤖 Please wait while I process your request..."
-        #     )
-        # )
-        
-        processing_activity = await send_message_activity(ctx, text="🤖 Please wait while I process your request...")
-
-
-        processing_message_id = processing_activity.id
-
-        print(f"Processing Activity : {processing_message_id}")
-
-    except Exception as ex:
-        logger.error(
-            f"Failed to create processing message: {ex}"
-        )
     
     if session_expired:
         await send_message_activity(
@@ -567,6 +546,21 @@ async def handle_message(ctx: ActivityContext[MessageActivity]):
                     "conversation."
                 )
         )
+
+    try:        
+        processing_activity = await send_message_activity(ctx, text="🤖 Please wait while I process your request...")
+    
+        processing_message_id = processing_activity.id
+  
+        print(f"Processing Activity : {processing_message_id}")
+        print(type(processing_activity))
+        print(dir(processing_activity))
+        print(vars(processing_activity))
+        print(dir(ctx))
+  
+    except Exception as ex:
+          #logger.error(f"Failed to create processing message: {ex}")  
+          print(f"Failed to create processing message: {ex}")
 
     agent_data={}
 
