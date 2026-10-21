@@ -538,13 +538,13 @@ async def handle_message(ctx: ActivityContext[MessageActivity]):
     processing_message_id = None
 
     try:
-        processing_message_id = (
-            await send_processing_message(
-                graph_client,
-                ctx.activity.conversation.id,
-                "🤖 Please wait while I process your request..."
-            )
-        )
+        # processing_message_id = (
+        #     await send_processing_message(
+        #         graph_client,
+        #         ctx.activity.conversation.id,
+        #         "🤖 Please wait while I process your request..."
+        #     )
+        # )
         
         processing_activity = await ctx.send_activity(MessageActivity(text="🤖 Please wait while I process your request..."))
 
