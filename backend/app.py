@@ -17565,10 +17565,11 @@ if __name__ == '__main__':
         port = port[0]  # extract first item
 
     flask_app = FlaskApp()        
-    flask_app.socketio.run(app=flask_app.app,host='0.0.0.0',port=int(port),debug=True,log_output=True, use_reloader=False,allow_unsafe_werkzeug=True)
     
     #threading.Thread(target=poller.main,daemon=True).start()
     scheduler_manager = schedulemanager()
     scheduler = BackgroundScheduler()
     scheduler.add_job(func=scheduler_manager.process_tickets,trigger='interval',minutes=intervalTime,id='ticket_scheduler',replace_existing=True)
     scheduler.start()
+
+    flask_app.socketio.run(app=flask_app.app,host='0.0.0.0',port=int(port),debug=True,log_output=True, use_reloader=False,allow_unsafe_werkzeug=True)
