@@ -3503,22 +3503,22 @@ class schedulemanager(DatabaseCollections):
         self.chatbot_agent = ChatbotAgent() 
         
     def process_tickets(self):
-            try:
-                # Resolve tickets older than 1 hour
-                self.resolve_inactive_tickets()
+        try:
+            print(f"Scheduler triggered at: {datetime.utcnow()}")
 
-                # Reopen tickets after 24 hours if required
-                self.reopen_resolved_tickets()
+            # Resolve tickets older than 1 hour
+            self.resolve_inactive_tickets()
 
-                print("Ticket scheduler executed successfully")
+            # Reopen tickets after 24 hours if required
+            self.reopen_resolved_tickets()
 
-            except Exception as ex:
+            print("Ticket scheduler executed successfully")
+
+        except Exception as ex:
                 print(f"Scheduler Error: {str(ex)}")
                 
     def resolve_inactive_tickets(self):
-        cutoff_time = datetime.utcnow() - timedelta(
-            hours=self.ticket_resolve
-        )
+        cutoff_time = datetime.utcnow() - timedelta(hours=self.ticket_resolve)
 
         inactive_tickets = list(
             self.ticket_collection.find(
@@ -3528,6 +3528,9 @@ class schedulemanager(DatabaseCollections):
                 }
             )
         )
+
+        print(f"Ticket scheduler executed Time :{cutoff_time}")
+        print(f"Ticket Details from the database :{inactive_tickets}")
 
         context = self.chatbot_agent._get_agent_context(config_loader.SNOW_ORCH_AGENT_ID)
         raw_tools_docs = context.get("raw_tools_docs", [])
@@ -3554,6 +3557,7 @@ class schedulemanager(DatabaseCollections):
                     logger.warning(
                         f"Incident not found for {ticket_id}"
                     )
+                    print(f"Incident Details :{incident_details}")
                     continue
 
                 current_state = incident_details["state"]
@@ -3598,17 +3602,20 @@ class schedulemanager(DatabaseCollections):
                     logger.info(
                         f"Successfully resolved ticket {ticket_id}"
                     )
+                    print(f"Successfully resolved ticket {ticket_id}")
 
             except Exception as ex:
                 logger.exception(
                     f"Failed to auto-resolve "
                     f"{ticket.get('ticket_id')}: {str(ex)}"
                 )
+                print(
+                    f"Failed to auto-resolve "
+                    f"{ticket.get('ticket_id')}: {str(ex)}"
+                )
 
     def reopen_resolved_tickets(self):
-        cutoff_time = datetime.utcnow() - timedelta(
-            hours=self.ticket_reopen
-        )
+        cutoff_time = datetime.utcnow() - timedelta(hours=self.ticket_reopen)
 
         resolved_tickets = list(
             self.ticket_collection.find(

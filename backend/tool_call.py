@@ -229,7 +229,7 @@ class DynamicToolExecutor:
 
             # Direct requests call replacing self.session.request
             res = requests.request(**req_kwargs)
-            print("Response tool:", res.status_code, res.json())  # Debugging output
+            #print("Response tool:", res.status_code, res.json())  # Debugging output
 
             # # 6. Process Response
             res.raise_for_status() # Raises HTTPError for bad responses (4xx, 5xx)
