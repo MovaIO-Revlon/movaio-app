@@ -3496,6 +3496,7 @@ class ChatbotAgent(DatabaseCollections):
 
 class schedulemanager(DatabaseCollections):
     def __init__(self):
+        super().__init__()      # <-- important
         self.ticket_resolve = int(config_loader.TICKET_RESOLVE_HOURS)
         self.ticket_reopen = int(config_loader.TICKET_REOPEN_HOURS)
         self.auth_service = ToolAuthService() 
