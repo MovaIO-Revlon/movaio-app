@@ -3734,7 +3734,8 @@ class schedulemanager(DatabaseCollections):
         print(f"get_incident_details --- {snow_response}")
 
         for incident in snow_response.get("result", []):
-            print(f"Ticket number --- {incident.get("number")}")
+            tick_now = incident.get("number")
+            print(f"Ticket number --- {tick_now}")
             if incident.get("number") == ticket_id:
                 return {
                     "sys_id": incident.get("sys_id"),
