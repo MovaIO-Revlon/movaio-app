@@ -89,9 +89,11 @@ insight_agent_id = config_loader.INSIGHT_AGENT_ID_LYZR
 insight_limit = config_loader.INSIGHT_LIMIT
 snow_folder_path = "servicenow_tool_executor"
 snow_caller_id = config_loader.SNOW_API_CALLER_ID
-chatbot_login_user = None
 
 JWT_SECRET_KEY = config_loader.JWT_SECRET_KEY
+
+class GlobalStore:
+    chatbot_login_user = None
 
 class OTPDetails(BaseModel):
     EmployeeId: str | None = None
@@ -2516,8 +2518,9 @@ class ChatbotAgent(DatabaseCollections):
 
         session_id = data.get('session_id')
         
-        self.login_user_id = user_id  # Store user_id in the global variable for later use
-            
+        # Store user_id in the global variable for later use
+        GlobalStore.chatbot_login_user = user_id
+        
         if not session_id:
             session_id = self.utils.generate_uuid()
             print(f"🆕 New session_id generated: {session_id}")
@@ -17190,8 +17193,11 @@ class FlaskApp(DatabaseCollections):
 
             print(f"login_user_id -------- {user_id}")
 
+            chatbot_user_id = GlobalStore.login_user_id
+
             if not user_id:
-                user_id = self.chatbot_agent.login_user_id or config_loader.SNOW_API_CALLER_ID
+                print(f"Login_User_id From the chatbot : ------ {chatbot_user_id}")
+                user_id = chatbot_user_id or config_loader.SNOW_API_CALLER_ID
                 print(f"login_user_id from the config-------- {user_id}")
 
             auth_service = ToolAuthService()
