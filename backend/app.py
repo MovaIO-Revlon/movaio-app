@@ -2516,7 +2516,7 @@ class ChatbotAgent(DatabaseCollections):
 
         session_id = data.get('session_id')
         
-        self.chatbot_agent.login_user_id = user_id  # Store user_id in the global variable for later use
+        self.login_user_id = user_id  # Store user_id in the global variable for later use
             
         if not session_id:
             session_id = self.utils.generate_uuid()
