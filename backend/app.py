@@ -88,6 +88,8 @@ trend_agent_id = config_loader.TREND_AGENT_ID_LYZR
 insight_agent_id = config_loader.INSIGHT_AGENT_ID_LYZR
 insight_limit = config_loader.INSIGHT_LIMIT
 snow_folder_path = "servicenow_tool_executor"
+snow_caller_id = config_loader.SNOW_API_CALLER_ID
+chatbot_login_user = None
 
 JWT_SECRET_KEY = config_loader.JWT_SECRET_KEY
 
@@ -2514,7 +2516,7 @@ class ChatbotAgent(DatabaseCollections):
 
         session_id = data.get('session_id')
         
-        self.login_user_id = user_id  # Store user_id in the global variable for later use
+        self.chatbot_agent.login_user_id = user_id  # Store user_id in the global variable for later use
             
         if not session_id:
             session_id = self.utils.generate_uuid()
@@ -17186,8 +17188,11 @@ class FlaskApp(DatabaseCollections):
                     "message": "snow_action is required"
                 }), 400
 
+            print(f"login_user_id -------- {user_id}")
+
             if not user_id:
                 user_id = self.chatbot_agent.login_user_id or config_loader.SNOW_API_CALLER_ID
+                print(f"login_user_id from the config-------- {user_id}")
 
             auth_service = ToolAuthService()
 
