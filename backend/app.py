@@ -17193,7 +17193,7 @@ class FlaskApp(DatabaseCollections):
 
             print(f"login_user_id -------- {user_id}")
 
-            chatbot_user_id = GlobalStore.login_user_id
+            chatbot_user_id = GlobalStore.chatbot_login_user
 
             if not user_id:
                 print(f"Login_User_id From the chatbot : ------ {chatbot_user_id}")
